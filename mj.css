@@ -77,13 +77,13 @@ select, input[type="checkbox"] {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 3px;
+    gap: 15px;
     margin-bottom: 10px;
 }
 
 .tile {
-    width: 32px;
-    height: 50px;
+    width: 29px;
+    height: 52px;
     background-color: #fff;
     border: 1px solid #ccc;
     border-radius: 5px;
