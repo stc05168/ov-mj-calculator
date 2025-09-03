@@ -3,6 +3,33 @@ function detectHandTypes() {
     const handTypes = [];
     const allTiles = getAllTiles();
     
+    // 優先檢查十三么（高番且結構獨特）
+    if (isShiSanYao(allTiles)) {
+        handTypes.push({ name: '十三么', score: 200 });
+        return sortHandTypes(handTypes); // 十三么與其他牌型互斥
+    }
+    
+    // 檢查十六不搭（16張牌，特殊結構）
+    if (isShiLiuBuDa(allTiles)) {
+        handTypes.push({ name: '十六不搭', score: 50 });
+        return sortHandTypes(handTypes); // 十六不搭與其他牌型互斥
+    }
+
+    // 新增：大於五
+    if (isGreaterThanFive(allTiles)) {
+        handTypes.push({ name: '大於五', score: 50 });
+    }
+
+    // 新增：小於五
+    if (isLessThanFive(allTiles)) {
+        handTypes.push({ name: '小於五', score: 50 });
+    }
+
+    // 新增：缺五
+    if (isMissingFive(allTiles)) {
+        handTypes.push({ name: '缺五', score: 10 });
+    }
+
     // 新增：大七門（大）25番
     if (isBigSevenDoors(allTiles)) {
         handTypes.push({ name: '七門齊（大）', score: 25 });
@@ -2560,4 +2587,268 @@ function hasDragonPung(allTiles) {
     
     // 檢查是否有至少一種元牌達到3張或以上（刻子或槓）
     return Object.values(dragonCounts).some(count => count >= 3);
+}
+
+// 新增：檢查十三么
+function isShiSanYao(allTiles) {
+    // 十三么需要14張牌，門前清，且包含所有么九牌各一張加一張重複牌
+    if (allTiles.length !== 14 || state.chows.length > 0 || state.pungs.length > 0 || state.openKongs.length > 0) {
+        return false;
+    }
+    
+    const requiredTiles = [
+        { type: TILE_TYPES.CHARACTERS, value: 1 }, // 1萬
+        { type: TILE_TYPES.CHARACTERS, value: 9 }, // 9萬
+        { type: TILE_TYPES.DOTS, value: 1 },       // 1筒
+        { type: TILE_TYPES.DOTS, value: 9 },       // 9筒
+        { type: TILE_TYPES.BAMBOOS, value: 1 },    // 1索
+        { type: TILE_TYPES.BAMBOOS, value: 9 },    // 9索
+        { type: TILE_TYPES.HONORS, value: 1 },     // 東
+        { type: TILE_TYPES.HONORS, value: 2 },     // 南
+        { type: TILE_TYPES.HONORS, value: 3 },     // 西
+        { type: TILE_TYPES.HONORS, value: 4 },     // 北
+        { type: TILE_TYPES.HONORS, value: 5 },     // 中
+        { type: TILE_TYPES.HONORS, value: 6 },     // 發
+        { type: TILE_TYPES.HONORS, value: 7 }      // 白
+    ];
+    
+    const tileCounts = {};
+    allTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        tileCounts[key] = (tileCounts[key] || 0) + 1;
+    });
+    
+    // 檢查是否包含所有么九牌各一張
+    let pairFound = false;
+    for (const reqTile of requiredTiles) {
+        const key = `${reqTile.type}-${reqTile.value}`;
+        const count = tileCounts[key] || 0;
+        if (count === 0) {
+            return false; // 缺少必要牌
+        }
+        if (count === 2) {
+            if (pairFound) {
+                return false; // 只能有一張重複牌
+            }
+            pairFound = true;
+        } else if (count > 2) {
+            return false; // 不能有超過兩張的牌
+        }
+    }
+    
+    // 檢查是否有多餘牌
+    const totalTileCount = Object.values(tileCounts).reduce((sum, count) => sum + count, 0);
+    return totalTileCount === 14 && pairFound;
+}
+
+// 新增：檢查十六不搭
+function isShiLiuBuDa(allTiles) {
+    // 十六不搭需要16張牌，每張牌數值和花色均不同，且無順子、刻子或對子
+    if (allTiles.length !== 16 || state.flowers.length > 0) {
+        return false;
+    }
+    
+    const tileCounts = {};
+    allTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        tileCounts[key] = (tileCounts[key] || 0) + 1;
+    });
+    
+    // 檢查是否有任何對子或刻子
+    for (const key in tileCounts) {
+        if (tileCounts[key] > 1) {
+            return false; // 不能有對子或刻子
+        }
+    }
+    
+    // 檢查是否有任何順子
+    const tilesBySuit = {};
+    allTiles.forEach(tile => {
+        if (!tilesBySuit[tile.type]) {
+            tilesBySuit[tile.type] = [];
+        }
+        tilesBySuit[tile.type].push(tile.value);
+    });
+    
+    for (const suit in tilesBySuit) {
+        const values = tilesBySuit[suit].sort((a, b) => a - b);
+        for (let i = 0; i < values.length - 2; i++) {
+            if (values[i + 1] === values[i] + 1 && values[i + 2] === values[i] + 2) {
+                return false; // 找到順子
+            }
+        }
+    }
+    
+    return true;
+}
+
+// 新增：檢查大於五（全副牌每一組合都大過"五"，不能有五及番子）
+function isGreaterThanFive(allTiles) {
+    // 檢查是否有番子
+    if (allTiles.some(tile => tile.type === TILE_TYPES.HONORS)) {
+        return false;
+    }
+    
+    // 檢查是否有"五"或小於五的牌
+    if (allTiles.some(tile => tile.value <= 5)) {
+        return false;
+    }
+    
+    // 檢查所有組合是否都大於五
+    return isAllCombinationsGreaterThanFive(allTiles);
+}
+
+// 新增：檢查小於五（全副牌每一組合都小過"五"，不能有五及番子）
+function isLessThanFive(allTiles) {
+    // 檢查是否有番子
+    if (allTiles.some(tile => tile.type === TILE_TYPES.HONORS)) {
+        return false;
+    }
+    
+    // 檢查是否有"五"或大於五的牌
+    if (allTiles.some(tile => tile.value >= 5)) {
+        return false;
+    }
+    
+    // 檢查所有組合是否都小於五
+    return isAllCombinationsLessThanFive(allTiles);
+}
+
+// 新增：檢查缺五（全副牌每一組合都無"五"，不能有番子）
+function isMissingFive(allTiles) {
+    // 檢查是否有番子
+    if (allTiles.some(tile => tile.type === TILE_TYPES.HONORS)) {
+        return false;
+    }
+    
+    // 檢查是否有"五"
+    if (allTiles.some(tile => tile.value === 5)) {
+        return false;
+    }
+    
+    // 檢查所有組合是否都沒有五
+    return isAllCombinationsMissingFive(allTiles);
+}
+
+// 輔助函數：檢查所有組合是否都大於五
+function isAllCombinationsGreaterThanFive(allTiles) {
+    const allMelds = getAllMelds(allTiles);
+    const eye = findEye(allTiles);
+    
+    // 檢查每個組合是否都大於五
+    for (const meld of allMelds) {
+        if (meld.type === TILE_TYPES.HONORS) {
+            return false; // 不應該有番子
+        }
+        
+        if (meld.values) {
+            // 順子：檢查所有數字是否都大於五
+            if (meld.values.some(value => value <= 5)) {
+                return false;
+            }
+        } else {
+            // 刻子：檢查數字是否大於五
+            if (meld.value <= 5) {
+                return false;
+            }
+        }
+    }
+    
+    // 檢查將眼是否大於五
+    if (eye && eye.type !== TILE_TYPES.HONORS && eye.value <= 5) {
+        return false;
+    }
+    
+    return true;
+}
+
+// 輔助函數：檢查所有組合是否都小於五
+function isAllCombinationsLessThanFive(allTiles) {
+    const allMelds = getAllMelds(allTiles);
+    const eye = findEye(allTiles);
+    
+    // 檢查每個組合是否都小於五
+    for (const meld of allMelds) {
+        if (meld.type === TILE_TYPES.HONORS) {
+            return false; // 不應該有番子
+        }
+        
+        if (meld.values) {
+            // 順子：檢查所有數字是否都小於五
+            if (meld.values.some(value => value >= 5)) {
+                return false;
+            }
+        } else {
+            // 刻子：檢查數字是否小於五
+            if (meld.value >= 5) {
+                return false;
+            }
+        }
+    }
+    
+    // 檢查將眼是否小於五
+    if (eye && eye.type !== TILE_TYPES.HONORS && eye.value >= 5) {
+        return false;
+    }
+    
+    return true;
+}
+
+// 輔助函數：檢查所有組合是否都沒有五
+function isAllCombinationsMissingFive(allTiles) {
+    const allMelds = getAllMelds(allTiles);
+    const eye = findEye(allTiles);
+    
+    // 檢查每個組合是否都沒有五
+    for (const meld of allMelds) {
+        if (meld.type === TILE_TYPES.HONORS) {
+            return false; // 不應該有番子
+        }
+        
+        if (meld.values) {
+            // 順子：檢查所有數字是否都不等於五
+            if (meld.values.some(value => value === 5)) {
+                return false;
+            }
+        } else {
+            // 刻子：檢查數字是否不等於五
+            if (meld.value === 5) {
+                return false;
+            }
+        }
+    }
+    
+    // 檢查將眼是否不等於五
+    if (eye && eye.type !== TILE_TYPES.HONORS && eye.value === 5) {
+        return false;
+    }
+    
+    return true;
+}
+
+// 輔助函數：獲取所有組合（順子、刻子、槓）
+function getAllMelds(allTiles) {
+    return [
+        ...state.chows.map(chow => ({
+            type: chow.type,
+            values: chow.tiles.map(tile => tile.value).sort((a, b) => a - b)
+        })),
+        ...state.pungs.map(pung => ({
+            type: pung.type,
+            value: pung.value
+        })),
+        ...state.openKongs.map(kong => ({
+            type: kong.type,
+            value: kong.value
+        })),
+        ...state.concealedKongs.map(kong => ({
+            type: kong.type,
+            value: kong.value
+        })),
+        ...getAllPungs(allTiles),
+        ...getAllChows(allTiles).filter(chow => !state.chows.some(schow => 
+            schow.type === chow.type && 
+            schow.tiles.map(tile => tile.value).sort().join() === chow.values.sort().join()
+        ))
+    ];
 }
