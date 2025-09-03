@@ -1,0 +1,248 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+    padding: 15px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #b71c1c;
+}
+
+.section {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+h2 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.2rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.setting-group {
+    flex: 1;
+    min-width: 140px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+select, input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+.dealer-setting {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.tiles-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.tile-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.tile {
+    width: 40px;
+    height: 50px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+}
+
+.tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+}
+
+.tile.selected {
+    background-color: #ffeb3b;
+    border-color: #fbc02d;
+}
+
+.tile.max-selected {
+    background-color: #ffcdd2;
+    cursor: not-allowed;
+}
+
+.tile.winning-tile {
+    background-color: #c8e6c9;
+    border-color: #4caf50;
+}
+
+.character { color: #c62828; }
+.bamboo { color: #2e7d32; }
+.dot { color: #1565c0; }
+.honor { color: #4527a0; }
+.flower { color: #e91e63; }
+
+.selected-tiles-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tiles-group {
+    min-height: 60px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px dashed #ccc;
+}
+
+.selected-tile {
+    width: 30px;
+    height: 40px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+button {
+    padding: 8px 15px;
+    background-color: #b71c1c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.score-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #e8f5e9;
+    border-radius: 5px;
+}
+
+.hand-type {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #b71c1c;
+}
+
+.group-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.exposed-section {
+    margin-top: 15px;
+}
+
+.exposed-tile-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.exposed-tile {
+    width: 35px;
+    height: 45px;
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.exposed-label {
+    font-size: 0.9rem;
+    margin-right: 5px;
+    font-weight: bold;
+    color: #1976d2;
+    min-width: 40px;
+}
+
+.winning-section {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed #ccc;
+}
+
+.info-text {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+.status-message {
+    color: #d32f2f;
+    font-weight: bold;
+    margin-top: 10px;
+    text-align: center;
+}
