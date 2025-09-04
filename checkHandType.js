@@ -3,16 +3,33 @@ function detectHandTypes() {
     const handTypes = [];
     const allTiles = getAllTiles();
     
-    // 優先檢查十三么（高番且結構獨特）
+    // 優先檢查十三么（16張牌版本）
     if (isShiSanYao(allTiles)) {
-        handTypes.push({ name: '十三么', score: 200 });
-        return sortHandTypes(handTypes); // 十三么與其他牌型互斥
+        handTypes.push({ name: '十三么', score: 200 });        
     }
     
-    // 檢查十六不搭（16張牌，特殊結構）
+    // 檢查十六不搭（16張牌）
     if (isShiLiuBuDa(allTiles)) {
-        handTypes.push({ name: '十六不搭', score: 50 });
-        return sortHandTypes(handTypes); // 十六不搭與其他牌型互斥
+        let baseScore = 50;
+        handTypes.push({ name: '十六不搭', score: baseScore });
+        
+        // 檢查三相逢
+        if (isShiLiuBuDaSanXiangFeng(allTiles)) {
+            const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
+            const extraScore = isMenQianQing ? 20 : 10;
+            handTypes.push({ name: '十六不搭三相逢', score: extraScore });
+            baseScore += extraScore;
+        }
+        
+        // 檢查雜龍
+        if (isShiLiuBuDaZhaLong(allTiles)) {
+            const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
+            const extraScore = isMenQianQing ? 15 : 8;
+            handTypes.push({ name: '十六不搭雜龍', score: extraScore });
+            baseScore += extraScore;
+        }
+        
+        return sortHandTypes(handTypes);
     }
 
     // 新增：大於五
@@ -31,16 +48,18 @@ function detectHandTypes() {
     }
 
     // 新增：大七門（大）25番
-    if (isBigSevenDoors(allTiles)) {
-        handTypes.push({ name: '七門齊（大）', score: 25 });
-    } else if (isSmallSevenDoors(allTiles)) {
-        handTypes.push({ name: '七門齊（小）', score: 20 });
-    } else if (isBigFiveDoors(allTiles)) {
-        handTypes.push({ name: '五門齊（大）', score: 15 });
-    } else if (isSmallFiveDoors(allTiles)) {
-        handTypes.push({ name: '五門齊（小）', score: 10 });
+    if (!isShiSanYao(allTiles)) {
+        if (isBigSevenDoors(allTiles)) {
+            handTypes.push({ name: '七門齊（大）', score: 25 });
+        } else if (isSmallSevenDoors(allTiles)) {
+            handTypes.push({ name: '七門齊（小）', score: 20 });
+        } else if (isBigFiveDoors(allTiles)) {
+            handTypes.push({ name: '五門齊（大）', score: 15 });
+        } else if (isSmallFiveDoors(allTiles)) {
+            handTypes.push({ name: '五門齊（小）', score: 10 });
+        }
     }
-
+    
     // 11. 字一色
     if (isAllHonors(allTiles)) {
         handTypes.push({ name: '字一色', score: 150 });
@@ -105,7 +124,7 @@ function detectHandTypes() {
     
     // 檢查基本牌型
     // 檢查門前清 (沒有吃、碰和槓)
-    if (state.chows.length === 0 && state.pungs.length === 0) {
+    if (!isShiSanYao(allTiles) && state.chows.length === 0 && state.pungs.length === 0) {
         handTypes.push({ name: '門前清', score: 5 });
     }
     
@@ -222,15 +241,14 @@ function detectHandTypes() {
     
     // 為了避免假獨和對碰同時出現，將獨獨/假獨檢查放在對碰為false時
     const isPair = isPairWait(allTiles);
-    if (!isPair) {
-        // d. 獨獨
-        if (isSingleWait(allTiles)) {
-            handTypes.push({ name: '獨獨', score: 2 });
-        }
-        // d2. 假獨
-        else if (isFakeSingleWait(allTiles)) {
-            handTypes.push({ name: '假獨', score: 1 });
-        }
+    
+    // 先检查是否是真正的独独
+    if (isSingleWait(allTiles)) {
+        handTypes.push({ name: '獨獨', score: 2 });
+    }
+    // 如果不是独独，再检查是否是假独
+    else if (!isPair && isFakeSingleWait(allTiles)) {
+        handTypes.push({ name: '假獨', score: 1 });
     }
     
     // e. 對碰
@@ -527,7 +545,6 @@ function detectChunQuanDaiX(allTiles) {
 // 檢查混全帶X（全副牌每一組合都有X或番子）
 function detectHunQuanDaiX(allTiles) {
     const targetNumbers = findCommonNumbersInAllCombinations(allTiles);
-    console.log(targetNumbers);
     if (Array.isArray(targetNumbers) && targetNumbers.length > 0) {
         if (isAllCombinationsContainNumbersOrHonors(allTiles, targetNumbers)) {
             return {
@@ -654,10 +671,7 @@ function detectYaojiuHandTypes(allTiles) {
         results.push({ name: '清么碰', score: 200 });
     }else if (isHunYaoPeng(allTiles)) {
         results.push({ name: '混么碰', score: 60 });
-    }
-    
-    // 8. 檢查純全帶么九
-    if (isChunQuanDaiYaoJiu(allTiles)) {
+    }else if (isChunQuanDaiYaoJiu(allTiles)) {
         results.push({ name: '純全帶么九', score: 80 });
     }else if (isHunQuanDaiYaoJiu(allTiles)) {
         results.push({ name: '混全帶么九', score: 40 });
@@ -748,7 +762,7 @@ function isLaoShaoPeng(allTiles) {
 // 4. 檢查嚦咕嚦咕（七對子 + 1組刻子）
 function isLiguligu(allTiles) {
     // 檢查是否為七對子
-    if (!isSevenPairs(allTiles)) return false;
+    if (!isEightPairs(allTiles)) return false;
     
     // 檢查是否有至少一組刻子
     const allPungs = getAllPungs(allTiles);
@@ -756,8 +770,8 @@ function isLiguligu(allTiles) {
 }
 
 // 檢查是否為七對子
-function isSevenPairs(allTiles) {
-    if (allTiles.length !== 14) return false;
+function isEightPairs(allTiles) {
+    if (allTiles.length !== 16) return false;
     
     const counts = {};
     allTiles.forEach(tile => {
@@ -900,7 +914,6 @@ function isAllCombinationsContainYaoJiu(allTiles) {
     
     // 檢查每個組合是否包含么九或番子
     for (const meld of allMelds) {
-        console.log(meld);
         let containsYaoJiu = false;
         
         if (meld.type === TILE_TYPES.HONORS) {
@@ -1939,120 +1952,118 @@ function isAllHonors(allTiles) {
 }
 
 // d. 獨獨: 食糊的必需是單吊/卡窿/偏章，而且不能變成叫多口的形狀
+// 修改独独检测函数
+// 檢查獨獨: 食糊的必需是單吊/卡窿/偏章，而且不能變成叫多口的形狀
 function isSingleWait(allTiles) {
     if (!state.winningTile) return false;
-    
-    // 如果是字牌，只能是單吊
-    if (state.winningTile.type === TILE_TYPES.HONORS) {
-        const count = allTiles.filter(t => 
-            t.type === state.winningTile.type && t.value === state.winningTile.value
-        ).length;
-        return count === 2; // 單吊
-    }
-    
-    // 檢查是否為邊張 (1或9)
-    if (state.winningTile.value === 1 || state.winningTile.value === 9) {
-        return true;
-    }
-    
-    // 檢查是否為嵌張 (需要與前後兩張牌形成順子)
-    const hasPrev = allTiles.some(t => 
-        t.type === state.winningTile.type && t.value === state.winningTile.value - 1
-    );
-    const hasNext = allTiles.some(t => 
-        t.type === state.winningTile.type && t.value === state.winningTile.value + 1
-    );
-    
-    // 如果是嵌張，檢查是否只能叫這張牌
-    if ((hasPrev && !hasNext) || (!hasPrev && hasNext)) {
-        // 檢查是否有其他叫牌可能性
-        const potentialWaits = findPotentialWaits(allTiles, state.winningTile);
-        return potentialWaits.length === 1; // 只能叫這一張牌
-    }
-    
-    return false;
-}
 
-// d2. 假獨: 食糊那隻可以變成叫多口，也可以是單吊/卡窿/偏章
-function isFakeSingleWait(allTiles) {
-    if (!state.winningTile) return false;
-    
-    // 檢查是否為邊張、嵌張或單吊，但不是真正的獨獨
-    const winningValue = state.winningTile.value;
-    const winningType = state.winningTile.type;
-    
-    // 如果是字牌，不可能是假獨
-    if (winningType === TILE_TYPES.HONORS) {
+    // 获取实际手牌（不包括副露和和牌）
+    const handTiles = state.handTiles;
+
+    // 分析和牌前的手牌听牌情况
+    const waitsBeforeWin = analyzeWaitsBeforeWin(handTiles, state.chows, state.pungs, state.openKongs, state.concealedKongs);
+
+    // 獨獨必须只听一张牌，且这张牌就是和牌的那张
+    if (waitsBeforeWin.length !== 1) return false;
+    if (!waitsBeforeWin.some(wait => wait.type === state.winningTile.type && wait.value === state.winningTile.value)) {
         return false;
     }
-    
-    // 檢查是否為邊張 (1或9)
-    if (winningValue === 1 || winningValue === 9) {
-        // 檢查是否有其他叫牌可能性
-        const potentialWaits = findPotentialWaits(allTiles, state.winningTile);
-        return potentialWaits.length > 1; // 可以叫多口
+
+    // 确认是单吊、卡窿或边张形式
+    return isSingleWaitForm(state.winningTile, handTiles);
+}
+
+// 檢查假獨: 形狀雖然是聽多口但可以砌成獨獨的樣子
+function isFakeSingleWait(allTiles) {
+    if (!state.winningTile) return false;
+
+    // 获取实际手牌（不包括副露和和牌）
+    const handTiles = state.handTiles;
+
+    // 分析和牌前的手牌听牌情况
+    const waitsBeforeWin = analyzeWaitsBeforeWin(handTiles, state.chows, state.pungs, state.openKongs, state.concealedKongs);
+
+    // 假獨必须听多于一张牌
+    if (waitsBeforeWin.length <= 1) return false;
+
+    // 确认和牌形式是单吊、卡窿或边张
+    return isSingleWaitForm(state.winningTile, handTiles);
+}
+
+// 检查和牌形式是否是单吊、卡窿或边张
+function isSingleWaitForm(winningTile, handTiles) {
+    const winningValue = winningTile.value;
+    const winningType = winningTile.type;
+
+    // 字牌只能是单吊
+    if (winningType === TILE_TYPES.HONORS) {
+        const count = handTiles.filter(t => t.type === winningType && t.value === winningValue).length;
+        return count === 1; // 单吊形式
     }
-    
-    // 檢查是否為嵌張 (需要與前後兩張牌形成順子)
-    const hasPrev = allTiles.some(t => 
-        t.type === winningType && t.value === winningValue - 1
-    );
-    const hasNext = allTiles.some(t => 
-        t.type === winningType && t.value === winningValue + 1
-    );
-    
-    if ((hasPrev && !hasNext) || (!hasPrev && hasNext)) {
-        // 檢查是否有其他叫牌可能性
-        const potentialWaits = findPotentialWaits(allTiles, state.winningTile);
-        return potentialWaits.length > 1; // 可以叫多口
+
+    // 数牌可以是单吊、卡窿或边张
+    const count = handTiles.filter(t => t.type === winningType && t.value === winningValue).length;
+
+    // 单吊形式
+    if (count === 1) {
+        return true;
     }
-    
+
+    // 卡窿形式（79听8）
+    const hasPrev = handTiles.some(t => t.type === winningType && t.value === winningValue - 1);
+    const hasNext = handTiles.some(t => t.type === winningType && t.value === winningValue + 1);
+    if (hasPrev && hasNext && winningValue >= 2 && winningValue <= 8) {
+        return true;
+    }
+
+    // 边张形式（12听3 或 89听7）
+    if (winningValue === 3 && handTiles.some(t => t.type === winningType && t.value === 1) &&
+        handTiles.some(t => t.type === winningType && t.value === 2)) {
+        return true;
+    }
+    if (winningValue === 7 && handTiles.some(t => t.type === winningType && t.value === 8) &&
+        handTiles.some(t => t.type === winningType && t.value === 9)) {
+        return true;
+    }
+
     return false;
 }
 
 // 尋找可能的叫牌
 function findPotentialWaits(allTiles, winningTile) {
-    const waits = [];
+    const waits = new Set();
     const winningValue = winningTile.value;
     const winningType = winningTile.type;
     
-    // 如果是字牌，只能是單吊
+    // 如果是字牌，只能是单吊
     if (winningType === TILE_TYPES.HONORS) {
-        return [winningValue];
+        waits.add(winningValue);
+        return Array.from(waits);
     }
     
-    // 檢查邊張
-    if (winningValue === 1) {
-        waits.push(1);
-        if (allTiles.some(t => t.type === winningType && t.value === 2)) {
-            waits.push(4);
-        }
-        if (allTiles.some(t => t.type === winningType && t.value === 3)) {
-            waits.push(7);
-        }
-    } else if (winningValue === 9) {
-        waits.push(9);
-        if (allTiles.some(t => t.type === winningType && t.value === 8)) {
-            waits.push(6);
-        }
-        if (allTiles.some(t => t.type === winningType && t.value === 7)) {
-            waits.push(3);
-        }
-    } else {
-        // 檢查嵌張和其他可能性
-        waits.push(winningValue);
+    // 分析手牌结构，找出所有可能的听牌
+    // 这里需要实现一个完整的听牌分析算法
+    // 简化版：检查所有可能形成顺子或刻子的牌
+    
+    // 检查单吊
+    waits.add(winningValue);
+    
+    // 检查顺子可能性
+    for (let i = Math.max(1, winningValue - 2); i <= Math.min(9, winningValue + 2); i++) {
+        if (i === winningValue) continue;
         
-        // 檢查是否可以形成順子
-        for (let i = Math.max(1, winningValue - 2); i <= Math.min(9, winningValue + 2); i++) {
-            if (i === winningValue) continue;
-            
-            if (allTiles.some(t => t.type === winningType && t.value === i)) {
-                waits.push(i);
-            }
+        // 检查是否能形成顺子
+        if (canFormChowWithTile(allTiles, winningType, i)) {
+            waits.add(i);
         }
     }
     
-    return [...new Set(waits)]; // 去除重複
+    // 检查刻子可能性
+    if (canFormPungWithTile(allTiles, winningType, winningValue)) {
+        waits.add(winningValue);
+    }
+    
+    return Array.from(waits);
 }
 
 // e. 對碰: 食糊是對碰
@@ -2067,7 +2078,7 @@ function isPairWait(allTiles) {
         t.type === winningType && t.value === winningValue
     ).length;
     
-    return pairCount >= 2;
+    return pairCount >= 3;
 }
 
 // f. 將眼: 將是數字牌而且是2/5/8
@@ -2591,11 +2602,14 @@ function hasDragonPung(allTiles) {
 
 // 新增：檢查十三么
 function isShiSanYao(allTiles) {
-    // 十三么需要14張牌，門前清，且包含所有么九牌各一張加一張重複牌
-    if (allTiles.length !== 14 || state.chows.length > 0 || state.pungs.length > 0 || state.openKongs.length > 0) {
+    // 十六张牌十三么需要17張牌（包括糊牌）
+    // 包含所有么九牌各一張，再加任意顺子或刻子
+    const totalTiles = allTiles.length;
+    if (totalTiles !== 17) {
         return false;
     }
     
+    // 十三么的基本牌型：一九萬、一九筒、一九索、東南西北中發白
     const requiredTiles = [
         { type: TILE_TYPES.CHARACTERS, value: 1 }, // 1萬
         { type: TILE_TYPES.CHARACTERS, value: 9 }, // 9萬
@@ -2618,33 +2632,143 @@ function isShiSanYao(allTiles) {
         tileCounts[key] = (tileCounts[key] || 0) + 1;
     });
     
-    // 檢查是否包含所有么九牌各一張
-    let pairFound = false;
+    // 檢查是否包含所有么九牌各至少一張
     for (const reqTile of requiredTiles) {
         const key = `${reqTile.type}-${reqTile.value}`;
         const count = tileCounts[key] || 0;
-        if (count === 0) {
+        if (count < 1) {
             return false; // 缺少必要牌
-        }
-        if (count === 2) {
-            if (pairFound) {
-                return false; // 只能有一張重複牌
-            }
-            pairFound = true;
-        } else if (count > 2) {
-            return false; // 不能有超過兩張的牌
         }
     }
     
-    // 檢查是否有多餘牌
-    const totalTileCount = Object.values(tileCounts).reduce((sum, count) => sum + count, 0);
-    return totalTileCount === 14 && pairFound;
+    // 檢查是否有將眼（其中一張牌有兩張）
+    let pairFound = false;
+    let pairTile = null;
+    for (const reqTile of requiredTiles) {
+        const key = `${reqTile.type}-${reqTile.value}`;
+        const count = tileCounts[key] || 0;
+        if (count == 2) {
+            pairFound = true;
+            pairTile = reqTile;
+            break;
+        }
+    }
+
+    if (!pairFound) {
+        return false; // 沒有將眼
+    }
+    
+    // 先統計每種牌需要排除的數量
+    const excludeCounts = {};
+    requiredTiles.forEach(reqTile => {
+        const key = `${reqTile.type}-${reqTile.value}`;
+        excludeCounts[key] = 1; // 每種牌保留一張
+    });
+    
+    // 將眼的牌多保留一張（總共保留兩張）
+    if (pairTile) {
+        const pairKey = `${pairTile.type}-${pairTile.value}`;
+        excludeCounts[pairKey] = 2;
+    }
+    
+    // 收集額外的牌（3張牌）
+    const extraTiles = [];
+    const usedCounts = {};
+    
+    allTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        usedCounts[key] = (usedCounts[key] || 0) + 1;
+        
+        // 如果這個牌型需要排除的數量還沒達到，就跳過
+        if (excludeCounts[key] && usedCounts[key] <= excludeCounts[key]) {
+            return;
+        }
+        
+        // 否則加入額外牌
+        extraTiles.push(tile);
+    });
+    
+    // 額外的牌必須能組成順子或刻子
+    if (extraTiles.length !== 3) {
+        return false;
+    }
+    
+    // 檢查是否能組成順子或刻子
+    return canFormMeld(extraTiles);
 }
 
-// 新增：檢查十六不搭
+// 檢查是否能組成順子或刻子
+function canFormMeld(tiles) {
+    if (tiles.length !== 3) return false;
+    
+    // 檢查是否為刻子（三張相同）
+    if (tiles.every(tile => 
+        tile.type === tiles[0].type && tile.value === tiles[0].value
+    )) {
+        return true;
+    }
+    
+    // 檢查是否為順子（三張連續）
+    const sortedTiles = [...tiles].sort((a, b) => a.value - b.value);
+    
+    const isChow = sortedTiles[0].value + 1 === sortedTiles[1].value && 
+                  sortedTiles[1].value + 1 === sortedTiles[2].value &&
+                  sortedTiles[0].type === sortedTiles[1].type && 
+                  sortedTiles[1].type === sortedTiles[2].type;
+    
+    return isChow;
+}
+
+function canFormMelds(tiles, neededMelds) {
+    if (tiles.length !== neededMelds * 3) return false;
+    if (tiles.length === 0) return true;
+
+    // 按花色和数值排序
+    const sortedTiles = [...tiles].sort((a, b) => {
+        if (a.type !== b.type) return a.type.localeCompare(b.type);
+        return a.value - b.value;
+    });
+
+    // 尝试形成刻子
+    for (let i = 0; i < sortedTiles.length - 2; i++) {
+        if (sortedTiles[i].type === sortedTiles[i + 1].type &&
+            sortedTiles[i].type === sortedTiles[i + 2].type &&
+            sortedTiles[i].value === sortedTiles[i + 1].value &&
+            sortedTiles[i].value === sortedTiles[i + 2].value) {
+            // 找到刻子
+            const remainingTiles = sortedTiles.filter((t, index) =>
+                index !== i && index !== i + 1 && index !== i + 2
+            );
+            if (canFormMelds(remainingTiles, neededMelds - 1)) {
+                return true;
+            }
+        }
+    }
+
+    // 尝试形成顺子（仅限数牌）
+    for (let i = 0; i < sortedTiles.length - 2; i++) {
+        if (sortedTiles[i].type !== TILE_TYPES.HONORS &&
+            sortedTiles[i].type === sortedTiles[i + 1].type &&
+            sortedTiles[i].type === sortedTiles[i + 2].type &&
+            sortedTiles[i].value + 1 === sortedTiles[i + 1].value &&
+            sortedTiles[i].value + 2 === sortedTiles[i + 2].value) {
+            // 找到顺子
+            const remainingTiles = sortedTiles.filter((t, index) =>
+                index !== i && index !== i + 1 && index !== i + 2
+            );
+            if (canFormMelds(remainingTiles, neededMelds - 1)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// 更新：檢查十六不搭的特殊計法
 function isShiLiuBuDa(allTiles) {
-    // 十六不搭需要16張牌，每張牌數值和花色均不同，且無順子、刻子或對子
-    if (allTiles.length !== 16 || state.flowers.length > 0) {
+    // 十六不搭需要17張牌（包括糊牌），每張牌數值和花色均不同，且無順子、刻子或對子
+    if (allTiles.length !== 17) {
         return false;
     }
     
@@ -2654,20 +2778,31 @@ function isShiLiuBuDa(allTiles) {
         tileCounts[key] = (tileCounts[key] || 0) + 1;
     });
     
-    // 檢查是否有任何對子或刻子
+    // 檢查是否有任何對子或刻子（除了将眼）
+    let pairCount = 0;
     for (const key in tileCounts) {
-        if (tileCounts[key] > 1) {
-            return false; // 不能有對子或刻子
+        if (tileCounts[key] > 2) {
+            return false; // 不能有刻子或杠
         }
+        if (tileCounts[key] === 2) {
+            pairCount++;
+        }
+    }
+    
+    // 十六不搭只能有一对将眼
+    if (pairCount !== 1) {
+        return false;
     }
     
     // 檢查是否有任何順子
     const tilesBySuit = {};
     allTiles.forEach(tile => {
-        if (!tilesBySuit[tile.type]) {
-            tilesBySuit[tile.type] = [];
+        if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
+            if (!tilesBySuit[tile.type]) {
+                tilesBySuit[tile.type] = [];
+            }
+            tilesBySuit[tile.type].push(tile.value);
         }
-        tilesBySuit[tile.type].push(tile.value);
     });
     
     for (const suit in tilesBySuit) {
@@ -2676,6 +2811,83 @@ function isShiLiuBuDa(allTiles) {
             if (values[i + 1] === values[i] + 1 && values[i + 2] === values[i] + 2) {
                 return false; // 找到順子
             }
+        }
+    }
+    
+    return true;
+}
+
+// 新增：檢查十六不搭三相逢
+function isShiLiuBuDaSanXiangFeng(allTiles) {
+    if (!isShiLiuBuDa(allTiles)) return false;
+    
+    // 檢查筒索萬是否是159159159排列
+    const numberTiles = allTiles.filter(tile => 
+        tile.type === TILE_TYPES.CHARACTERS || 
+        tile.type === TILE_TYPES.BAMBOOS || 
+        tile.type === TILE_TYPES.DOTS
+    );
+    
+    // 按花色分組
+    const suits = {
+        [TILE_TYPES.CHARACTERS]: [],
+        [TILE_TYPES.BAMBOOS]: [],
+        [TILE_TYPES.DOTS]: []
+    };
+    
+    numberTiles.forEach(tile => {
+        suits[tile.type].push(tile.value);
+    });
+    
+    // 檢查每個花色是否都是1,5,9
+    for (const suit in suits) {
+        const values = suits[suit].sort();
+        if (values.length !== 3 || 
+            !values.includes(1) || 
+            !values.includes(5) || 
+            !values.includes(9)) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// 新增：檢查十六不搭雜龍
+function isShiLiuBuDaZhaLong(allTiles) {
+    if (!isShiLiuBuDa(allTiles)) return false;
+    
+    // 檢查筒索萬是否是147258369排列
+    const numberTiles = allTiles.filter(tile => 
+        tile.type === TILE_TYPES.CHARACTERS || 
+        tile.type === TILE_TYPES.BAMBOOS || 
+        tile.type === TILE_TYPES.DOTS
+    );
+    
+    // 按數值分組
+    const values = {
+        1: [], 2: [], 3: [],
+        4: [], 5: [], 6: [],
+        7: [], 8: [], 9: []
+    };
+    
+    numberTiles.forEach(tile => {
+        values[tile.value].push(tile.type);
+    });
+    
+    // 檢查每個數值是否有三種花色
+    for (let i = 1; i <= 9; i++) {
+        if (values[i].length !== 3) {
+            return false;
+        }
+        
+        // 檢查是否包含三種花色
+        const hasCharacters = values[i].includes(TILE_TYPES.CHARACTERS);
+        const hasBamboos = values[i].includes(TILE_TYPES.BAMBOOS);
+        const hasDots = values[i].includes(TILE_TYPES.DOTS);
+        
+        if (!hasCharacters || !hasBamboos || !hasDots) {
+            return false;
         }
     }
     
@@ -2851,4 +3063,228 @@ function getAllMelds(allTiles) {
             schow.tiles.map(tile => tile.value).sort().join() === chow.values.sort().join()
         ))
     ];
+}
+
+// 辅助函数：检查是否能与某张牌形成顺子
+function canFormChowWithTile(allTiles, type, value) {
+    // 实现顺子形成检查逻辑
+    // 简化版：检查是否有相邻的牌
+    const hasPrev = allTiles.some(t => t.type === type && t.value === value - 1);
+    const hasNext = allTiles.some(t => t.type === type && t.value === value + 1);
+    const hasPrev2 = allTiles.some(t => t.type === type && t.value === value - 2);
+    const hasNext2 = allTiles.some(t => t.type === type && t.value === value + 2);
+    
+    return (hasPrev && hasNext) || (hasPrev && hasPrev2) || (hasNext && hasNext2);
+}
+
+// 辅助函数：检查是否能与某张牌形成刻子
+function canFormPungWithTile(allTiles, type, value) {
+    const count = allTiles.filter(t => t.type === type && t.value === value).length;
+    return count >= 2; // 已经有2张，再来一张就能形成刻子
+}
+
+function analyzeRealWaits(allTiles) {
+    const waits = [];
+    const tiles = [...allTiles];
+    
+    // 移除花牌
+    const filteredTiles = tiles.filter(tile => tile.type !== TILE_TYPES.FLOWERS);
+    
+    // 分析所有可能的听牌
+    // 这里需要实现完整的麻将听牌分析算法
+    
+    // 简化版：分析单吊、对碰、边张、卡窿、多面听等情况
+    const tileCounts = {};
+    filteredTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        tileCounts[key] = (tileCounts[key] || 0) + 1;
+    });
+    
+    // 分析刻子听牌
+    for (const key in tileCounts) {
+        if (tileCounts[key] === 2) {
+            const [type, value] = key.split('-');
+            waits.push({ type, value: parseInt(value) }); // 对碰听牌
+        }
+    }
+    
+    // 分析顺子听牌（数牌）
+    const numberTiles = filteredTiles.filter(tile => 
+        tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS
+    );
+    
+    const tilesBySuit = {};
+    numberTiles.forEach(tile => {
+        if (!tilesBySuit[tile.type]) {
+            tilesBySuit[tile.type] = [];
+        }
+        tilesBySuit[tile.type].push(tile.value);
+    });
+    
+    // 分析每个花色的听牌
+    for (const suit in tilesBySuit) {
+        const values = [...new Set(tilesBySuit[suit])].sort((a, b) => a - b);
+        
+        for (let i = 0; i < values.length; i++) {
+            const value = values[i];
+            
+            // 检查边张听牌（12听3，89听7）
+            if (value === 1 && values.includes(2) && !values.includes(3)) {
+                waits.push({ type: suit, value: 3 });
+            }
+            if (value === 2 && values.includes(1) && !values.includes(3)) {
+                waits.push({ type: suit, value: 3 });
+            }
+            if (value === 8 && values.includes(9) && !values.includes(7)) {
+                waits.push({ type: suit, value: 7 });
+            }
+            if (value === 9 && values.includes(8) && !values.includes(7)) {
+                waits.push({ type: suit, value: 7 });
+            }
+            
+            // 检查卡窿听牌（13听2，24听3，35听4，46听5，57听6，68听7，79听8）
+            if (i < values.length - 1 && values[i + 1] === value + 2) {
+                waits.push({ type: suit, value: value + 1 });
+            }
+            
+            // 检查多面听牌（如4567听3、5、8）
+            if (i < values.length - 2) {
+                // 连续三张牌（如456）
+                if (values[i + 1] === value + 1 && values[i + 2] === value + 2) {
+                    // 可以听value-1或value+3
+                    if (value > 1) waits.push({ type: suit, value: value - 1 });
+                    if (value < 7) waits.push({ type: suit, value: value + 3 });
+                }
+            }
+            
+            // 检查四连牌（如4567）
+            if (i < values.length - 3 && 
+                values[i + 1] === value + 1 && 
+                values[i + 2] === value + 2 && 
+                values[i + 3] === value + 3) {
+                // 听3、5、8
+                if (value > 1) waits.push({ type: suit, value: value - 1 });
+                waits.push({ type: suit, value: value + 1 });
+                if (value < 6) waits.push({ type: suit, value: value + 4 });
+            }
+        }
+    }
+    
+    // 去重
+    const uniqueWaits = [];
+    const seen = new Set();
+    
+    waits.forEach(wait => {
+        const key = `${wait.type}-${wait.value}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueWaits.push(wait);
+        }
+    });
+    console.log(uniqueWaits);
+    return uniqueWaits;
+}
+
+// 改进分析和牌前的手牌听牌情况
+function analyzeWaitsBeforeWin(handTiles, chows, pungs, openKongs, concealedKongs) {
+    const waits = [];
+    const tiles = [...handTiles];
+    
+
+    // 移除花牌
+    const filteredTiles = tiles.filter(tile => tile.type !== TILE_TYPES.FLOWERS);
+
+    // 获取所有已暴露的牌（吃、碰、明槓、暗槓）
+    const meldedTiles = [];
+    chows.forEach(chow => meldedTiles.push(...chow.tiles));
+    pungs.forEach(pung => meldedTiles.push(...Array(3).fill({ type: pung.type, value: pung.value })));
+    openKongs.forEach(kong => meldedTiles.push(...Array(4).fill({ type: kong.type, value: kong.value })));
+    concealedKongs.forEach(kong => meldedTiles.push(...Array(4).fill({ type: kong.type, value: kong.value })));
+
+    // 检查手牌是否接近和牌（16张牌）
+    if (filteredTiles.length !== 16) return waits;
+
+    // 尝试每种可能的和牌
+    const allPossibleTiles = [];
+    for (const type of [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS, TILE_TYPES.HONORS]) {
+        const maxValue = type === TILE_TYPES.HONORS ? 7 : 9;
+        for (let value = 1; value <= maxValue; value++) {
+            allPossibleTiles.push({ type, value });
+        }
+    }
+
+    // 检查每张可能的牌是否能使手牌和牌
+    for (const tile of allPossibleTiles) {
+        const testHand = [...filteredTiles, tile];
+        if (canWin(testHand, chows, pungs, openKongs, concealedKongs)) {
+            waits.push(tile);
+        }
+    }
+
+    console.log(waits);
+    // 去重
+    const uniqueWaits = [];
+    const seen = new Set();
+    waits.forEach(wait => {
+        const key = `${wait.type}-${wait.value}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueWaits.push(wait);
+        }
+    });
+    
+    console.log(uniqueWaits);
+
+    return uniqueWaits;
+}
+
+// 检查和牌
+function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
+    if (tiles.length !== 17) return false;
+
+    // 检查是否能组成4组（顺子/刻子/槓）加一对
+    const sortedTiles = [...tiles].sort((a, b) => {
+        if (a.type !== b.type) return a.type.localeCompare(b.type);
+        return a.value - b.value;
+    });
+
+    // 获取所有已暴露的组合
+    const melds = [
+        ...chows.map(chow => ({ type: chow.type, values: chow.tiles.map(t => t.value).sort((a, b) => a - b) })),
+        ...pungs.map(pung => ({ type: pung.type, value: pung.value })),
+        ...openKongs.map(kong => ({ type: kong.type, value: kong.value })),
+        ...concealedKongs.map(kong => ({ type: kong.type, value: kong.value }))
+    ];
+
+    const meldCount = melds.length;
+
+    // 计算还需要的手牌组合数
+    const neededMelds = 5 - meldCount; // 5个组合加一对
+    const neededTilesForMelds = neededMelds * 3;
+    const remainingTiles = sortedTiles.filter(tile =>
+        !melds.some(meld =>
+            (meld.values && meld.type === tile.type && meld.values.includes(tile.value)) ||
+            (meld.value && meld.type === tile.type && meld.value === tile.value)
+        )
+    );
+
+    // 检查剩余牌是否能组成需要的组合数加一对
+    if (remainingTiles.length !== neededTilesForMelds + 2) return false;
+
+    // 尝试找出将牌
+    for (let i = 0; i < remainingTiles.length - 1; i++) {
+        if (remainingTiles[i].type === remainingTiles[i + 1].type &&
+            remainingTiles[i].value === remainingTiles[i + 1].value) {
+            // 找到一对将牌
+            const pair = [remainingTiles[i], remainingTiles[i + 1]];
+            const restTiles = remainingTiles.filter((t, index) => index !== i && index !== i + 1);
+
+            // 检查剩余牌是否能组成需要的顺子或刻子
+            if (canFormMelds(restTiles, neededMelds)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
