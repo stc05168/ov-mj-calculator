@@ -5,31 +5,69 @@ function detectHandTypes() {
     
     // 優先檢查十三么（16張牌版本）
     if (isShiSanYao(allTiles)) {
-        handTypes.push({ name: '十三么', score: 200 });        
+        // 檢查是否是十三飞（和牌张是19万19筒19索或字牌）
+        let isThirteenFly = false;
+        if (state.winningTile) {
+            const wt = state.winningTile;
+            
+            // 檢查winning tile在allTiles中是否只有2隻（作為將眼）
+            const winningTileCount = allTiles.filter(tile => 
+                tile.type === wt.type && tile.value === wt.value
+            ).length;
+            
+            // 只有當winning tile正好有2張時才檢查十三飞條件
+            if (winningTileCount === 2) {
+                // 檢查是否是19万19筒19索
+                if (wt.type !== TILE_TYPES.HONORS && wt.type !== TILE_TYPES.FLOWERS) {
+                    if (wt.value === 1 || wt.value === 9) {
+                        isThirteenFly = true;
+                    }
+                }
+                // 檢查是否是字牌（东南西北中发白）
+                else if (wt.type === TILE_TYPES.HONORS) {
+                    isThirteenFly = true;
+                }
+            }
+        }
+        
+        // 根據十三飞條件計分
+        if (isThirteenFly) {
+            handTypes.push({ name: '十三么（十三飛）', score: 150 });
+        } else {
+            handTypes.push({ name: '十三么', score: 140 });
+        }        
     }
     
     // 檢查十六不搭（16張牌）
-    if (isShiLiuBuDa(allTiles)) {
-        let baseScore = 50;
-        handTypes.push({ name: '十六不搭', score: baseScore });
+    const shiLiuBuDaResult = isShiLiuBuDa(allTiles);
+    if (shiLiuBuDaResult.isValid) {
+        handTypes.push({ 
+            name: shiLiuBuDaResult.isShiLiuFei ? '十六不搭 (十六飛) ' : '十六不搭', 
+            score: shiLiuBuDaResult.isShiLiuFei ? 70 : 60 
+        });
+
+        // 檢查十六不搭獨獨
+        if (isShiLiuBuDaDuDu(allTiles)) {
+            handTypes.push({ name: '十六不搭獨獨', score: 2 });
+        }
         
         // 檢查三相逢
-        if (isShiLiuBuDaSanXiangFeng(allTiles)) {
-            const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
-            const extraScore = isMenQianQing ? 20 : 10;
-            handTypes.push({ name: '十六不搭三相逢', score: extraScore });
-            baseScore += extraScore;
+        const sanXiangFengResult = isShiLiuBuDaSanXiangFeng(allTiles);
+        if (sanXiangFengResult.isValid) {
+            handTypes.push({ 
+                name: sanXiangFengResult.isDark ? '十六不搭三相逢 (暗)' : '十六不搭三相逢 (明)', 
+                score: sanXiangFengResult.isDark ? 20 : 10 
+            });
         }
-        
+
         // 檢查雜龍
-        if (isShiLiuBuDaZhaLong(allTiles)) {
-            const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
-            const extraScore = isMenQianQing ? 15 : 8;
-            handTypes.push({ name: '十六不搭雜龍', score: extraScore });
-            baseScore += extraScore;
+        const zhaLongResult = isShiLiuBuDaZhaLong(allTiles);
+        if (zhaLongResult.isValid) {
+            handTypes.push({ 
+                name: zhaLongResult.isDark ? '十六不搭雜龍 (暗)' : '十六不搭雜龍 (明)', 
+                score: zhaLongResult.isDark ? 20 : 10 
+            });
         }
-        
-        return sortHandTypes(handTypes);
     }
 
     // 新增：大於五
@@ -48,7 +86,7 @@ function detectHandTypes() {
     }
 
     // 新增：大七門（大）25番
-    if (!isShiSanYao(allTiles)) {
+    if (!shiLiuBuDaResult.isValid && !isShiSanYao(allTiles)) {
         if (isBigSevenDoors(allTiles)) {
             handTypes.push({ name: '七門齊（大）', score: 25 });
         } else if (isSmallSevenDoors(allTiles)) {
@@ -99,10 +137,12 @@ function detectHandTypes() {
     });
     
     // 新增龍牌型檢測
-    const dragonResults = detectDragonHandTypes(allTiles);
-    dragonResults.forEach(result => {
-        handTypes.push(result);
-    });
+    if (!shiLiuBuDaResult.isValid) {
+        const dragonResults = detectDragonHandTypes(allTiles);
+        dragonResults.forEach(result => {
+            handTypes.push(result);
+        });        
+    }
     
     // 新增么九相關牌型檢測（優先檢查高番數的）
     const yaojiuResults = detectYaojiuHandTypes(allTiles);
@@ -124,7 +164,7 @@ function detectHandTypes() {
     
     // 檢查基本牌型
     // 檢查門前清 (沒有吃、碰和槓)
-    if (!isShiSanYao(allTiles) && state.chows.length === 0 && state.pungs.length === 0) {
+    if (!shiLiuBuDaResult.isValid && !isShiSanYao(allTiles) && state.chows.length === 0 && state.pungs.length === 0) {
         handTypes.push({ name: '門前清', score: 5 });
     }
     
@@ -253,7 +293,11 @@ function detectHandTypes() {
     
     // e. 對碰
     if (isPair) {
-        handTypes.push({ name: '對碰', score: 2 });
+        if (isShiSanYao) {
+            handTypes.push({ name: '獨獨', score: 2 });
+        }else {
+            handTypes.push({ name: '對碰', score: 2 });
+        }
     }
     
     // f. 將眼
@@ -321,117 +365,190 @@ function detectDragonHandTypes(allTiles) {
 function detectQingLong(allTiles) {
     const results = [];
     const numberTiles = allTiles.filter(tile => tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS);
-    
-    // 按花色分組
+
+    // 按花色分組並統計手牌中的牌數
     const suits = {};
     numberTiles.forEach(tile => {
         if (!suits[tile.type]) {
-            suits[tile.type] = new Set();
+            suits[tile.type] = {};
         }
-        suits[tile.type].add(tile.value);
+        suits[tile.type][tile.value] = (suits[tile.type][tile.value] || 0) + 1;
     });
-    
-    // 檢查每個花色是否包含1-9
+
+    // 檢查每個花色的清龍
     for (const suit in suits) {
-        if (suits[suit].size >= 9) {
-            // 確認確實有1-9的所有數字
-            let hasAllNumbers = true;
-            for (let i = 1; i <= 9; i++) {
-                if (!suits[suit].has(i)) {
-                    hasAllNumbers = false;
-                    break;
-                }
-            }
-            
-            if (hasAllNumbers) {
-                // 檢查是明清龍還是暗清龍
+        const tileCounts = { ...suits[suit] };
+        let qingLongCount = 0;
+
+        // 計算手牌中的 123 和 789 順子數量
+        let handChow123Count = Math.min(
+            tileCounts[1] || 0,
+            tileCounts[2] || 0,
+            tileCounts[3] || 0
+        );
+        let handChow789Count = Math.min(
+            tileCounts[7] || 0,
+            tileCounts[8] || 0,
+            tileCounts[9] || 0
+        );
+        const has456 = [4, 5, 6].every(i => tileCounts[i] >= 1);
+
+        // 檢查副露的順子（來自 state.chows）
+        let exposedChow123Count = 0;
+        let exposedChow789Count = 0;
+
+        if (state.chows && state.chows.length > 0) {
+            exposedChow123Count = state.chows.filter(chow => 
+                chow.type === suit && 
+                chow.tiles.every(tile => tile.value === 1 || tile.value === 2 || tile.value === 3)
+            ).length;
+            exposedChow789Count = state.chows.filter(chow => 
+                chow.type === suit && 
+                chow.tiles.every(tile => tile.value === 7 || tile.value === 8 || tile.value === 9)
+            ).length;
+        }
+
+        //allTiles 包括了exposedChow
+        handChow123Count = handChow123Count - exposedChow123Count;
+        handChow789Count = handChow789Count - exposedChow789Count;
+
+        if (has456) {
+            // 總清龍數量為所有可能的 123 和 789 組合
+            // 手牌的 123 和 789 組合
+            const handQingLongCount = handChow123Count * handChow789Count;
+            // 副露的 123 和手牌的 789 組合
+            const exposed123QingLongCount = exposedChow123Count * handChow789Count;
+            // 手牌的 123 和副露的 789 組合
+            const exposed789QingLongCount = handChow123Count * exposedChow789Count;
+            // 副露的 123 和副露的 789 組合
+            const exposedBothQingLongCount = exposedChow123Count * exposedChow789Count;
+
+            // 總清龍數量
+            qingLongCount = handQingLongCount + exposed123QingLongCount + exposed789QingLongCount + exposedBothQingLongCount;
+
+            if (qingLongCount > 0) {
                 const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
-                
+    
+                // 分配明清龍和暗清龍
+                let mingQingLongCount = 0;
+                let anQingLongCount = 0;
+    
                 if (isMenQianQing) {
-                    results.push({ name: `暗清龍(${suit})`, score: 20 });
+                    // 完全門前清，所有清龍為暗清龍
+                    anQingLongCount = qingLongCount;
                 } else {
+                    // 明清龍：包含副露的 123 或 789
+                    mingQingLongCount = exposed123QingLongCount + exposed789QingLongCount + exposedBothQingLongCount;
+                    // 暗清龍：僅來自手牌的 123 和 789
+                    anQingLongCount = handQingLongCount;
+                }
+    
+                // 添加明清龍
+                for (let i = 0; i < mingQingLongCount; i++) {
                     results.push({ name: `明清龍(${suit})`, score: 10 });
+                }
+                // 添加暗清龍
+                for (let i = 0; i < anQingLongCount; i++) {
+                    results.push({ name: `暗清龍(${suit})`, score: 20 });
                 }
             }
         }
     }
-    
+
     return results;
 }
 
-// 檢查清龍（同一個款式包含1-9）
-function hasCompleteQingLong(allTiles) {
-    const numberTiles = allTiles.filter(tile => tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS);
-    
-    // 按花色分組
-    const suits = {};
-    numberTiles.forEach(tile => {
-        if (!suits[tile.type]) {
-            suits[tile.type] = new Set();
-        }
-        suits[tile.type].add(tile.value);
-    });
-    
-    // 檢查每個花色是否包含1-9
-    for (const suit in suits) {
-        if (suits[suit].size >= 9) {
-            // 確認確實有1-9的所有數字
-            let hasAllNumbers = true;
-            for (let i = 1; i <= 9; i++) {
-                if (!suits[suit].has(i)) {
-                    hasAllNumbers = false;
-                    break;
-                }
-            }
-            if (hasAllNumbers) {
-                return suit; // 返回花色名稱
-            }
-        }
-    }
-    
-    return false;
-}
-
-// 檢測雜龍
 function detectZhaLong(allTiles) {
     const results = [];
     const numberTiles = allTiles.filter(tile => tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS);
-    
-    // 檢查是否包含三種花色
-    const suits = new Set();
-    numberTiles.forEach(tile => {
-        suits.add(tile.type);
-    });
-    
-    if (suits.size < 3) {
-        return results; // 沒有三種花色
-    }
-    
-    // 檢查是否包含1-9的所有數字
-    const allValues = new Set();
-    numberTiles.forEach(tile => {
-        allValues.add(tile.value);
-    });
-    
-    let hasAllNumbers = true;
+
+    // 按數值和花色統計牌數
+    const values = {};
     for (let i = 1; i <= 9; i++) {
-        if (!allValues.has(i)) {
-            hasAllNumbers = false;
-            break;
-        }
+        values[i] = { [TILE_TYPES.CHARACTERS]: 0, [TILE_TYPES.BAMBOOS]: 0, [TILE_TYPES.DOTS]: 0 };
     }
-    
-    if (hasAllNumbers) {
-        // 檢查是明雜龍還是暗雜龍
+    numberTiles.forEach(tile => {
+        values[tile.value][tile.type] = (values[tile.value][tile.type] || 0) + 1;
+    });
+
+    // 檢查副露的順子
+    const exposedChows = state.chows || [];
+    const exposedChowTiles = new Set();
+    let exposedChow123Count = 0;
+    let exposedChow789Count = 0;
+    exposedChows.forEach(chow => {
+        chow.tiles.forEach(tile => {
+            exposedChowTiles.add(`${tile.type}-${tile.value}`);
+        });
+        // 檢查副露的 123 和 789 順子（跨花色）
+        if (chow.tiles.every(tile => tile.value === 1 || tile.value === 2 || tile.value === 3)) {
+            exposedChow123Count++;
+        } else if (chow.tiles.every(tile => tile.value === 7 || tile.value === 8 || tile.value === 9)) {
+            exposedChow789Count++;
+        }
+    });
+
+    // 計算手牌中的 123 和 789 組合數（考慮副露減少的牌數）
+    const tempValues = JSON.parse(JSON.stringify(values));
+    let handChow123Count = Infinity;
+    let handChow789Count = Infinity;
+
+    // 計算手牌的 123 和 789 張數
+    for (let i = 1; i <= 3; i++) {
+        let count = 0;
+        for (const suit of [TILE_TYPES.CHARACTERS, TILE_TYPES.BAMBOOS, TILE_TYPES.DOTS]) {
+            count += tempValues[i][suit];
+        }
+        handChow123Count = Math.min(handChow123Count, count);
+    }
+    for (let i = 7; i <= 9; i++) {
+        let count = 0;
+        for (const suit of [TILE_TYPES.CHARACTERS, TILE_TYPES.BAMBOOS, TILE_TYPES.DOTS]) {
+            count += tempValues[i][suit];
+        }
+        handChow789Count = Math.min(handChow789Count, count);
+    }
+
+    // 檢查 456 是否至少各有 1 張
+    const has456 = [4, 5, 6].every(i => 
+        (tempValues[i][TILE_TYPES.CHARACTERS] > 0) ||
+        (tempValues[i][TILE_TYPES.BAMBOOS] > 0) ||
+        (tempValues[i][TILE_TYPES.DOTS] > 0)
+    );
+
+    let mingZhaLongCount = 0;
+    let anZhaLongCount = 0;
+
+    handChow123Count = handChow123Count - exposedChow123Count;
+    handChow789Count = handChow789Count - exposedChow789Count;
+
+    if (has456) {
+        // 總雜龍數量為所有可能的 123 和 789 組合
+        const handZhaLongCount = handChow123Count * handChow789Count;
+        const exposed123ZhaLongCount = exposedChow123Count * handChow789Count;
+        const exposed789ZhaLongCount = handChow123Count * exposedChow789Count;
+        const exposedBothZhaLongCount = exposedChow123Count * exposedChow789Count;
+        const zhaLongCount = handZhaLongCount + exposed123ZhaLongCount + exposed789ZhaLongCount + exposedBothZhaLongCount;
+
+        // 分配明暗雜龍
         const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
-        
+
         if (isMenQianQing) {
-            results.push({ name: '暗雜龍', score: 10 });
+            anZhaLongCount = zhaLongCount;
         } else {
-            results.push({ name: '明雜龍', score: 5 });
+            mingZhaLongCount = exposed123ZhaLongCount + exposed789ZhaLongCount + exposedBothZhaLongCount;
+            anZhaLongCount = handZhaLongCount;
         }
     }
-    
+
+    // 添加明雜龍和暗雜龍
+    for (let i = 0; i < mingZhaLongCount; i++) {
+        results.push({ name: '明雜龍', score: 5 });
+    }
+    for (let i = 0; i < anZhaLongCount; i++) {
+        results.push({ name: '暗雜龍', score: 10 });
+    }
+
     return results;
 }
 
@@ -2765,133 +2882,334 @@ function canFormMelds(tiles, neededMelds) {
     return false;
 }
 
-// 更新：檢查十六不搭的特殊計法
+// 檢查十六不搭
 function isShiLiuBuDa(allTiles) {
-    // 十六不搭需要17張牌（包括糊牌），每張牌數值和花色均不同，且無順子、刻子或對子
-    if (allTiles.length !== 17) {
-        return false;
-    }
-    
+    if (allTiles.length !== 17) return false;
+
     const tileCounts = {};
     allTiles.forEach(tile => {
         const key = `${tile.type}-${tile.value}`;
         tileCounts[key] = (tileCounts[key] || 0) + 1;
     });
-    
-    // 檢查是否有任何對子或刻子（除了将眼）
+
     let pairCount = 0;
+    let pairTile = null;
     for (const key in tileCounts) {
-        if (tileCounts[key] > 2) {
-            return false; // 不能有刻子或杠
-        }
+        if (tileCounts[key] > 2) return false; // 不能有刻子或槓
         if (tileCounts[key] === 2) {
             pairCount++;
+            pairTile = key;
         }
     }
-    
-    // 十六不搭只能有一对将眼
-    if (pairCount !== 1) {
-        return false;
-    }
-    
-    // 檢查是否有任何順子
+
+    if (pairCount !== 1) return false; // 必須只有一對將眼
+
     const tilesBySuit = {};
     allTiles.forEach(tile => {
         if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
-            if (!tilesBySuit[tile.type]) {
-                tilesBySuit[tile.type] = [];
-            }
+            if (!tilesBySuit[tile.type]) tilesBySuit[tile.type] = [];
             tilesBySuit[tile.type].push(tile.value);
         }
     });
-    
+
     for (const suit in tilesBySuit) {
         const values = tilesBySuit[suit].sort((a, b) => a - b);
         for (let i = 0; i < values.length - 2; i++) {
             if (values[i + 1] === values[i] + 1 && values[i + 2] === values[i] + 2) {
-                return false; // 找到順子
+                return false; // 不能有順子
             }
         }
     }
-    
-    return true;
-}
 
-// 新增：檢查十六不搭三相逢
-function isShiLiuBuDaSanXiangFeng(allTiles) {
-    if (!isShiLiuBuDa(allTiles)) return false;
-    
-    // 檢查筒索萬是否是159159159排列
+    // 檢查數牌數量（必須為9張）
     const numberTiles = allTiles.filter(tile => 
         tile.type === TILE_TYPES.CHARACTERS || 
         tile.type === TILE_TYPES.BAMBOOS || 
         tile.type === TILE_TYPES.DOTS
     );
-    
-    // 按花色分組
+    if (numberTiles.length !== 9) return false;
+
+    // 檢查字牌數量（必須為8張）
+    const honorTiles = allTiles.filter(tile => tile.type === TILE_TYPES.HONORS);
+    if (honorTiles.length !== 8) return false;
+
+    // 檢查是否為十六飛（和牌張是否為將眼）
+    let isShiLiuFei = false;
+    if (state.winningTile && pairTile) {
+        const [pairType, pairValue] = pairTile.split('-');
+        if (state.winningTile.type === pairType && state.winningTile.value === parseInt(pairValue)) {
+            isShiLiuFei = true;
+        }
+    }
+
+    return { isValid: true, pairTile, isShiLiuFei };
+}
+
+// 檢查十六不搭獨獨
+function isShiLiuBuDaDuDu(allTiles) {
+    const shiLiuBuDaResult = isShiLiuBuDa(allTiles);
+    if (!shiLiuBuDaResult.isValid) return false;
+
+    if (!state.winningTile) return false;
+
+    const pairTile = shiLiuBuDaResult.pairTile;
+    const [pairType, pairValue] = pairTile.split('-');
+
+    // 獲取數牌和字牌
+    const numberTiles = allTiles.filter(tile => 
+        tile.type === TILE_TYPES.CHARACTERS || 
+        tile.type === TILE_TYPES.BAMBOOS || 
+        tile.type === TILE_TYPES.DOTS
+    );
+    const honorTiles = allTiles.filter(tile => tile.type === TILE_TYPES.HONORS);
+
+    // 按花色分組數牌
+    const tilesBySuit = {
+        [TILE_TYPES.CHARACTERS]: [],
+        [TILE_TYPES.BAMBOOS]: [],
+        [TILE_TYPES.DOTS]: []
+    };
+    numberTiles.forEach(tile => {
+        tilesBySuit[tile.type].push(tile.value);
+    });
+
+    // 如果和牌張是字牌，檢查是否為獨聽
+    if (state.winningTile.type === TILE_TYPES.HONORS) {
+        // 將眼必須是數牌
+        if (pairType !== TILE_TYPES.CHARACTERS && pairType !== TILE_TYPES.BAMBOOS && pairType !== TILE_TYPES.DOTS) {
+            return false;
+        }
+
+        // 獲取現有字牌
+        const honorValues = honorTiles.map(tile => tile.value);
+        const winningHonorValue = state.winningTile.value;
+
+        // 定義所有可能的字牌
+        const allHonors = ['EAST', 'SOUTH', 'WEST', 'NORTH', 'RED', 'GREEN', 'WHITE'];
+
+        // 檢查其他字牌是否可和牌
+        let validWinningHonors = [];
+        for (const honor of allHonors) {
+            if (honor === winningHonorValue || honorValues.includes(honor)) continue;
+
+            // 模擬用其他字牌替換和牌張
+            const newHonorTiles = [...honorTiles, { type: TILE_TYPES.HONORS, value: honor }];
+            const newAllTiles = [
+                ...numberTiles,
+                ...newHonorTiles.filter(tile => tile.type === TILE_TYPES.HONORS)
+            ];
+
+            // 檢查新牌組是否滿足十六不搭（無順子、無刻子除將眼外）
+            const tileCounts = {};
+            newAllTiles.forEach(tile => {
+                const key = `${tile.type}-${tile.value}`;
+                tileCounts[key] = (tileCounts[key] || 0) + 1;
+            });
+
+            let newPairCount = 0;
+            let newPairTile = null;
+            for (const key in tileCounts) {
+                if (tileCounts[key] > 2) break; // 不能有刻子
+                if (tileCounts[key] === 2) {
+                    newPairCount++;
+                    newPairTile = key;
+                }
+            }
+
+            // 必須有且僅有一對將眼，且無順子
+            if (newPairCount === 1) {
+                const [newPairType] = newPairTile.split('-');
+                if (newPairType === TILE_TYPES.CHARACTERS || newPairType === TILE_TYPES.BAMBOOS || newPairType === TILE_TYPES.DOTS) {
+                    validWinningHonors.push(honor);
+                }
+            }
+        }
+
+        // 獨聽要求只有和牌張本身可和
+        return validWinningHonors.length === 0;
+    }
+
+    // 如果和牌張是數牌，檢查是否為獨聽（不相連的牌）
+    if (state.winningTile.type === TILE_TYPES.CHARACTERS || 
+        state.winningTile.type === TILE_TYPES.BAMBOOS || 
+        state.winningTile.type === TILE_TYPES.DOTS) {
+        // 將眼必須是字牌
+        if (pairType !== TILE_TYPES.HONORS) {
+            return false;
+        }
+
+        const winningSuit = state.winningTile.type;
+        const winningValue = state.winningTile.value;
+        const suitValues = tilesBySuit[winningSuit].sort((a, b) => a - b);
+
+        // 檢查和牌張是否形成順子
+        let winningFormsSequence = false;
+        const testWinningValues = [...suitValues, winningValue].sort((a, b) => a - b);
+        for (let j = 0; j < testWinningValues.length - 2; j++) {
+            if (testWinningValues[j + 1] === testWinningValues[j] + 1 && 
+                testWinningValues[j + 2] === testWinningValues[j] + 2) {
+                winningFormsSequence = true;
+                break;
+            }
+        }
+        if (winningFormsSequence) return false; // 和牌張形成順子，非獨聽
+
+        // 檢查其他數牌（1~9，排除已有牌和和牌張）
+        let validWinningValues = [];
+        for (let i = 1; i <= 9; i++) {
+            if (i === winningValue || suitValues.includes(i)) continue;
+
+            // 檢查是否與現有牌相鄰（差值為1或2，可能形成順子）
+            let canFormSequence = false;
+            for (const val of suitValues) {
+                if (Math.abs(i - val) === 1 || Math.abs(i - val) === 2) {
+                    canFormSequence = true;
+                    break;
+                }
+            }
+            // 刻子檢查
+            const valueCounts = {};
+            const newSuitValues = [...suitValues, i];
+            newSuitValues.forEach(val => {
+                valueCounts[val] = (valueCounts[val] || 0) + 1;
+            });
+            const formsPung = Object.values(valueCounts).some(count => count > 1);
+
+            // 若不形成順子且不形成刻子，則為合法和牌張
+            if (!canFormSequence && !formsPung) {
+                validWinningValues.push(i);
+            }
+        }
+
+        // 獨聽要求只有和牌張本身可和
+        return validWinningValues.length === 0;
+    }
+
+    return false;
+}
+
+// 檢查十六不搭三相逢（任意三個數字）
+function isShiLiuBuDaSanXiangFeng(allTiles) {
+    const shiLiuBuDaResult = isShiLiuBuDa(allTiles);
+    if (!shiLiuBuDaResult.isValid) return false;
+
+    const numberTiles = allTiles.filter(tile => 
+        tile.type === TILE_TYPES.CHARACTERS || 
+        tile.type === TILE_TYPES.BAMBOOS || 
+        tile.type === TILE_TYPES.DOTS
+    );
+
+    if (numberTiles.length !== 9) return false;
+
     const suits = {
         [TILE_TYPES.CHARACTERS]: [],
         [TILE_TYPES.BAMBOOS]: [],
         [TILE_TYPES.DOTS]: []
     };
-    
+
     numberTiles.forEach(tile => {
         suits[tile.type].push(tile.value);
     });
-    
-    // 檢查每個花色是否都是1,5,9
-    for (const suit in suits) {
-        const values = suits[suit].sort();
-        if (values.length !== 3 || 
-            !values.includes(1) || 
-            !values.includes(5) || 
-            !values.includes(9)) {
+
+    // 檢查三花色是否具有相同的三個數字
+    const charValues = suits[TILE_TYPES.CHARACTERS].sort((a, b) => a - b);
+    const bambooValues = suits[TILE_TYPES.BAMBOOS].sort((a, b) => a - b);
+    const dotValues = suits[TILE_TYPES.DOTS].sort((a, b) => a - b);
+
+    if (charValues.length !== 3 || bambooValues.length !== 3 || dotValues.length !== 3) {
+        return false;
+    }
+
+    // 確認三花色的數字完全相同
+    for (let i = 0; i < 3; i++) {
+        if (charValues[i] !== bambooValues[i] || bambooValues[i] !== dotValues[i]) {
             return false;
         }
     }
-    
-    return true;
+
+    // 獲取三相逢的數字
+    const sanXiangFengValues = charValues;
+
+    // 檢查將眼是否包含三相逢的數字
+    if (shiLiuBuDaResult.pairTile) {
+        const [pairType, pairValue] = shiLiuBuDaResult.pairTile.split('-');
+        if (pairType !== TILE_TYPES.HONORS && pairType !== TILE_TYPES.FLOWERS && 
+            sanXiangFengValues.includes(parseInt(pairValue))) {
+            return false; // 將眼包含三相逢的數字，無效
+        }
+    }
+
+    // 檢查和牌張是否屬於三相逢的數字
+    let isDark = true;
+    if (state.winningTile && 
+        state.winningTile.type !== TILE_TYPES.HONORS && 
+        state.winningTile.type !== TILE_TYPES.FLOWERS &&
+        sanXiangFengValues.includes(state.winningTile.value)) {
+        isDark = false;
+    }
+
+    return { isValid: true, isDark, values: sanXiangFengValues };
 }
 
-// 新增：檢查十六不搭雜龍
+// 檢查十六不搭雜龍
 function isShiLiuBuDaZhaLong(allTiles) {
-    if (!isShiLiuBuDa(allTiles)) return false;
-    
-    // 檢查筒索萬是否是147258369排列
+    const shiLiuBuDaResult = isShiLiuBuDa(allTiles);
+    if (!shiLiuBuDaResult.isValid) return false;
+
     const numberTiles = allTiles.filter(tile => 
         tile.type === TILE_TYPES.CHARACTERS || 
         tile.type === TILE_TYPES.BAMBOOS || 
         tile.type === TILE_TYPES.DOTS
     );
-    
-    // 按數值分組
-    const values = {
-        1: [], 2: [], 3: [],
-        4: [], 5: [], 6: [],
-        7: [], 8: [], 9: []
-    };
-    
-    numberTiles.forEach(tile => {
-        values[tile.value].push(tile.type);
-    });
-    
-    // 檢查每個數值是否有三種花色
+
+    if (numberTiles.length !== 9) return false;
+
+    // 按數字分組，檢查1~9是否各有三花色
+    const values = {};
     for (let i = 1; i <= 9; i++) {
-        if (values[i].length !== 3) {
-            return false;
+        values[i] = [];
+    }
+
+    numberTiles.forEach(tile => {
+        if (tile.value >= 1 && tile.value <= 9) {
+            values[tile.value].push(tile.type);
         }
-        
-        // 檢查是否包含三種花色
-        const hasCharacters = values[i].includes(TILE_TYPES.CHARACTERS);
-        const hasBamboos = values[i].includes(TILE_TYPES.BAMBOOS);
-        const hasDots = values[i].includes(TILE_TYPES.DOTS);
-        
-        if (!hasCharacters || !hasBamboos || !hasDots) {
+    });
+
+    for (let i = 1; i <= 9; i++) {
+        if (values[i].length !== 1 || // 每個數字應恰好有一張牌
+            !values[i].includes(TILE_TYPES.CHARACTERS) &&
+            !values[i].includes(TILE_TYPES.BAMBOOS) &&
+            !values[i].includes(TILE_TYPES.DOTS)) {
             return false;
         }
     }
-    
-    return true;
+
+    // 確保每個花色各有3張數牌
+    const suitCounts = {
+        [TILE_TYPES.CHARACTERS]: 0,
+        [TILE_TYPES.BAMBOOS]: 0,
+        [TILE_TYPES.DOTS]: 0
+    };
+    numberTiles.forEach(tile => {
+        suitCounts[tile.type]++;
+    });
+    if (suitCounts[TILE_TYPES.CHARACTERS] !== 3 ||
+        suitCounts[TILE_TYPES.BAMBOOS] !== 3 ||
+        suitCounts[TILE_TYPES.DOTS] !== 3) {
+        return false;
+    }
+
+    // 檢查和牌張是否為1~9
+    let isDark = true;
+    if (state.winningTile && 
+        state.winningTile.type !== TILE_TYPES.HONORS && 
+        state.winningTile.type !== TILE_TYPES.FLOWERS &&
+        state.winningTile.value >= 1 && state.winningTile.value <= 9) {
+        isDark = false;
+    }
+
+    return { isValid: true, isDark };
 }
 
 // 新增：檢查大於五（全副牌每一組合都大過"五"，不能有五及番子）
@@ -3181,7 +3499,7 @@ function analyzeRealWaits(allTiles) {
             uniqueWaits.push(wait);
         }
     });
-    console.log(uniqueWaits);
+
     return uniqueWaits;
 }
 
@@ -3221,7 +3539,6 @@ function analyzeWaitsBeforeWin(handTiles, chows, pungs, openKongs, concealedKong
         }
     }
 
-    console.log(waits);
     // 去重
     const uniqueWaits = [];
     const seen = new Set();
@@ -3233,8 +3550,6 @@ function analyzeWaitsBeforeWin(handTiles, chows, pungs, openKongs, concealedKong
         }
     });
     
-    console.log(uniqueWaits);
-
     return uniqueWaits;
 }
 
