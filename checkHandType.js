@@ -3025,7 +3025,7 @@ function isShiLiuBuDaDuDu(allTiles) {
                                  { type: TILE_TYPES.HONORS, value: honor }];
             const newAllTiles = [
                 ...numberTiles,
-                ...newHonorTiles.filter(tile => tile.type === TILE_TYPES.HONORS)
+                ...newHonorTiles
             ];
 
             // 檢查新牌組是否滿足十六不搭（無順子、無刻子除將眼外）
@@ -3077,7 +3077,7 @@ function isShiLiuBuDaDuDu(allTiles) {
         return validWinningHonors.length === 0;
     }
 
-    // 如果和牌張是數牌，檢查是否為獨聽（不相連的牌）
+    // 如果和牌張是數牌，檢查是否為獨聽
     if (state.winningTile.type === TILE_TYPES.CHARACTERS || 
         state.winningTile.type === TILE_TYPES.BAMBOOS || 
         state.winningTile.type === TILE_TYPES.DOTS) {
@@ -3088,7 +3088,7 @@ function isShiLiuBuDaDuDu(allTiles) {
 
         const winningSuit = state.winningTile.type;
         const winningValue = state.winningTile.value;
-        const suitValues = tilesBySuit[winningSuit].sort((a, b) => a - b);
+        const suitValues = tilesBySuit[winningSuit].filter(val => val !== winningValue).sort((a, b) => a - b);
 
         // 檢查和牌張是否形成順子
         let winningFormsSequence = false;
@@ -3107,25 +3107,55 @@ function isShiLiuBuDaDuDu(allTiles) {
         for (let i = 1; i <= 9; i++) {
             if (i === winningValue || suitValues.includes(i)) continue;
 
-            // 檢查是否與現有牌相鄰（差值為1或2，可能形成順子）
-            let canFormSequence = false;
-            for (const val of suitValues) {
-                if (Math.abs(i - val) === 1 || Math.abs(i - val) === 2) {
-                    canFormSequence = true;
-                    break;
+            // 模擬用其他數牌替換和牌張
+            const newNumberTiles = [
+                ...numberTiles.filter(tile => tile.type !== winningSuit || tile.value !== winningValue),
+                { type: winningSuit, value: i }
+            ];
+            const newAllTiles = [...newNumberTiles, ...honorTiles];
+
+            // 檢查新牌組是否滿足十六不搭
+            const newTileCounts = {};
+            newAllTiles.forEach(tile => {
+                const key = `${tile.type}-${tile.value}`;
+                newTileCounts[key] = (newTileCounts[key] || 0) + 1;
+            });
+
+            let newPairCount = 0;
+            let newPairTile = null;
+            for (const key in newTileCounts) {
+                if (newTileCounts[key] > 2) continue; // 不能有刻子
+                if (newTileCounts[key] === 2) {
+                    newPairCount++;
+                    newPairTile = key;
                 }
             }
-            // 刻子檢查
-            const valueCounts = {};
-            const newSuitValues = [...suitValues, i];
-            newSuitValues.forEach(val => {
-                valueCounts[val] = (valueCounts[val] || 0) + 1;
-            });
-            const formsPung = Object.values(valueCounts).some(count => count > 1);
 
-            // 若不形成順子且不形成刻子，則為合法和牌張
-            if (!canFormSequence && !formsPung) {
-                validWinningValues.push(i);
+            // 必須有且僅有一對將眼，且無順子
+            if (newPairCount === 1) {
+                const newTilesBySuit = {};
+                newAllTiles.forEach(tile => {
+                    if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
+                        if (!newTilesBySuit[tile.type]) newTilesBySuit[tile.type] = [];
+                        newTilesBySuit[tile.type].push(tile.value);
+                    }
+                });
+
+                let newHasSequence = false;
+                for (const suit in newTilesBySuit) {
+                    const values = newTilesBySuit[suit].sort((a, b) => a - b);
+                    for (let j = 0; j < values.length - 2; j++) {
+                        if (values[j + 1] === values[j] + 1 && values[j + 2] === values[j] + 2) {
+                            newHasSequence = true;
+                            break;
+                        }
+                    }
+                    if (newHasSequence) break;
+                }
+
+                if (!newHasSequence) {
+                    validWinningValues.push(i);
+                }
             }
         }
 
