@@ -29,6 +29,11 @@ function detectHandTypes() {
                 }
             }
         }
+
+        // 檢查十三么獨獨
+        if (isShiSanYaoDuDu(allTiles, shiSanYaoResult)) {
+            handTypes.push({ name: '十三么獨獨', score: 2 });
+        }
         
         // 根據十三飞條件計分
         if (isThirteenFly) {
@@ -209,7 +214,7 @@ function detectHandTypes() {
     
     // 如果不是無字花大平糊，則添加平糊
     if (isPingHuResult && !(hasNoHonors && hasNoFlowers)) {
-        handTypes.push({ name: '平糊', score: 2 });
+        handTypes.push({ name: '平糊', score: 5 });
     }
     
     // a. 缺一門: 只有筒索萬其中2款
@@ -280,25 +285,23 @@ function detectHandTypes() {
     }
     
     // 為了避免假獨和對碰同時出現，將獨獨/假獨檢查放在對碰為false時
-    const isPair = isPairWait(allTiles);
+    if (!isShiSanYao(allTiles) && !isShiLiuBuDa(allTiles)) {
+        const isPair = isPairWait(allTiles);
     
-    // 先检查是否是真正的独独
-    if (isSingleWait(allTiles)) {
-        handTypes.push({ name: '獨獨', score: 2 });
-    }
-    // 如果不是独独，再检查是否是假独
-    else if (!isPair && isFakeSingleWait(allTiles)) {
-        handTypes.push({ name: '假獨', score: 1 });
-    }
-    
-    // e. 對碰
-    if (isPair) {
-        if (isShiSanYao) {
+        // 先检查是否是真正的独独
+        if (isSingleWait(allTiles)) {
             handTypes.push({ name: '獨獨', score: 2 });
-        }else {
+        }
+        // 如果不是独独，再检查是否是假独
+        else if (!isPair && isFakeSingleWait(allTiles)) {
+            handTypes.push({ name: '假獨', score: 1 });
+        }
+        
+        // e. 對碰
+        if (isPair) {
             handTypes.push({ name: '對碰', score: 2 });
         }
-    }
+    }    
     
     // f. 將眼
     if (is258Eye(allTiles)) {
@@ -458,98 +461,153 @@ function detectQingLong(allTiles) {
     return results;
 }
 
+// 修改 detectZhaLong 函数
 function detectZhaLong(allTiles) {
     const results = [];
-    const numberTiles = allTiles.filter(tile => tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS);
-
-    // 按數值和花色統計牌數
-    const values = {};
-    for (let i = 1; i <= 9; i++) {
-        values[i] = { [TILE_TYPES.CHARACTERS]: 0, [TILE_TYPES.BAMBOOS]: 0, [TILE_TYPES.DOTS]: 0 };
-    }
-    numberTiles.forEach(tile => {
-        values[tile.value][tile.type] = (values[tile.value][tile.type] || 0) + 1;
-    });
-
-    // 檢查副露的順子
-    const exposedChows = state.chows || [];
-    const exposedChowTiles = new Set();
-    let exposedChow123Count = 0;
-    let exposedChow789Count = 0;
-    exposedChows.forEach(chow => {
-        chow.tiles.forEach(tile => {
-            exposedChowTiles.add(`${tile.type}-${tile.value}`);
-        });
-        // 檢查副露的 123 和 789 順子（跨花色）
-        if (chow.tiles.every(tile => tile.value === 1 || tile.value === 2 || tile.value === 3)) {
-            exposedChow123Count++;
-        } else if (chow.tiles.every(tile => tile.value === 7 || tile.value === 8 || tile.value === 9)) {
-            exposedChow789Count++;
-        }
-    });
-
-    // 計算手牌中的 123 和 789 組合數（考慮副露減少的牌數）
-    const tempValues = JSON.parse(JSON.stringify(values));
-    let handChow123Count = Infinity;
-    let handChow789Count = Infinity;
-
-    // 計算手牌的 123 和 789 張數
-    for (let i = 1; i <= 3; i++) {
-        let count = 0;
-        for (const suit of [TILE_TYPES.CHARACTERS, TILE_TYPES.BAMBOOS, TILE_TYPES.DOTS]) {
-            count += tempValues[i][suit];
-        }
-        handChow123Count = Math.min(handChow123Count, count);
-    }
-    for (let i = 7; i <= 9; i++) {
-        let count = 0;
-        for (const suit of [TILE_TYPES.CHARACTERS, TILE_TYPES.BAMBOOS, TILE_TYPES.DOTS]) {
-            count += tempValues[i][suit];
-        }
-        handChow789Count = Math.min(handChow789Count, count);
-    }
-
-    // 檢查 456 是否至少各有 1 張
-    const has456 = [4, 5, 6].every(i => 
-        (tempValues[i][TILE_TYPES.CHARACTERS] > 0) ||
-        (tempValues[i][TILE_TYPES.BAMBOOS] > 0) ||
-        (tempValues[i][TILE_TYPES.DOTS] > 0)
+    const numberTiles = allTiles.filter(tile => 
+        tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS
     );
 
-    let mingZhaLongCount = 0;
-    let anZhaLongCount = 0;
+    // Group tiles by suit
+    const tilesBySuit = {};
+    [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS].forEach(suit => {
+        tilesBySuit[suit] = numberTiles.filter(tile => tile.type === suit)
+            .map(tile => tile.value)
+            .sort((a, b) => a - b);
+    });
 
-    handChow123Count = handChow123Count - exposedChow123Count;
-    handChow789Count = handChow789Count - exposedChow789Count;
+    // Get chows from state
+    const chowsBySuit = {};
+    state.chows.forEach(chow => {
+        if (!chowsBySuit[chow.type]) {
+            chowsBySuit[chow.type] = [];
+        }
+        chowsBySuit[chow.type].push(chow.tiles.map(tile => tile.value).sort((a, b) => a - b));
+    });
 
-    if (has456) {
-        // 總雜龍數量為所有可能的 123 和 789 組合
-        const handZhaLongCount = handChow123Count * handChow789Count;
-        const exposed123ZhaLongCount = exposedChow123Count * handChow789Count;
-        const exposed789ZhaLongCount = handChow123Count * exposedChow789Count;
-        const exposedBothZhaLongCount = exposedChow123Count * exposedChow789Count;
-        const zhaLongCount = handZhaLongCount + exposed123ZhaLongCount + exposed789ZhaLongCount + exposedBothZhaLongCount;
+    // Count occurrences of 123, 456, 789 in each suit
+    const setsBySuit = {};
+    [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS].forEach(suit => {
+        setsBySuit[suit] = { '123': 0, '456': 0, '789': 0, chowCounts: { '123': 0, '456': 0, '789': 0 } };
+        const values = tilesBySuit[suit];
+        const valueCounts = {};
+        values.forEach(v => {
+            valueCounts[v] = (valueCounts[v] || 0) + 1;
+        });
 
-        // 分配明暗雜龍
-        const isMenQianQing = state.chows.length === 0 && state.pungs.length === 0 && state.openKongs.length === 0;
+        const max123 = Math.min(valueCounts[1] || 0, valueCounts[2] || 0, valueCounts[3] || 0);
+        const max456 = Math.min(valueCounts[4] || 0, valueCounts[5] || 0, valueCounts[6] || 0);
+        const max789 = Math.min(valueCounts[7] || 0, valueCounts[8] || 0, valueCounts[9] || 0);
+        setsBySuit[suit]['123'] = max123;
+        setsBySuit[suit]['456'] = max456;
+        setsBySuit[suit]['789'] = max789;
 
-        if (isMenQianQing) {
-            anZhaLongCount = zhaLongCount;
-        } else {
-            mingZhaLongCount = exposed123ZhaLongCount + exposed789ZhaLongCount + exposedBothZhaLongCount;
-            anZhaLongCount = handZhaLongCount;
+        const chows = chowsBySuit[suit] || [];
+        chows.forEach(chowValues => {
+            if (chowValues.join(',') === '1,2,3') setsBySuit[suit].chowCounts['123']++;
+            else if (chowValues.join(',') === '4,5,6') setsBySuit[suit].chowCounts['456']++;
+            else if (chowValues.join(',') === '7,8,9') setsBySuit[suit].chowCounts['789']++;
+        });
+    });
+
+    // Find all possible Zha Long combinations
+    const allCombinations = [];
+    
+    // Generate all possible combinations of 123, 456, 789 across different suits
+    const setTypes = ['123', '456', '789'];
+    const suits = [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS];
+    
+    // Get all permutations of suits
+    const suitPermutations = getPermutations(suits);
+    
+    // For each permutation of suits, try to assign 123, 456, 789
+    for (const suitPerm of suitPermutations) {
+        for (const setPerm of getPermutations(setTypes)) {
+            let isValid = true;
+            let isDark = true;
+            const usedSets = [];
+            
+            for (let i = 0; i < 3; i++) {
+                const suit = suitPerm[i];
+                const setType = setPerm[i];
+                
+                if (setsBySuit[suit][setType] <= 0) {
+                    isValid = false;
+                    break;
+                }
+                
+                // Check if this set is exposed (not dark)
+                if (setsBySuit[suit].chowCounts[setType] > 0) {
+                    isDark = false;
+                }
+                
+                usedSets.push({ suit, type: setType });
+            }
+            
+            if (isValid) {
+                allCombinations.push({ isValid, isDark, usedSets });
+            }
         }
     }
-
-    // 添加明雜龍和暗雜龍
-    for (let i = 0; i < mingZhaLongCount; i++) {
-        results.push({ name: '明雜龍', score: 5 });
+    
+    // Remove duplicates and count occurrences
+    const uniqueCombinations = [];
+    const combinationKeys = new Set();
+    
+    for (const combo of allCombinations) {
+        const key = combo.usedSets.map(set => `${set.suit}-${set.type}`).sort().join('|');
+        if (!combinationKeys.has(key)) {
+            combinationKeys.add(key);
+            uniqueCombinations.push(combo);
+        }
     }
-    for (let i = 0; i < anZhaLongCount; i++) {
-        results.push({ name: '暗雜龍', score: 10 });
+    
+    // For each unique combination, add it to results as many times as it appears
+    for (const combo of uniqueCombinations) {
+        // Find the minimum count across all sets in this combination
+        let minCount = Infinity;
+        for (const set of combo.usedSets) {
+            const count = setsBySuit[set.suit][set.type];
+            if (count < minCount) {
+                minCount = count;
+            }
+        }
+        
+        // Add the combination multiple times based on availability
+        for (let i = 0; i < minCount; i++) {
+            results.push({ ...combo });
+        }
     }
+    
+    const returns = [];
+    for (const data of results) {
+        if (!data.isDark) {
+            returns.push({ name: '明雜龍', score: 5 });
+        }else {
+            returns.push({ name: '暗雜龍', score: 10 });
+        }
+    }
+    return returns;
+}
 
-    return results;
+// Helper function to get all permutations of an array
+function getPermutations(array) {
+    const result = [];
+    
+    function permute(arr, m = []) {
+        if (arr.length === 0) {
+            result.push(m);
+        } else {
+            for (let i = 0; i < arr.length; i++) {
+                const curr = arr.slice();
+                const next = curr.splice(i, 1);
+                permute(curr.slice(), m.concat(next));
+            }
+        }
+    }
+    
+    permute(array);
+    return result;
 }
 
 // 新增四歸一相關牌型檢測函數
@@ -2529,31 +2587,46 @@ function getAllPungs(allTiles) {
 
 // 新增計數老少上
 function countLaoShaoShang(allTiles) {
-    const allChows = getAllChows(allTiles);
-    const chowGroups = {};
+    let laoShaoCount = 0;
+    const numberTiles = allTiles.filter(tile => 
+        tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS
+    );
 
-    // 按花色分組順子
-    allChows.forEach(chow => {
-        if (!chowGroups[chow.type]) {
-            chowGroups[chow.type] = [];
-        }
-        chowGroups[chow.type].push(chow.startValue);
+    // Group tiles by suit
+    const tilesBySuit = {};
+    [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS].forEach(suit => {
+        tilesBySuit[suit] = numberTiles.filter(tile => tile.type === suit)
+            .map(tile => tile.value)
+            .sort((a, b) => a - b);
     });
 
-    let count = 0;
-    // 檢查每個花色是否有123和789順子
-    for (const suit in chowGroups) {
-        const has123 = chowGroups[suit].includes(1);
-        const has789 = chowGroups[suit].includes(7);
-        if (has123 && has789) {
-            // 計算該花色中123和789的對數（取最小值）
-            const count123 = chowGroups[suit].filter(start => start === 1).length;
-            const count789 = chowGroups[suit].filter(start => start === 7).length;
-            count += Math.min(count123, count789);
-        }
-    }
+    // Check for 清龍 and 老少 in each suit
+    [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS].forEach(suit => {
+        const values = tilesBySuit[suit];
+        const valueCounts = {};
+        values.forEach(v => {
+            valueCounts[v] = (valueCounts[v] || 0) + 1;
+        });
 
-    return count;
+        // Check for 清龍 (123456789 in one suit)
+        const hasPureDragon = [1, 2, 3, 4, 5, 6, 7, 8, 9].every(v => (valueCounts[v] || 0) >= 1);
+        if (hasPureDragon) {
+            return; // Skip 老少 for suits with 清龍
+        }
+
+        // Count 123 and 789 sets
+        const max123 = Math.min(valueCounts[1] || 0, valueCounts[2] || 0, valueCounts[3] || 0);
+        const max789 = Math.min(valueCounts[7] || 0, valueCounts[8] || 0, valueCounts[9] || 0);
+
+        // Count one Lao Shao per suit (prefer 123 if available)
+        if (max123 > 0) {
+            laoShaoCount += 1;
+        } else if (max789 > 0) {
+            laoShaoCount += 1;
+        }
+    });
+
+    return laoShaoCount;
 }
 
 // 新增計數老少碰

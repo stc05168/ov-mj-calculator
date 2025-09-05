@@ -1030,7 +1030,7 @@ function calculateScore() {
         handTypesContainer.appendChild(handElement);
     });
         
-    if (state.isDealer && state.dealerCount > 0) {
+    if (state.isDealer) {
         const dealerScore = 2 * state.dealerCount + 1;
         totalScore += dealerScore;
         const dealerElement = document.createElement('div');
