@@ -396,510 +396,213 @@ function handleDragLeave(e) {
 }
 
 function showStatusMessage(message, type = 'info') {
-    const statusDiv = document.createElement('div');
-    statusDiv.className = `status-message ${type}`;
-    statusDiv.textContent = message;
-    statusDiv.style.position = 'fixed';
-    statusDiv.style.top = '20px';
-    statusDiv.style.right = '20px';
-    statusDiv.style.padding = '10px 15px';
-    statusDiv.style.borderRadius = '5px';
-    statusDiv.style.zIndex = '1000';
-    
-    if (type === 'success') {
-        statusDiv.style.backgroundColor = '#4caf50';
-        statusDiv.style.color = 'white';
-    } else if (type === 'error') {
-        statusDiv.style.backgroundColor = '#f44336';
-        statusDiv.style.color = 'white';
-    } else {
-        statusDiv.style.backgroundColor = '#2196f3';
-        statusDiv.style.color = 'white';
-    }
-    
-    document.body.appendChild(statusDiv);
-    
-    // 3秒后自动消失
-    setTimeout(() => {
-        if (statusDiv.parentNode) {
-            statusDiv.parentNode.removeChild(statusDiv);
-        }
-    }, 3000);
-}
-
-function updateDraggableTiles() {
-    // 为手牌添加拖拽属性
-    const handTiles = document.querySelectorAll('#hand-tiles .selected-tile');
-    handTiles.forEach(tile => {
-        tile.setAttribute('draggable', 'true');
-        tile.dataset.source = 'hand-tiles';
-        // 移除旧的事件监听器（避免重复添加）
-        tile.removeEventListener('dragstart', handleDragStart);
-        tile.removeEventListener('touchstart', handleTouchStart);
-        tile.removeEventListener('touchmove', handleTouchMove);
-        tile.removeEventListener('touchend', handleTouchEnd);
-        
-        // 添加新的事件监听器
-        setupDragEvents(tile);
-    });
-    
-    // 为糊牌添加拖拽属性
-    const winningTiles = document.querySelectorAll('#winning-tile .selected-tile');
-    winningTiles.forEach(tile => {
-        tile.setAttribute('draggable', 'true');
-        tile.dataset.source = 'winning-tile';
-        // 移除旧的事件监听器（避免重复添加）
-        tile.removeEventListener('dragstart', handleDragStart);
-        tile.removeEventListener('touchstart', handleTouchStart);
-        tile.removeEventListener('touchmove', handleTouchMove);
-        tile.removeEventListener('touchend', handleTouchEnd);
-        
-        // 添加新的事件监听器
-        setupDragEvents(tile);
-    });
+    const statusMessage = document.getElementById('status-message');
+    statusMessage.innerHTML = `<div class="status-message">${message}</div>`;
 }
 
 function handleHandTilesDrop(e) {
     e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    console.log('Dropped to hand tiles:', data);
 
-    // 安全地移除 drag-over 類
-    if (e.currentTarget) {
-        e.currentTarget.classList.remove('drag-over');
+    if (data.source === 'hand-tiles') {
+        console.log('Tile already in hand, no action needed');
+        return;
+    }
+
+    if (data.source === 'winning-tile') {
+        state.winningTile = null;
+        state.handTiles.push({
+            type: data.type,
+            value: data.value,
+            display: data.display,
+            cssClass: getTileCssClass(data.type)
+        });
     } else {
-        console.warn('currentTarget is null, attempting to find hand-tiles');
-        const handTilesZone = document.getElementById('hand-tiles');
-        if (handTilesZone) {
-            handTilesZone.classList.remove('drag-over');
+        const tile = ALL_TILES.find(t => t.type === data.type && t.value === data.value) ||
+                     FLOWER_TILES.find(t => t.type === data.type && t.value === data.value);
+        if (tile) {
+            state.handTiles.push({ ...tile });
         }
     }
 
-    try {
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        console.log('Hand tiles drop data:', data);
-
-        const tile = findTileByTypeAndValue(data.type, data.value);
-        if (!tile) {
-            console.error('Tile not found:', data);
-            showStatusMessage('無效的牌', 'error');
-            return;
-        }
-
-        console.log('Found tile:', tile);
-
-        saveStateToHistory();
-        selectTile(tile);
-
-        console.log('Current hand tiles after drop:', state.handTiles);
-        updateUI();
-        showStatusMessage(`已添加: ${tile.display}`, 'success');
-    } catch (error) {
-        console.error('Error handling hand tiles drop:', error);
-        showStatusMessage('放置失敗', 'error');
-    }
+    updateUI();
 }
 
-// 糊牌区放置事件处理
 function handleWinningTileDrop(e) {
     e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    console.log('Dropped to winning tile:', data);
 
-    // 安全地移除 drag-over 類
-    if (e.currentTarget) {
-        e.currentTarget.classList.remove('drag-over');
-    } else {
-        console.warn('currentTarget is null, attempting to find winning-tile');
-        const winningTileZone = document.getElementById('winning-tile');
-        if (winningTileZone) {
-            winningTileZone.classList.remove('drag-over');
-        }
-    }
-
-    try {
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        console.log('Winning tile drop data:', data);
-
-        const tile = findTileByTypeAndValue(data.type, data.value);
-        if (!tile) {
-            console.error('Tile not found:', data);
-            showStatusMessage('無效的牌', 'error');
-            return;
-        }
-
-        console.log('Found tile:', tile);
-
-        saveStateToHistory();
-
-        // 如果糊牌區已有牌，則提示錯誤
-        if (state.winningTile) {
-            console.warn('Winning tile already exists:', state.winningTile);
-            showStatusMessage('糊牌區已有一張牌', 'error');
-            return;
-        }
-
-        // 從手牌區移除（如果來源是 hand-tiles）
-        if (data.source === 'hand-tiles') {
-            const index = state.handTiles.findIndex(t =>
-                t.type === data.type && t.value === data.value
-            );
-            if (index !== -1) {
-                state.handTiles.splice(index, 1);
-                console.log('Tile removed from hand-tiles:', tile);
-            }
-        }
-
-        // 添加到糊牌區
-        state.winningTile = { ...tile };
-        console.log('Tile set as winning tile:', tile);
-        showStatusMessage(`已設為糊牌: ${tile.display}`, 'success');
-
-        updateUI();
-    } catch (error) {
-        console.error('Error handling winning tile drop:', error);
-        showStatusMessage('放置失敗', 'error');
-    }
-}
-
-// 垃圾筒放置事件处理
-function handleTrashDrop(e) {
-    if (e.cancelable) {
-        e.preventDefault();
-    }
-
-    // 安全地移除 drag-over 類
-    if (e.currentTarget) {
-        e.currentTarget.classList.remove('drag-over');
-    } else {
-        console.warn('currentTarget is null, attempting to find trash-icon');
-        const trashZone = document.getElementById('trash-icon');
-        if (trashZone) {
-            trashZone.classList.remove('drag-over');
-        }
-    }
-
-    try {
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        console.log('Trash drop data:', data);
-
-        const tile = findTileByTypeAndValue(data.type, data.value);
-        if (!tile) {
-            console.error('Tile not found:', data);
-            showStatusMessage('無效的牌', 'error');
-            return;
-        }
-
-        saveStateToHistory();
-
-        // 從糊牌區移除
-        if (data.source === 'winning-tile' && state.winningTile &&
-            state.winningTile.type === data.type && state.winningTile.value === data.value) {
-            state.winningTile = null;
-            console.log('Tile removed from winning-tile:', tile);
-            showStatusMessage(`已移除: ${tile.display}`, 'success');
-        } else if (data.source === 'hand-tiles') {
-            // 從手牌區移除
-            const index = state.handTiles.findIndex(t =>
-                t.type === data.type && t.value === data.value
-            );
-            if (index !== -1) {
-                state.handTiles.splice(index, 1);
-                console.log('Tile removed from hand-tiles:', tile);
-                showStatusMessage(`已移除: ${tile.display}`, 'success');
-            }
-        } else {
-            console.warn('Invalid drop source for trash:', data.source);
-            showStatusMessage('無效的拖曳來源', 'error');
-            return;
-        }
-
-        updateUI();
-    } catch (error) {
-        console.error('Error handling trash drop:', error);
-        showStatusMessage('移除失敗', 'error');
-    }
-}
-
-// 辅助函数：根据类型和值查找牌
-function findTileByTypeAndValue(type, value) {
-    // 將值轉換為數字
-    const numericValue = parseInt(value);
-
-    // 在 ALL_TILES 中查找
-    let foundTile = ALL_TILES.find(t =>
-        t.type === type && t.value === numericValue
-    );
-
-    if (foundTile) return { ...foundTile };
-
-    // 在 FLOWER_TILES 中查找
-    foundTile = FLOWER_TILES.find(t =>
-        t.type === type && t.value === numericValue
-    );
-
-    if (foundTile) return { ...foundTile };
-
-    console.warn(`Tile not found: type=${type}, value=${numericValue}`);
-    return null;
-}
-
-// 修改updateUI函数，为已选牌添加拖拽属性
-function updateUI() {
-    updateTileCount();
-    updateHandTilesDisplay();
-    updateFlowersDisplay();
-    updateExposedTilesDisplay();
-    updateWinningTileDisplay();
-    updateButtonStates();
-    calculateScore();
-    updateDraggableTiles(); // 確保在每次 UI 更新後設置拖曳屬性
-}
-
-// 修改updateHandTilesDisplay函数，添加data-source属性
-function updateHandTilesDisplay() {
-    const container = document.getElementById('hand-tiles');
-    container.innerHTML = '';
-
-    state.handTiles.forEach(tile => {
-        const tileElement = document.createElement('div');
-        tileElement.className = `selected-tile ${tile.cssClass}`;
-        tileElement.textContent = tile.display;
-        tileElement.dataset.type = tile.type;
-        tileElement.dataset.value = tile.value;
-        tileElement.dataset.source = 'hand-tiles';
-        tileElement.setAttribute('draggable', 'true'); // 設置可拖曳
-        container.appendChild(tileElement);
-
-        // 添加拖曳事件
-        setupDragEvents(tileElement);
-    });
-}
-
-function updateWinningTileDisplay() {
-    const container = document.getElementById('winning-tile');
-    container.innerHTML = '';
-    
     if (state.winningTile) {
-        const tileElement = document.createElement('div');
-        tileElement.className = `selected-tile winning-tile ${state.winningTile.cssClass}`;
-        tileElement.textContent = state.winningTile.display;
-        tileElement.dataset.type = state.winningTile.type;
-        tileElement.dataset.value = state.winningTile.value;
-        tileElement.dataset.source = 'winning-tile'; // 添加来源标识
-        tileElement.setAttribute('draggable', 'true');
-        container.appendChild(tileElement);
-        
-        // 确保触摸和拖曳事件绑定
-        setupDragEvents(tileElement);
-        console.log('Winning tile display updated:', state.winningTile, 'Draggable:', tileElement.draggable, 'Element:', tileElement.outerHTML);
-    } else {
-        console.log('No winning tile to display');
+        console.log('Winning tile already set, moving existing to hand');
+        state.handTiles.push(state.winningTile);
+        state.winningTile = null;
+    }
+
+    if (data.source !== 'winning-tile') {
+        state.winningTile = {
+            type: data.type,
+            value: data.value,
+            display: data.display,
+            cssClass: getTileCssClass(data.type)
+        };
+
+        if (data.source === 'hand-tiles') {
+            const index = state.handTiles.findIndex(t => 
+                t.type === data.type && t.value === data.value
+            );
+            if (index !== -1) {
+                state.handTiles.splice(index, 1);
+            }
+        }
+    }
+
+    updateUI();
+}
+
+function handleTrashDrop(e) {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    console.log('Dropped to trash:', data);
+
+    if (data.source === 'hand-tiles') {
+        const index = state.handTiles.findIndex(t => 
+            t.type === data.type && t.value === data.value
+        );
+        if (index !== -1) {
+            state.handTiles.splice(index, 1);
+        }
+    } else if (data.source === 'winning-tile') {
+        state.winningTile = null;
+    }
+
+    updateUI();
+}
+
+function getTileCssClass(type) {
+    switch(type) {
+        case TILE_TYPES.CHARACTERS: return 'character';
+        case TILE_TYPES.BAMBOOS: return 'bamboo';
+        case TILE_TYPES.DOTS: return 'dot';
+        case TILE_TYPES.HONORS: return 'honor';
+        case TILE_TYPES.FLOWERS: return 'flower';
+        default: return '';
     }
 }
 
-// 渲染普通牌型選擇區（按類型分組）
 function renderTiles() {
-    const charactersContainer = document.getElementById('characters-container');
-    const bamboosContainer = document.getElementById('bamboos-container');
-    const dotsContainer = document.getElementById('dots-container');
-    const honorsContainer = document.getElementById('honors-container');
-    
-    charactersContainer.innerHTML = '';
-    bamboosContainer.innerHTML = '';
-    dotsContainer.innerHTML = '';
-    honorsContainer.innerHTML = '';
-    
-    ALL_TILES.forEach(tile => {
-        const tileElement = document.createElement('div');
-        tileElement.className = `tile ${tile.cssClass}`;
-        tileElement.textContent = tile.display;
-        tileElement.dataset.type = tile.type;
-        tileElement.dataset.value = tile.value;
-        
-        tileElement.addEventListener('click', () => selectTile(tile));
-        
-        switch(tile.type) {
-            case TILE_TYPES.CHARACTERS:
-                charactersContainer.appendChild(tileElement);
-                break;
-            case TILE_TYPES.BAMBOOS:
-                bamboosContainer.appendChild(tileElement);
-                break;
-            case TILE_TYPES.DOTS:
-                dotsContainer.appendChild(tileElement);
-                break;
-            case TILE_TYPES.HONORS:
-                honorsContainer.appendChild(tileElement);
-                break;
+    const containers = {
+        'characters-container': ALL_TILES.filter(t => t.type === TILE_TYPES.CHARACTERS),
+        'bamboos-container': ALL_TILES.filter(t => t.type === TILE_TYPES.BAMBOOS),
+        'dots-container': ALL_TILES.filter(t => t.type === TILE_TYPES.DOTS),
+        'honors-container': ALL_TILES.filter(t => t.type === TILE_TYPES.HONORS)
+    };
+
+    for (const [containerId, tiles] of Object.entries(containers)) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+            tiles.forEach(tile => {
+                const tileElement = document.createElement('div');
+                tileElement.className = `tile ${tile.cssClass}`;
+                tileElement.textContent = tile.display;
+                tileElement.dataset.type = tile.type;
+                tileElement.dataset.value = tile.value;
+                tileElement.dataset.source = containerId;
+                tileElement.setAttribute('draggable', 'true');
+                container.appendChild(tileElement);
+                setupDragEvents(tileElement);
+            });
         }
-    });
+    }
 }
 
-// 渲染花牌選擇區
 function renderFlowers() {
     const container = document.getElementById('flowers-container');
-    container.innerHTML = '';
-    
-    FLOWER_TILES.forEach(tile => {
-        const tileElement = document.createElement('div');
-        tileElement.className = `tile ${tile.cssClass}`;
-        tileElement.textContent = tile.display;
-        tileElement.dataset.type = tile.type;
-        tileElement.dataset.value = tile.value;
-        
-        tileElement.addEventListener('click', () => selectFlower(tile));
-        container.appendChild(tileElement);
+    if (container) {
+        container.innerHTML = '';
+        FLOWER_TILES.forEach(tile => {
+            const tileElement = document.createElement('div');
+            tileElement.className = `tile ${tile.cssClass}`;
+            tileElement.textContent = tile.display;
+            tileElement.dataset.type = tile.type;
+            tileElement.dataset.value = tile.value;
+            tileElement.dataset.source = 'flowers-container';
+            tileElement.setAttribute('draggable', 'true');
+            container.appendChild(tileElement);
+            setupDragEvents(tileElement);
+        });
+    }
+}
+
+function setupEventListeners() {
+    document.getElementById('chow-btn').addEventListener('click', addChow);
+    document.getElementById('pung-btn').addEventListener('click', addPung);
+    document.getElementById('open-kong-btn').addEventListener('click', addOpenKong);
+    document.getElementById('concealed-kong-btn').addEventListener('click', addConcealedKong);
+    document.getElementById('undo-btn').addEventListener('click', undoLastAction);
+    document.getElementById('clear-btn').addEventListener('click', clearSelection);
+
+    document.getElementById('seat-wind').addEventListener('change', (e) => {
+        state.seatWind = e.target.value;
+        calculateScore();
+    });
+
+    document.getElementById('round-wind').addEventListener('change', (e) => {
+        state.roundWind = e.target.value;
+        calculateScore();
+    });
+
+    document.getElementById('is-dealer').addEventListener('change', (e) => {
+        state.isDealer = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('dealer-count').addEventListener('change', (e) => {
+        state.dealerCount = parseInt(e.target.value);
+        calculateScore();
+    });
+
+    document.getElementById('is-self-draw').addEventListener('change', (e) => {
+        state.isSelfDraw = e.target.checked;
+        calculateScore();
     });
 }
 
-// 設置事件監聽器
-function setupEventListeners() {
-    document.getElementById('chow-btn').addEventListener('click', markAsChow);
-    document.getElementById('pung-btn').addEventListener('click', markAsPung);
-    document.getElementById('open-kong-btn').addEventListener('click', markAsOpenKong);
-    document.getElementById('concealed-kong-btn').addEventListener('click', markAsConcealedKong);
-    document.getElementById('undo-btn').addEventListener('click', undoLastAction);
-    document.getElementById('clear-btn').addEventListener('click', clearSelection);
-    document.getElementById('seat-wind').addEventListener('change', updateSeatWind);
-    document.getElementById('round-wind').addEventListener('change', updateRoundWind);
-    document.getElementById('is-dealer').addEventListener('change', toggleDealerSetting);
-    document.getElementById('dealer-count').addEventListener('change', updateDealerCount);
-    document.getElementById('is-self-draw').addEventListener('change', updateSelfDraw);
-    
-    // 添加鍵盤快捷鍵
-    document.addEventListener('keydown', handleKeyDown);
+function updateDraggableTiles() {
+    const selectedTiles = document.querySelectorAll('.selected-tile');
+    selectedTiles.forEach(tile => {
+        tile.setAttribute('draggable', 'true');
+        setupDragEvents(tile);
+    });
 }
 
-// 處理鍵盤事件
-function handleKeyDown(e) {
-    if (e.ctrlKey && e.key === 'z') {
-        e.preventDefault();
-        undoLastAction();
-    }
-}
-
-// 更新座位風位
-function updateSeatWind(e) {
-    saveStateToHistory();
-    state.seatWind = e.target.value;
-    calculateScore();
-}
-
-// 更新圈風
-function updateRoundWind(e) {
-    saveStateToHistory();
-    state.roundWind = e.target.value;
-    calculateScore();
-}
-
-// 切換莊家設定顯示
-function toggleDealerSetting(e) {
-    saveStateToHistory();
-    state.isDealer = e.target.checked;
-    const dealerCountContainer = document.getElementById('dealer-count-container');
-    dealerCountContainer.style.display = state.isDealer ? 'block' : 'none';
-    
-    if (!state.isDealer) {
-        state.dealerCount = 0;
-    }
-    
-    calculateScore();
-}
-
-// 更新連莊次數
-function updateDealerCount(e) {
-    saveStateToHistory();
-    state.dealerCount = parseInt(e.target.value);
-    calculateScore();
-}
-
-// 更新自摸設定
-function updateSelfDraw(e) {
-    saveStateToHistory();
-    state.isSelfDraw = e.target.checked;
-    calculateScore();
-}
-
-// 選擇普通牌
-function selectTile(tile) {
-    saveStateToHistory();
-
-    const exposedGroups = state.chows.length + state.pungs.length + state.openKongs.length + state.concealedKongs.length;
-    const maxHandTiles = 16 - (exposedGroups * 3);
-
-    if (state.handTiles.length >= maxHandTiles) {
-        const totalTiles = state.handTiles.length +
-            (state.chows.length * 3) +
-            (state.pungs.length * 3) +
-            (state.openKongs.length * 4) +
-            (state.concealedKongs.length * 4);
-
-        if (state.winningTile === null && totalTiles === maxHandTiles) {
-            state.winningTile = { ...tile };
-            console.log('Auto set as winning tile:', tile);
-            showStatusMessage(`已自動設為糊牌: ${tile.display}`, 'success');
-            updateUI();
-            return;
-        }
-
-        console.warn('Hand tiles limit reached:', maxHandTiles);
-        showStatusMessage(`手牌已達上限 (${maxHandTiles} 張)`, 'error');
-        return;
-    }
-
-    state.handTiles.push({ ...tile });
-    console.log('Tile added to hand:', tile, 'Current hand tiles:', state.handTiles);
-    showStatusMessage(`已添加: ${tile.display}`, 'success');
-    updateUI();
-}
-
-// 選擇花牌
-function selectFlower(tile) {
-    saveStateToHistory();
-    
-    // 檢查是否已經選擇了該花牌
-    const alreadySelected = state.flowers.some(f => 
-        f.type === tile.type && f.value === tile.value
-    );
-    
-    if (alreadySelected) {
-        alert('每種花牌只能選擇1張');
-        return;
-    }
-    
-    // 添加花牌到選擇列表
-    state.flowers.push({...tile});
-    updateUI();
-}
-
-// 標記為吃
-function markAsChow() {
-    saveStateToHistory();
-    
-    // 獲取選中的牌
+function addChow() {
     const selectedTiles = getSelectedTilesForChow();
-    
     if (selectedTiles.length !== 3) {
-        alert('請選擇3張連續的數牌進行吃');
+        showStatusMessage('請選擇三張連續的牌進行吃牌', 'error');
         return;
     }
-    
-    // 檢查是否都是同一種花色且連續
+
     const firstTile = selectedTiles[0];
     const isSameType = selectedTiles.every(t => t.type === firstTile.type);
     const values = selectedTiles.map(t => t.value).sort((a, b) => a - b);
     const isSequential = (values[1] === values[0] + 1) && (values[2] === values[1] + 1);
-    
+
     if (!isSameType || !isSequential) {
-        alert('吃必須是3張同一花色且連續的牌');
+        showStatusMessage('選擇的牌不符合吃的條件', 'error');
         return;
     }
-    
-    // 檢查是否三張相同（不應該是吃）
-    const allSame = selectedTiles.every(t => t.value === firstTile.value);
-    if (allSame) {
-        alert('三張相同的牌應該使用碰或槓');
-        return;
-    }
-    
-    // 從手牌中移除這些牌
+
+    saveStateToHistory();
+
+    state.chows.push({
+        tiles: selectedTiles,
+        type: firstTile.type,
+        value: firstTile.value
+    });
+
     selectedTiles.forEach(tile => {
         const index = state.handTiles.findIndex(t => 
             t.type === tile.type && t.value === tile.value
@@ -908,40 +611,25 @@ function markAsChow() {
             state.handTiles.splice(index, 1);
         }
     });
-    
-    // 添加到吃的列表
-    state.chows.push({
-        tiles: selectedTiles,
-        type: firstTile.type
-    });
-    
+
     updateUI();
 }
 
-// 標記為碰
-function markAsPung() {
-    saveStateToHistory();
-    
-    // 獲取選中的牌
+function addPung() {
     const selectedTiles = getSelectedTiles();
-    
     if (selectedTiles.length < 3) {
-        alert('請選擇至少3張相同的牌進行碰');
+        showStatusMessage('請選擇至少三張相同的牌進行碰', 'error');
         return;
     }
-    
-    // 檢查是否都是同一種牌
-    const firstTile = selectedTiles[0];
-    const allSame = selectedTiles.every(t => 
-        t.type === firstTile.type && t.value === firstTile.value
-    );
-    
-    if (!allSame) {
-        alert('碰必須是3張相同的牌');
-        return;
-    }
-    
-    // 從手牌中移除這些牌
+
+    saveStateToHistory();
+
+    state.pungs.push({
+        tiles: selectedTiles.slice(0, 3),
+        type: selectedTiles[0].type,
+        value: selectedTiles[0].value
+    });
+
     selectedTiles.slice(0, 3).forEach(tile => {
         const index = state.handTiles.findIndex(t => 
             t.type === tile.type && t.value === tile.value
@@ -950,84 +638,25 @@ function markAsPung() {
             state.handTiles.splice(index, 1);
         }
     });
-    
-    // 添加到碰的列表
-    state.pungs.push({
-        tiles: selectedTiles.slice(0, 3),
-        type: firstTile.type,
-        value: firstTile.value
-    });
-    
+
     updateUI();
 }
 
-// 標記為明槓
-function markAsOpenKong() {
-    saveStateToHistory();
-    
-    // 獲取選中的牌
+function addOpenKong() {
     const selectedTiles = getSelectedTiles();
-    
     if (selectedTiles.length !== 4) {
-        alert('請選擇4張相同的牌進行明槓');
+        showStatusMessage('請選擇四張相同的牌進行明槓', 'error');
         return;
     }
-    
-    // 檢查是否都是同一種牌
-    const firstTile = selectedTiles[0];
-    const allSame = selectedTiles.every(t => 
-        t.type === firstTile.type && t.value === firstTile.value
-    );
-    
-    if (!allSame) {
-        alert('槓必須是4張相同的牌');
-        return;
-    }
-    
-    // 從手牌中移除這些牌
-    selectedTiles.forEach(tile => {
-        const index = state.handTiles.findIndex(t => 
-            t.type === tile.type && t.value === tile.value
-        );
-        if (index !== -1) {
-            state.handTiles.splice(index, 1);
-        }
-    });
-    
-    // 添加到明槓的列表
+
+    saveStateToHistory();
+
     state.openKongs.push({
         tiles: selectedTiles,
-        type: firstTile.type,
-        value: firstTile.value
+        type: selectedTiles[0].type,
+        value: selectedTiles[0].value
     });
-    
-    updateUI();
-}
 
-// 標記為暗槓
-function markAsConcealedKong() {
-    saveStateToHistory();
-    
-    // 獲取選中的牌
-    const selectedTiles = getSelectedTiles();
-    
-    if (selectedTiles.length !== 4) {
-        alert('請選擇4張相同的牌進行暗槓');
-        return;
-    }
-    
-    // 檢查是否都是同一種牌
-    const firstTile = selectedTiles[0];
-    const allSame = selectedTiles.every(t => 
-        t.type === firstTile.type && t.value === firstTile.value
-    );
-    
-    if (!allSame) {
-        alert('槓必須是4張相同的牌');
-        return;
-    }
-    
-    // 從手牌中移除這些牌
     selectedTiles.forEach(tile => {
         const index = state.handTiles.findIndex(t => 
             t.type === tile.type && t.value === tile.value
@@ -1036,29 +665,46 @@ function markAsConcealedKong() {
             state.handTiles.splice(index, 1);
         }
     });
-    
-    // 添加到暗槓的列表
-    state.concealedKongs.push({
-        tiles: selectedTiles,
-        type: firstTile.type,
-        value: firstTile.value
-    });
-    
+
     updateUI();
 }
 
-// 獲取選中的牌（用於碰、槓）
+function addConcealedKong() {
+    const selectedTiles = getSelectedTiles();
+    if (selectedTiles.length !== 4) {
+        showStatusMessage('請選擇四張相同的牌進行暗槓', 'error');
+        return;
+    }
+
+    saveStateToHistory();
+
+    state.concealedKongs.push({
+        tiles: selectedTiles,
+        type: selectedTiles[0].type,
+        value: selectedTiles[0].value
+    });
+
+    selectedTiles.forEach(tile => {
+        const index = state.handTiles.findIndex(t => 
+            t.type === tile.type && t.value === tile.value
+        );
+        if (index !== -1) {
+            state.handTiles.splice(index, 1);
+        }
+    });
+
+    updateUI();
+}
+
 function getSelectedTiles() {
     const counts = {};
     const handTiles = [...state.handTiles];
     
-    // 統計手牌中每種牌的數量
     handTiles.forEach(tile => {
         const key = `${tile.type}-${tile.value}`;
         counts[key] = (counts[key] || 0) + 1;
     });
     
-    // 尋找最多張的相同牌
     let maxCount = 0;
     let selectedKey = null;
     
@@ -1079,13 +725,10 @@ function getSelectedTiles() {
     return [];
 }
 
-// 獲取選中的牌（用於吃）
 function getSelectedTilesForChow() {
-    // 返回最近添加的3張牌
     return state.handTiles.slice(-3);
 }
 
-// 保存當前狀態到歷史記錄
 function saveStateToHistory() {
     state.history.push(JSON.parse(JSON.stringify({
         handTiles: state.handTiles,
@@ -1097,13 +740,11 @@ function saveStateToHistory() {
         winningTile: state.winningTile
     })));
     
-    // 限制歷史記錄長度
     if (state.history.length > 50) {
         state.history.shift();
     }
 }
 
-// 復原上一次操作
 function undoLastAction() {
     if (state.history.length > 0) {
         const previousState = state.history.pop();
@@ -1120,7 +761,6 @@ function undoLastAction() {
     }
 }
 
-// 清除選擇
 function clearSelection() {
     saveStateToHistory();
     
@@ -1134,7 +774,6 @@ function clearSelection() {
     updateUI();
 }
 
-// 更新UI
 function updateUI() {
     updateTileCount();
     updateHandTilesDisplay();
@@ -1145,7 +784,6 @@ function updateUI() {
     calculateScore();
 }
 
-// 更新牌數顯示
 function updateTileCount() {
     const exposedGroups = state.chows.length + state.pungs.length + state.openKongs.length + state.concealedKongs.length;
     const maxHandTiles = 16 - (exposedGroups * 3);
@@ -1153,7 +791,6 @@ function updateTileCount() {
         `(${state.handTiles.length}/${maxHandTiles})`;
 }
 
-// 更新手牌顯示
 function updateHandTilesDisplay() {
     const container = document.getElementById('hand-tiles');
     container.innerHTML = '';
@@ -1168,13 +805,11 @@ function updateHandTilesDisplay() {
         tileElement.setAttribute('draggable', 'true');
         container.appendChild(tileElement);
 
-        // 添加拖曳事件
         setupDragEvents(tileElement);
     });
     console.log('Hand tiles display updated:', state.handTiles);
 }
 
-// 更新花牌顯示
 function updateFlowersDisplay() {
     const container = document.getElementById('selected-flowers');
     container.innerHTML = '';
@@ -1187,12 +822,10 @@ function updateFlowersDisplay() {
     });
 }
 
-// 更新副露區顯示
 function updateExposedTilesDisplay() {
     const container = document.getElementById('exposed-tiles');
     container.innerHTML = '';
     
-    // 顯示吃的牌
     state.chows.forEach(chow => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'exposed-tile-group';
@@ -1212,7 +845,6 @@ function updateExposedTilesDisplay() {
         container.appendChild(groupDiv);
     });
     
-    // 顯示碰的牌
     state.pungs.forEach(pung => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'exposed-tile-group';
@@ -1232,7 +864,6 @@ function updateExposedTilesDisplay() {
         container.appendChild(groupDiv);
     });
     
-    // 顯示明槓的牌
     state.openKongs.forEach(kong => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'exposed-tile-group';
@@ -1252,7 +883,6 @@ function updateExposedTilesDisplay() {
         container.appendChild(groupDiv);
     });
     
-    // 顯示暗槓的牌
     state.concealedKongs.forEach(kong => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'exposed-tile-group';
@@ -1273,7 +903,6 @@ function updateExposedTilesDisplay() {
     });
 }
 
-// 更新糊牌顯示
 function updateWinningTileDisplay() {
     const container = document.getElementById('winning-tile');
     container.innerHTML = '';
@@ -1282,11 +911,15 @@ function updateWinningTileDisplay() {
         const tileElement = document.createElement('div');
         tileElement.className = `selected-tile winning-tile ${state.winningTile.cssClass}`;
         tileElement.textContent = state.winningTile.display;
+        tileElement.dataset.type = state.winningTile.type;
+        tileElement.dataset.value = state.winningTile.value;
+        tileElement.dataset.source = 'winning-tile';
+        tileElement.setAttribute('draggable', 'true');
         container.appendChild(tileElement);
+        setupDragEvents(tileElement); // 添加拖曳事件
     }
 }
 
-// 更新按鈕狀態
 function updateButtonStates() {
     const selectedTiles = getSelectedTiles();
     const selectedTilesForChow = getSelectedTilesForChow();
@@ -1295,7 +928,6 @@ function updateButtonStates() {
     const openKongBtn = document.getElementById('open-kong-btn');
     const concealedKongBtn = document.getElementById('concealed-kong-btn');
     
-    // 檢查是否可以吃（三張連續的數牌，且不是三張相同的）
     let canChow = false;
     if (selectedTilesForChow.length === 3) {
         const firstTile = selectedTilesForChow[0];
@@ -1307,7 +939,6 @@ function updateButtonStates() {
         canChow = isSameType && isSequential && !allSame;
     }
     
-    // 檢查是否可以碰或槓
     let canPung = selectedTiles.length >= 3;
     let canKong = selectedTiles.length === 4;
     
@@ -1317,16 +948,11 @@ function updateButtonStates() {
     concealedKongBtn.disabled = !canKong;
 }
 
-// 計算番數
 function calculateScore() {
     const statusMessage = document.getElementById('status-message');
     statusMessage.innerHTML = '';
     
-    // 檢查總牌數是否達到要求
-    // 计算杠的数量
     const kongCount = state.openKongs.length + state.concealedKongs.length;
-    
-    // 检查总牌数是否达到要求 (17张基本牌 + 杠的数量)
     const totalTiles = state.handTiles.length + 
                       (state.chows.length * 3) + 
                       (state.pungs.length * 3) + 
@@ -1346,7 +972,6 @@ function calculateScore() {
     const handTypes = detectHandTypes();
     let totalScore = 0;
     
-    // 顯示檢測到的牌型
     const handTypesContainer = document.getElementById('hand-types');
     handTypesContainer.innerHTML = '';
     
@@ -1359,7 +984,6 @@ function calculateScore() {
         handTypesContainer.appendChild(handElement);
     });
         
-    // 連莊番數
     if (state.isDealer && state.dealerCount > 0) {
         const dealerScore = 2 * state.dealerCount + 1;
         totalScore += dealerScore;
@@ -1369,36 +993,29 @@ function calculateScore() {
         handTypesContainer.appendChild(dealerElement);
     }
     
-    // 顯示總番數
     document.getElementById('score-display').textContent = 
         `總番數: ${totalScore}`;
 }
 
-// 獲取所有牌（包括手牌、吃、碰、槓和糊牌）
 function getAllTiles() {
     const allTiles = [...state.handTiles];
     
-    // 添加吃的牌
     state.chows.forEach(chow => {
         allTiles.push(...chow.tiles);
     });
     
-    // 添加碰的牌
     state.pungs.forEach(pung => {
         allTiles.push(...pung.tiles);
     });
     
-    // 添加明槓的牌
     state.openKongs.forEach(kong => {
         allTiles.push(...kong.tiles);
     });
     
-    // 添加暗槓的牌
     state.concealedKongs.forEach(kong => {
         allTiles.push(...kong.tiles);
     });
     
-    // 添加糊牌
     if (state.winningTile) {
         allTiles.push(state.winningTile);
     }
@@ -1407,7 +1024,6 @@ function getAllTiles() {
 }
 
 function initializeTiles() {
-    // 假設這是初始化選擇區牌的函數
     const containers = ['characters-container', 'bamboos-container', 'dots-container', 'honors-container', 'flowers-container'];
     containers.forEach(containerId => {
         const container = document.getElementById(containerId);
@@ -1423,6 +1039,9 @@ function initializeTiles() {
     });
 }
 
+function detectHandTypes() {
+    // Placeholder for hand type detection logic
+    return [];
+}
 
-// 初始化應用
 window.addEventListener('DOMContentLoaded', initApp);
