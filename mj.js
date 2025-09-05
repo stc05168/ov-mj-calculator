@@ -71,8 +71,6 @@ function setupDragEvents(element) {
     if (element.classList.contains('tile') && !element.classList.contains('selected-tile')) {
         element.addEventListener('click', handleTileClick);
     }
-
-    console.log('Drag and click events set up for element:', element, 'Classes:', element.className, 'Source:', element.dataset.source);
 }
 
 function setupDropZone(zone, dropHandler) {
@@ -98,8 +96,6 @@ function setupDropZone(zone, dropHandler) {
     }, { passive: false });
     zone.addEventListener('touchmove', handleTouchMoveDropZone, { passive: false });
     zone.addEventListener('touchend', (e) => handleTouchEndDropZone(e, dropHandler, zone), { passive: false });
-
-    console.log('Drop zone events set up for:', zone.id);
 }
 
 let dropZonesInitialized = false;
@@ -107,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTiles();
 
     if (dropZonesInitialized) {
-        console.log('Drop zones already initialized, skipping');
         return;
     }
     dropZonesInitialized = true;
@@ -200,7 +195,6 @@ function handleTouchStart(e) {
         touchStartTime: Date.now() // 記錄觸摸開始時間
     };
 
-    console.log('Touch start:', element._dragData, 'Element:', element.outerHTML);
     element.classList.add('touch-active');
 
     // 設置定時器以檢測長按
@@ -215,7 +209,6 @@ function handleTouchStart(e) {
             dragImage.classList.add('dragging');
             document.body.appendChild(dragImage);
             element._dragImage = dragImage;
-            console.log('Long press detected, drag started:', dragImage);
         }
     }, 300); // 300ms 為長按閾值
 }
@@ -229,8 +222,6 @@ function handleTouchMove(e) {
 
     const touch = e.touches[0];
     const element = e.target;
-
-    console.log('Touch move triggered:', touch.clientX, touch.clientY);
 
     if (!element._dragData) {
         console.warn('No drag data found during touch move');
@@ -252,7 +243,6 @@ function handleTouchMove(e) {
         dragImage.classList.add('dragging');
         document.body.appendChild(dragImage);
         element._dragImage = dragImage;
-        console.log('Drag image created:', dragImage);
     }
 
     if (dragData.isDragging) {
@@ -263,7 +253,6 @@ function handleTouchMove(e) {
 // 触摸结束事件处理
 function handleTouchEnd(e) {
     const element = e.target;
-    console.log('Touch end triggered for element:', element);
 
     // 清除長按定時器
     if (element._longPressTimeout) {
@@ -272,7 +261,6 @@ function handleTouchEnd(e) {
     }
 
     if (element._dragData && element._dragData.isDragging) {
-        console.log('Calling handleTouchEndDropZone');
         const touch = e.changedTouches[0];
         if (touch) {
             const targetZone = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('#hand-tiles, #winning-tile, #trash-icon');
@@ -328,8 +316,6 @@ function handleTouchEndDropZone(e, dropHandler, targetZone) {
         return;
     }
 
-    console.log('Touch end drop zone:', touch.clientX, touch.clientY);
-
     const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!targetElement) {
         console.warn('No element found at touch point:', touch.clientX, touch.clientY);
@@ -344,8 +330,6 @@ function handleTouchEndDropZone(e, dropHandler, targetZone) {
         return;
     }
 
-    console.log('Target zone:', targetZone.id);
-
     const originalElement = document.querySelector('.tile.touch-active, .selected-tile.touch-active');
     if (!originalElement || !originalElement._dragData) {
         console.warn('No active drag element or drag data found');
@@ -353,7 +337,6 @@ function handleTouchEndDropZone(e, dropHandler, targetZone) {
     }
 
     const dragData = originalElement._dragData;
-    console.log('Dropping to zone:', targetZone.id, 'with data:', dragData);
 
     const dropEvent = new CustomEvent('drop', { bubbles: true });
     dropEvent.dataTransfer = {
@@ -449,10 +432,8 @@ function showStatusMessage(message, type = 'info') {
 function handleHandTilesDrop(e) {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('application/json'));
-    console.log('Dropped to hand tiles:', data);
 
     if (data.source === 'hand-tiles') {
-        console.log('Tile already in hand, no action needed');
         return;
     }
 
@@ -478,10 +459,8 @@ function handleHandTilesDrop(e) {
 function handleWinningTileDrop(e) {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('application/json'));
-    console.log('Dropped to winning tile:', data);
 
     if (state.winningTile) {
-        console.log('Winning tile already set, moving existing to hand');
         state.handTiles.push(state.winningTile);
         state.winningTile = null;
     }
@@ -510,7 +489,6 @@ function handleWinningTileDrop(e) {
 function handleTrashDrop(e) {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('application/json'));
-    console.log('Dropped to trash:', data);
 
     if (data.source === 'hand-tiles') {
         const index = state.handTiles.findIndex(t => 
@@ -853,7 +831,6 @@ function updateHandTilesDisplay() {
 
         setupDragEvents(tileElement);
     });
-    console.log('Hand tiles display updated:', state.handTiles);
 }
 
 function updateFlowersDisplay() {
@@ -1079,7 +1056,6 @@ function initializeTiles() {
                 tile.dataset.source = containerId;
                 tile.setAttribute('draggable', 'true');
                 setupDragEvents(tile);
-                console.log('Tile initialized:', tile.outerHTML, 'Source:', tile.dataset.source);
             });
         }
     });

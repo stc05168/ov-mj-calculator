@@ -7,13 +7,14 @@ function detectHandTypes() {
     if (isValidShiSanYao(allTiles)) {
         // 检查是否是独独
         if (isShiSanYaoDuDu(state.handTiles, state.winningTile)) {
-            handTypes.push({ name: '十三么（獨獨）', score: 150 });
+            handTypes.push({ name: '十三么', score: 140 });
+            handTypes.push({ name: '十三么（獨獨）', score: 2 });
         } else {
             // 分析和牌前的听牌情况
             const waits = analyzeWaitsBeforeWinForShiSanYao(state.handTiles);
             
-            if (waits.length > 1) {
-                handTypes.push({ name: `十三么（${waits.length} 飛）`, score: 140 });
+            if (waits.length > 10) {
+                handTypes.push({ name: `十三么（${waits.length} 飛）`, score: 150 });
             } else {
                 handTypes.push({ name: '十三么', score: 140 });
             }
@@ -460,7 +461,6 @@ function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
             // 检查是否是不完整的顺子
             if (values.length === 2) {
                 const diff = values[1] - values[0];
-                
                 // 中洞（如35听4）
                 if (diff === 2) {
                     allPossibleTiles.push({ type: firstTile.type, value: values[0] + 1 });
@@ -473,6 +473,9 @@ function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
                     if (values[1] < 9) {
                         allPossibleTiles.push({ type: firstTile.type, value: values[1] + 1 });
                     }
+                }else if (diff === 0) {
+                    waits.push(firstTile)
+                    return waits;
                 }
             }
             // 检查是否是三张牌但需要形成顺子或刻子
@@ -496,7 +499,7 @@ function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
             }
         }
     }
-    
+
     return waits;
 }
 // 新增龍牌型檢測函數
