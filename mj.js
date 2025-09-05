@@ -49,65 +49,137 @@ function setupDragAndDrop() {
 }
 
 function setupDragEvents(element) {
-    // 鼠标事件
+    // 移除舊的事件監聽器，避免重複綁定
+    element.removeEventListener('dragstart', handleDragStart);
+    element.removeEventListener('dragend', handleDragEnd);
+    element.removeEventListener('touchstart', handleTouchStart);
+    element.removeEventListener('touchmove', handleTouchMove);
+    element.removeEventListener('touchend', handleTouchEnd);
+    element.removeEventListener('touchcancel', handleTouchEnd);
+
+    // 添加滑鼠事件
     element.addEventListener('dragstart', handleDragStart);
     element.addEventListener('dragend', handleDragEnd);
-    
-    // 触摸事件
+
+    // 添加觸摸事件
     element.addEventListener('touchstart', handleTouchStart, { passive: false });
     element.addEventListener('touchmove', handleTouchMove, { passive: false });
-    element.addEventListener('touchend', handleTouchEnd);
-    element.addEventListener('touchcancel', handleTouchEnd);
+    element.addEventListener('touchend', handleTouchEnd, { passive: false });
+    element.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    console.log('Drag events set up for element:', element, 'Classes:', element.className, 'Source:', element.dataset.source);
 }
 
 function setupDropZone(zone, dropHandler) {
-    // 鼠标事件
+    // 移除舊的事件監聽器
+    zone.removeEventListener('dragover', handleDragOver);
+    zone.removeEventListener('drop', dropHandler);
+    zone.removeEventListener('dragenter', handleDragEnter);
+    zone.removeEventListener('dragleave', handleDragLeave);
+    zone.removeEventListener('touchmove', handleTouchMoveDropZone);
+    zone.removeEventListener('touchend', handleTouchEndDropZone);
+
+    // 添加滑鼠事件
     zone.addEventListener('dragover', handleDragOver);
     zone.addEventListener('drop', dropHandler);
     zone.addEventListener('dragenter', handleDragEnter);
     zone.addEventListener('dragleave', handleDragLeave);
-    
-    // 触摸事件
+
+    // 添加觸摸事件
+    zone.addEventListener('touchstart', (e) => {
+        if (e.target.classList.contains('selected-tile')) {
+            e.stopPropagation();
+        }
+    }, { passive: false });
     zone.addEventListener('touchmove', handleTouchMoveDropZone, { passive: false });
-    zone.addEventListener('touchend', (e) => handleTouchEndDropZone(e, dropHandler));
+    zone.addEventListener('touchend', (e) => handleTouchEndDropZone(e, dropHandler, zone), { passive: false });
+
+    console.log('Drop zone events set up for:', zone.id);
 }
+
+let dropZonesInitialized = false;
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTiles();
+
+    if (dropZonesInitialized) {
+        console.log('Drop zones already initialized, skipping');
+        return;
+    }
+    dropZonesInitialized = true;
+
+    const handTilesZone = document.getElementById('hand-tiles');
+    const winningTileZone = document.getElementById('winning-tile');
+    const trashZone = document.getElementById('trash-icon');
+
+    if (handTilesZone) {
+        setupDropZone(handTilesZone, handleHandTilesDrop);
+    } else {
+        console.error('Hand tiles element not found');
+    }
+
+    if (winningTileZone) {
+        setupDropZone(winningTileZone, handleWinningTileDrop);
+    } else {
+        console.error('Winning tile element not found');
+    }
+
+    if (trashZone) {
+        setupDropZone(trashZone, handleTrashDrop);
+    } else {
+        console.error('Trash icon element not found');
+    }
+});
 
 // 触摸开始事件处理
 function handleTouchStart(e) {
-    e.preventDefault(); // 防止默認行為（如頁面滾動）
-
-    const touch = e.touches[0];
-    const element = e.target;
-
-    // 檢查元素是否可拖曳
-    if (!element.classList.contains('tile') && !element.classList.contains('selected-tile')) {
-        console.warn('Invalid drag element:', element);
-        return;
+    if (e.cancelable) {
+        e.preventDefault();
+    } else {
+        console.warn('touchstart event is not cancelable');
     }
 
-    // 設置拖曳資料
+    const touch = e.touches[0];
+    let element = e.target;
+
+    // 確保找到正確的牌元素
+    if (!element.classList.contains('tile') && !element.classList.contains('selected-tile')) {
+        element = element.closest('.tile, .selected-tile');
+        if (!element) {
+            console.warn('No valid drag element found:', e.target);
+            return;
+        }
+    }
+
+    if (!element.dataset.source) {
+        console.warn('Element missing data-source:', element.outerHTML);
+        element.dataset.source = element.closest('[id]')?.id || 'unknown';
+    }
+
     element._dragData = {
         type: element.dataset.type,
         value: parseInt(element.dataset.value),
-        source: element.dataset.source || element.closest('[id]').id,
+        source: element.dataset.source,
         display: element.textContent,
         startX: touch.clientX,
         startY: touch.clientY,
         isDragging: false
     };
 
-    console.log('Touch start:', element._dragData);
-
-    // 添加觸摸激活樣式
+    console.log('Touch start:', element._dragData, 'Element:', element.outerHTML);
     element.classList.add('touch-active');
 }
 
-// 触摸移动事件处理
 function handleTouchMove(e) {
-    e.preventDefault(); // 防止頁面滾動
+    if (e.cancelable) {
+        e.preventDefault();
+    } else {
+        console.warn('touchmove event is not cancelable');
+    }
 
     const touch = e.touches[0];
     const element = e.target;
+
+    console.log('Touch move triggered:', touch.clientX, touch.clientY);
 
     if (!element._dragData) {
         console.warn('No drag data found during touch move');
@@ -118,11 +190,10 @@ function handleTouchMove(e) {
     const deltaX = Math.abs(touch.clientX - dragData.startX);
     const deltaY = Math.abs(touch.clientY - dragData.startY);
 
-    // 開始拖曳的閾值檢查
-    if (!dragData.isDragging && (deltaX > 10 || deltaY > 10)) {
+    // 進一步降低閾值以提高靈敏度
+    if (!dragData.isDragging && (deltaX > 3 || deltaY > 3)) {
         dragData.isDragging = true;
 
-        // 創建拖曳圖像
         const dragImage = element.cloneNode(true);
         dragImage.style.position = 'fixed';
         dragImage.style.zIndex = '10000';
@@ -132,10 +203,10 @@ function handleTouchMove(e) {
         document.body.appendChild(dragImage);
 
         element._dragImage = dragImage;
+        console.log('Drag image created:', dragImage);
     }
 
     if (dragData.isDragging) {
-        // 更新拖曳圖像位置
         updateDragImagePosition(touch.clientX, touch.clientY, element._dragImage);
     }
 }
@@ -143,20 +214,31 @@ function handleTouchMove(e) {
 // 触摸结束事件处理
 function handleTouchEnd(e) {
     const element = e.target;
-    
+    console.log('Touch end triggered for element:', element);
+
     if (element._dragData && element._dragData.isDragging) {
-        // 移除拖拽图像
-        if (element._dragImage && element._dragImage.parentNode) {
-            element._dragImage.parentNode.removeChild(element._dragImage);
+        console.log('Calling handleTouchEndDropZone');
+        const touch = e.changedTouches[0];
+        if (touch) {
+            const targetZone = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('#hand-tiles, #winning-tile, #trash-icon');
+            if (targetZone) {
+                const dropHandler = targetZone.id === 'hand-tiles' ? handleHandTilesDrop :
+                                 targetZone.id === 'winning-tile' ? handleWinningTileDrop :
+                                 handleTrashDrop;
+                handleTouchEndDropZone(e, dropHandler, targetZone);
+            } else {
+                console.warn('No valid drop zone found at touch end');
+            }
         }
-        
-        // 处理放置逻辑（在handleTouchEndDropZone中处理）
     }
-    
-    // 清理数据
+
+    // 清理拖曳圖像和狀態
+    if (element._dragImage && element._dragImage.parentNode) {
+        element._dragImage.parentNode.removeChild(element._dragImage);
+    }
+    element.classList.remove('touch-active');
     delete element._dragData;
     delete element._dragImage;
-    element.classList.remove('touch-active');
 }
 
 function handleTouchMoveDropZone(e) {
@@ -168,29 +250,43 @@ function handleTouchMoveDropZone(e) {
 }
 
 // 放置区域的触摸移动处理
-function handleTouchEndDropZone(e, dropHandler) {
-    e.preventDefault(); // 防止默認行為
+function handleTouchEndDropZone(e, dropHandler, targetZone) {
+    if (e.cancelable) {
+        e.preventDefault();
+    } else {
+        console.warn('touchend event is not cancelable, possible scrolling interference');
+    }
+
     const draggingElement = document.querySelector('.dragging');
-    if (!draggingElement) return;
+    if (!draggingElement) {
+        console.warn('No dragging element found');
+        return;
+    }
 
     const touch = e.changedTouches[0];
-    if (!touch) return; // 確保 touch 物件存在
+    if (!touch) {
+        console.warn('No touch data found');
+        return;
+    }
 
-    // 使用 clientX 和 clientY 獲取觸摸結束位置
+    console.log('Touch end drop zone:', touch.clientX, touch.clientY);
+
     const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!targetElement) {
         console.warn('No element found at touch point:', touch.clientX, touch.clientY);
         return;
     }
 
-    // 查找最近的放置區域
-    const targetZone = targetElement.closest('#hand-tiles, #winning-tile, #trash-icon');
+    if (!targetZone) {
+        targetZone = targetElement.closest('#hand-tiles, #winning-tile, #trash-icon');
+    }
     if (!targetZone) {
         console.warn('No valid drop zone found at:', touch.clientX, touch.clientY);
         return;
     }
 
-    // 找到原始拖曳元素
+    console.log('Target zone:', targetZone.id);
+
     const originalElement = document.querySelector('.tile.touch-active, .selected-tile.touch-active');
     if (!originalElement || !originalElement._dragData) {
         console.warn('No active drag element or drag data found');
@@ -198,24 +294,20 @@ function handleTouchEndDropZone(e, dropHandler) {
     }
 
     const dragData = originalElement._dragData;
+    console.log('Dropping to zone:', targetZone.id, 'with data:', dragData);
 
-    // 創建模擬的 drop 事件
-    const dropEvent = new Event('drop', { bubbles: true });
+    const dropEvent = new CustomEvent('drop', { bubbles: true });
     dropEvent.dataTransfer = {
         getData: () => JSON.stringify(dragData)
     };
+    dropEvent.currentTarget = targetZone;
 
-    // 調用對應的 drop 處理函數
-    console.log('Dropping to zone:', targetZone.id, 'with data:', dragData);
-    dropHandler.call(targetZone, dropEvent);
-
-    // 清理拖曳圖像和狀態
-    if (draggingElement && draggingElement.parentNode) {
-        draggingElement.parentNode.removeChild(draggingElement);
+    try {
+        dropHandler.call(targetZone, dropEvent);
+    } catch (error) {
+        console.error('Error in drop handler:', error);
+        showStatusMessage('放置失敗', 'error');
     }
-    originalElement.classList.remove('touch-active');
-    delete originalElement._dragData;
-    delete originalElement._dragImage;
 }
 
 // 更新拖拽图像位置
@@ -303,59 +395,6 @@ function handleDragLeave(e) {
     }
 }
 
-// 手牌区放置事件处理
-function handleTrashDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // 移除拖拽视觉效果
-    const trashIcon = document.getElementById('trash-icon');
-    trashIcon.classList.remove('drag-over');
-    
-    try {
-        // 获取拖拽数据
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        console.log('Trash drop data:', data);
-        
-        // 保存状态到历史记录
-        saveStateToHistory();
-        
-        // 根据来源删除相应的牌
-        if (data.source === 'hand-tiles') {
-            // 从手牌中删除
-            const index = state.handTiles.findIndex(t => 
-                t.type === data.type && parseInt(t.value) === parseInt(data.value)
-            );
-            
-            if (index !== -1) {
-                state.handTiles.splice(index, 1);
-                console.log('Removed from hand tiles:', data.display);
-            }
-        } else if (data.source === 'winning-tile') {
-            // 删除糊牌
-            if (state.winningTile && 
-                state.winningTile.type === data.type && 
-                parseInt(state.winningTile.value) === parseInt(data.value)) {
-                state.winningTile = null;
-                console.log('Removed winning tile:', data.display);
-            }
-        } else if (data.source.includes('container')) {
-            // 从选择区拖拽到垃圾筒，不做任何操作
-            console.log('Dropped from selection area to trash, ignoring');
-            return;
-        }
-        
-        updateUI();
-        
-        // 显示删除成功的提示
-        showStatusMessage(`已刪除: ${data.display}`, 'success');
-        
-    } catch (error) {
-        console.error('Error handling trash drop:', error);
-        showStatusMessage('刪除失敗', 'error');
-    }
-}
-
 function showStatusMessage(message, type = 'info') {
     const statusDiv = document.createElement('div');
     statusDiv.className = `status-message ${type}`;
@@ -422,7 +461,17 @@ function updateDraggableTiles() {
 
 function handleHandTilesDrop(e) {
     e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
+
+    // 安全地移除 drag-over 類
+    if (e.currentTarget) {
+        e.currentTarget.classList.remove('drag-over');
+    } else {
+        console.warn('currentTarget is null, attempting to find hand-tiles');
+        const handTilesZone = document.getElementById('hand-tiles');
+        if (handTilesZone) {
+            handTilesZone.classList.remove('drag-over');
+        }
+    }
 
     try {
         const data = JSON.parse(e.dataTransfer.getData('application/json'));
@@ -435,20 +484,12 @@ function handleHandTilesDrop(e) {
             return;
         }
 
+        console.log('Found tile:', tile);
+
         saveStateToHistory();
+        selectTile(tile);
 
-        if (data.source === 'winning-tile' && state.winningTile &&
-            state.winningTile.type === data.type && state.winningTile.value === data.value) {
-            state.winningTile = null;
-            selectTile(tile);
-        } else if (data.source.includes('container')) {
-            selectTile(tile);
-        } else {
-            console.warn('Invalid drop source:', data.source);
-            showStatusMessage('無效的拖曳來源', 'error');
-            return;
-        }
-
+        console.log('Current hand tiles after drop:', state.handTiles);
         updateUI();
         showStatusMessage(`已添加: ${tile.display}`, 'success');
     } catch (error) {
@@ -460,39 +501,56 @@ function handleHandTilesDrop(e) {
 // 糊牌区放置事件处理
 function handleWinningTileDrop(e) {
     e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
+
+    // 安全地移除 drag-over 類
+    if (e.currentTarget) {
+        e.currentTarget.classList.remove('drag-over');
+    } else {
+        console.warn('currentTarget is null, attempting to find winning-tile');
+        const winningTileZone = document.getElementById('winning-tile');
+        if (winningTileZone) {
+            winningTileZone.classList.remove('drag-over');
+        }
+    }
 
     try {
-        // 獲取拖曳資料
         const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        const tile = findTileByTypeAndValue(data.type, data.value);
+        console.log('Winning tile drop data:', data);
 
+        const tile = findTileByTypeAndValue(data.type, data.value);
         if (!tile) {
             console.error('Tile not found:', data);
             showStatusMessage('無效的牌', 'error');
             return;
         }
 
-        // 檢查糊牌區是否已有牌
-        if (state.winningTile) {
-            showStatusMessage('糊牌區已有一張牌，請先移除', 'error');
-            return;
-        }
+        console.log('Found tile:', tile);
 
         saveStateToHistory();
 
-        // 從手牌區移除（如果適用）
+        // 如果糊牌區已有牌，則提示錯誤
+        if (state.winningTile) {
+            console.warn('Winning tile already exists:', state.winningTile);
+            showStatusMessage('糊牌區已有一張牌', 'error');
+            return;
+        }
+
+        // 從手牌區移除（如果來源是 hand-tiles）
         if (data.source === 'hand-tiles') {
             const index = state.handTiles.findIndex(t =>
                 t.type === data.type && t.value === data.value
             );
             if (index !== -1) {
                 state.handTiles.splice(index, 1);
+                console.log('Tile removed from hand-tiles:', tile);
             }
         }
 
-        // 設置糊牌
+        // 添加到糊牌區
         state.winningTile = { ...tile };
+        console.log('Tile set as winning tile:', tile);
+        showStatusMessage(`已設為糊牌: ${tile.display}`, 'success');
+
         updateUI();
     } catch (error) {
         console.error('Error handling winning tile drop:', error);
@@ -502,29 +560,61 @@ function handleWinningTileDrop(e) {
 
 // 垃圾筒放置事件处理
 function handleTrashDrop(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-    
-    // 获取拖拽数据
-    const data = JSON.parse(e.dataTransfer.getData('application/json'));
-    
-    // 根据来源删除相应的牌
-    if (data.source === 'hand-tiles') {
-        // 从手牌中删除
-        const index = state.handTiles.findIndex(t => 
-            t.type === data.type && t.value === data.value
-        );
-        
-        if (index !== -1) {
-            state.handTiles.splice(index, 1);
-        }
-    } else if (data.source === 'winning-tile' && state.winningTile && 
-               state.winningTile.type === data.type && state.winningTile.value === data.value) {
-        // 删除糊牌
-        state.winningTile = null;
+    if (e.cancelable) {
+        e.preventDefault();
     }
-    
-    updateUI();
+
+    // 安全地移除 drag-over 類
+    if (e.currentTarget) {
+        e.currentTarget.classList.remove('drag-over');
+    } else {
+        console.warn('currentTarget is null, attempting to find trash-icon');
+        const trashZone = document.getElementById('trash-icon');
+        if (trashZone) {
+            trashZone.classList.remove('drag-over');
+        }
+    }
+
+    try {
+        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+        console.log('Trash drop data:', data);
+
+        const tile = findTileByTypeAndValue(data.type, data.value);
+        if (!tile) {
+            console.error('Tile not found:', data);
+            showStatusMessage('無效的牌', 'error');
+            return;
+        }
+
+        saveStateToHistory();
+
+        // 從糊牌區移除
+        if (data.source === 'winning-tile' && state.winningTile &&
+            state.winningTile.type === data.type && state.winningTile.value === data.value) {
+            state.winningTile = null;
+            console.log('Tile removed from winning-tile:', tile);
+            showStatusMessage(`已移除: ${tile.display}`, 'success');
+        } else if (data.source === 'hand-tiles') {
+            // 從手牌區移除
+            const index = state.handTiles.findIndex(t =>
+                t.type === data.type && t.value === data.value
+            );
+            if (index !== -1) {
+                state.handTiles.splice(index, 1);
+                console.log('Tile removed from hand-tiles:', tile);
+                showStatusMessage(`已移除: ${tile.display}`, 'success');
+            }
+        } else {
+            console.warn('Invalid drop source for trash:', data.source);
+            showStatusMessage('無效的拖曳來源', 'error');
+            return;
+        }
+
+        updateUI();
+    } catch (error) {
+        console.error('Error handling trash drop:', error);
+        showStatusMessage('移除失敗', 'error');
+    }
 }
 
 // 辅助函数：根据类型和值查找牌
@@ -585,19 +675,22 @@ function updateHandTilesDisplay() {
 function updateWinningTileDisplay() {
     const container = document.getElementById('winning-tile');
     container.innerHTML = '';
-
+    
     if (state.winningTile) {
         const tileElement = document.createElement('div');
         tileElement.className = `selected-tile winning-tile ${state.winningTile.cssClass}`;
         tileElement.textContent = state.winningTile.display;
         tileElement.dataset.type = state.winningTile.type;
         tileElement.dataset.value = state.winningTile.value;
-        tileElement.dataset.source = 'winning-tile';
-        tileElement.setAttribute('draggable', 'true'); // 設置可拖曳
+        tileElement.dataset.source = 'winning-tile'; // 添加来源标识
+        tileElement.setAttribute('draggable', 'true');
         container.appendChild(tileElement);
-
-        // 添加拖曳事件
+        
+        // 确保触摸和拖曳事件绑定
         setupDragEvents(tileElement);
+        console.log('Winning tile display updated:', state.winningTile, 'Draggable:', tileElement.draggable, 'Element:', tileElement.outerHTML);
+    } else {
+        console.log('No winning tile to display');
     }
 }
 
@@ -740,17 +833,19 @@ function selectTile(tile) {
 
         if (state.winningTile === null && totalTiles === maxHandTiles) {
             state.winningTile = { ...tile };
+            console.log('Auto set as winning tile:', tile);
             showStatusMessage(`已自動設為糊牌: ${tile.display}`, 'success');
             updateUI();
             return;
         }
 
+        console.warn('Hand tiles limit reached:', maxHandTiles);
         showStatusMessage(`手牌已達上限 (${maxHandTiles} 張)`, 'error');
         return;
     }
 
     state.handTiles.push({ ...tile });
-    console.log('Tile added to hand:', tile);
+    console.log('Tile added to hand:', tile, 'Current hand tiles:', state.handTiles);
     showStatusMessage(`已添加: ${tile.display}`, 'success');
     updateUI();
 }
@@ -1062,13 +1157,21 @@ function updateTileCount() {
 function updateHandTilesDisplay() {
     const container = document.getElementById('hand-tiles');
     container.innerHTML = '';
-    
+
     state.handTiles.forEach(tile => {
         const tileElement = document.createElement('div');
         tileElement.className = `selected-tile ${tile.cssClass}`;
         tileElement.textContent = tile.display;
+        tileElement.dataset.type = tile.type;
+        tileElement.dataset.value = tile.value;
+        tileElement.dataset.source = 'hand-tiles';
+        tileElement.setAttribute('draggable', 'true');
         container.appendChild(tileElement);
+
+        // 添加拖曳事件
+        setupDragEvents(tileElement);
     });
+    console.log('Hand tiles display updated:', state.handTiles);
 }
 
 // 更新花牌顯示
@@ -1302,6 +1405,24 @@ function getAllTiles() {
     
     return allTiles;
 }
+
+function initializeTiles() {
+    // 假設這是初始化選擇區牌的函數
+    const containers = ['characters-container', 'bamboos-container', 'dots-container', 'honors-container', 'flowers-container'];
+    containers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            const tiles = container.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                tile.dataset.source = containerId;
+                tile.setAttribute('draggable', 'true');
+                setupDragEvents(tile);
+                console.log('Tile initialized:', tile.outerHTML, 'Source:', tile.dataset.source);
+            });
+        }
+    });
+}
+
 
 // 初始化應用
 window.addEventListener('DOMContentLoaded', initApp);
