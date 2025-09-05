@@ -2771,12 +2771,18 @@ function countLaoShaoShang(allTiles) {
         // Count 123 and 789 sets
         const max123 = Math.min(valueCounts[1] || 0, valueCounts[2] || 0, valueCounts[3] || 0);
         const max789 = Math.min(valueCounts[7] || 0, valueCounts[8] || 0, valueCounts[9] || 0);
-
+        
         // Count one Lao Shao per suit (prefer 123 if available)
-        if (max123 > 0) {
-            laoShaoCount += 1;
-        } else if (max789 > 0) {
-            laoShaoCount += 1;
+        if (max123 > 0 && max789 > 0) {
+            if (max123 == 1 && max789 == 1) {
+                laoShaoCount += 1;
+            }else if (max123 == 2 && max789 == 1) {
+                laoShaoCount += 2;
+            }else if (max123 == 1 && max789 == 2) {
+                laoShaoCount += 2;
+            }else if (max123 == 2 && max789 == 2) {
+                laoShaoCount += 4;
+            }
         }
     });
 
@@ -3184,7 +3190,7 @@ function isShiSanYaoDuDu(handTiles, winningTile) {
     
     // 分析和牌前的听牌情况
     const waitsBeforeWin = analyzeWaitsBeforeWinForShiSanYao(handTiles);
-    
+
     // 独独必须只听一张牌
     return waitsBeforeWin.length === 1;
 }
