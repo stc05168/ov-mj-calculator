@@ -25,7 +25,6 @@ function initApp() {
 }
 
 // 设置拖放事件监听
-// 修改 setupDragAndDrop 函數
 function setupDragAndDrop() {
     // 設置所有牌的拖拽屬性
     const allTiles = document.querySelectorAll('.tile');
@@ -56,6 +55,7 @@ function setupDragEvents(element) {
     element.removeEventListener('touchmove', handleTouchMove);
     element.removeEventListener('touchend', handleTouchEnd);
     element.removeEventListener('touchcancel', handleTouchEnd);
+    element.removeEventListener('click', handleTileClick);
 
     // 添加滑鼠事件
     element.addEventListener('dragstart', handleDragStart);
@@ -67,7 +67,12 @@ function setupDragEvents(element) {
     element.addEventListener('touchend', handleTouchEnd, { passive: false });
     element.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-    console.log('Drag events set up for element:', element, 'Classes:', element.className, 'Source:', element.dataset.source);
+    // 添加點擊事件（僅適用於選擇區的牌）
+    if (element.classList.contains('tile') && !element.classList.contains('selected-tile')) {
+        element.addEventListener('click', handleTileClick);
+    }
+
+    console.log('Drag and click events set up for element:', element, 'Classes:', element.className, 'Source:', element.dataset.source);
 }
 
 function setupDropZone(zone, dropHandler) {
@@ -130,6 +135,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// 點擊選擇牌到手牌區
+function handleTileClick(e) {
+    const element = e.target;
+    if (!element.classList.contains('tile') || element.classList.contains('selected-tile')) {
+        return;
+    }
+
+    const type = element.dataset.type;
+    const value = parseInt(element.dataset.value);
+    const source = element.dataset.source;
+    const display = element.textContent;
+
+    if (source === 'flowers-container') {
+        const tile = FLOWER_TILES.find(t => t.type === type && t.value === value);
+        if (tile) {
+            state.flowers.push({ ...tile });
+            showStatusMessage('花牌已加入', 'info');
+        }
+    } else {
+        const tile = ALL_TILES.find(t => t.type === type && t.value === value);
+        if (tile) {
+            state.handTiles.push({ ...tile });
+            showStatusMessage('牌已加入手牌', 'info');
+        }
+    }
+
+    updateUI();
+}
+
 // 触摸开始事件处理
 function handleTouchStart(e) {
     if (e.cancelable) {
@@ -162,11 +196,28 @@ function handleTouchStart(e) {
         display: element.textContent,
         startX: touch.clientX,
         startY: touch.clientY,
-        isDragging: false
+        isDragging: false,
+        touchStartTime: Date.now() // 記錄觸摸開始時間
     };
 
     console.log('Touch start:', element._dragData, 'Element:', element.outerHTML);
     element.classList.add('touch-active');
+
+    // 設置定時器以檢測長按
+    element._longPressTimeout = setTimeout(() => {
+        if (element._dragData) {
+            element._dragData.isDragging = true;
+            const dragImage = element.cloneNode(true);
+            dragImage.style.position = 'fixed';
+            dragImage.style.zIndex = '10000';
+            dragImage.style.opacity = '0.8';
+            dragImage.style.transform = 'scale(1.2)';
+            dragImage.classList.add('dragging');
+            document.body.appendChild(dragImage);
+            element._dragImage = dragImage;
+            console.log('Long press detected, drag started:', dragImage);
+        }
+    }, 300); // 300ms 為長按閾值
 }
 
 function handleTouchMove(e) {
@@ -190,10 +241,9 @@ function handleTouchMove(e) {
     const deltaX = Math.abs(touch.clientX - dragData.startX);
     const deltaY = Math.abs(touch.clientY - dragData.startY);
 
-    // 進一步降低閾值以提高靈敏度
     if (!dragData.isDragging && (deltaX > 3 || deltaY > 3)) {
         dragData.isDragging = true;
-
+        clearTimeout(element._longPressTimeout); // 清除長按定時器
         const dragImage = element.cloneNode(true);
         dragImage.style.position = 'fixed';
         dragImage.style.zIndex = '10000';
@@ -201,7 +251,6 @@ function handleTouchMove(e) {
         dragImage.style.transform = 'scale(1.2)';
         dragImage.classList.add('dragging');
         document.body.appendChild(dragImage);
-
         element._dragImage = dragImage;
         console.log('Drag image created:', dragImage);
     }
@@ -215,6 +264,12 @@ function handleTouchMove(e) {
 function handleTouchEnd(e) {
     const element = e.target;
     console.log('Touch end triggered for element:', element);
+
+    // 清除長按定時器
+    if (element._longPressTimeout) {
+        clearTimeout(element._longPressTimeout);
+        delete element._longPressTimeout;
+    }
 
     if (element._dragData && element._dragData.isDragging) {
         console.log('Calling handleTouchEndDropZone');
@@ -230,6 +285,12 @@ function handleTouchEnd(e) {
                 console.warn('No valid drop zone found at touch end');
             }
         }
+    } else if (element._dragData && !element.classList.contains('selected-tile')) {
+        // 快速觸碰（非拖曳）模擬點擊
+        const touchDuration = Date.now() - element._dragData.touchStartTime;
+        if (touchDuration < 300) {
+            handleTileClick({ target: element });
+        }
     }
 
     // 清理拖曳圖像和狀態
@@ -242,14 +303,12 @@ function handleTouchEnd(e) {
 }
 
 function handleTouchMoveDropZone(e) {
-    // 如果有拖拽操作在进行，阻止滚动
     const draggingElement = document.querySelector('.dragging');
     if (draggingElement) {
         e.preventDefault();
     }
 }
 
-// 放置区域的触摸移动处理
 function handleTouchEndDropZone(e, dropHandler, targetZone) {
     if (e.cancelable) {
         e.preventDefault();
@@ -310,16 +369,13 @@ function handleTouchEndDropZone(e, dropHandler, targetZone) {
     }
 }
 
-// 更新拖拽图像位置
 function updateDragImagePosition(x, y, dragImage) {
     if (dragImage) {
-        // 調整偏移以確保圖像跟隨觸摸點
         dragImage.style.left = (x - 15) + 'px';
         dragImage.style.top = (y - 20) + 'px';
     }
 }
 
-// 阻止拖拽时的页面滚动
 function preventScrollDuringDrag(e) {
     const draggingElement = document.querySelector('.dragging');
     if (draggingElement) {
@@ -327,7 +383,6 @@ function preventScrollDuringDrag(e) {
     }
 }
 
-// 拖拽开始事件处理
 function handleDragStart(e) {
     const tileElement = e.target;
     const type = tileElement.dataset.type;
@@ -335,7 +390,6 @@ function handleDragStart(e) {
     const source = tileElement.dataset.source || tileElement.parentElement.id;
     const display = tileElement.textContent;
     
-    // 保存拖拽数据
     e.dataTransfer.setData('application/json', JSON.stringify({
         type: type,
         value: value,
@@ -343,10 +397,8 @@ function handleDragStart(e) {
         display: display
     }));
     
-    // 设置拖拽图像
     e.dataTransfer.effectAllowed = 'move';
     
-    // 设置拖拽图像为牌本身
     setTimeout(() => {
         tileElement.classList.add('dragging');
     }, 0);
@@ -366,17 +418,13 @@ document.addEventListener('dragend', (e) => {
     });
 });
 
-// 拖拽经过事件处理
 function handleDragOver(e) {
     e.preventDefault();
-    // 允许放置
     e.dataTransfer.dropEffect = 'move';
 }
 
-// 修改拖拽进入事件处理
 function handleDragEnter(e) {
     e.preventDefault();
-    // 确保我们只处理垃圾筒元素的dragenter事件
     if (e.currentTarget.id === 'trash-icon' || 
         e.currentTarget.id === 'hand-tiles' || 
         e.currentTarget.id === 'winning-tile') {
@@ -384,10 +432,8 @@ function handleDragEnter(e) {
     }
 }
 
-// 拖拽离开事件处理
 function handleDragLeave(e) {
     e.preventDefault();
-    // 确保我们只处理垃圾筒元素的dragleave事件
     if (e.currentTarget.id === 'trash-icon' || 
         e.currentTarget.id === 'hand-tiles' || 
         e.currentTarget.id === 'winning-tile') {
@@ -916,7 +962,7 @@ function updateWinningTileDisplay() {
         tileElement.dataset.source = 'winning-tile';
         tileElement.setAttribute('draggable', 'true');
         container.appendChild(tileElement);
-        setupDragEvents(tileElement); // 添加拖曳事件
+        setupDragEvents(tileElement);
     }
 }
 
@@ -1037,11 +1083,6 @@ function initializeTiles() {
             });
         }
     });
-}
-
-function detectHandTypes() {
-    // Placeholder for hand type detection logic
-    return [];
 }
 
 window.addEventListener('DOMContentLoaded', initApp);
