@@ -129,7 +129,7 @@ select, input[type="checkbox"] {
 }
 
 .tiles-group {
-    min-height: 60px;
+    min-height: 120px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
@@ -245,4 +245,143 @@ button:disabled {
     font-weight: bold;
     margin-top: 10px;
     text-align: center;
+}
+
+.trash-section {
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #ffebee;
+    border-radius: 5px;
+    border: 1px dashed #f44336;
+}
+
+.trash-icon {
+    font-size: 2rem;
+    padding: 10px;
+    background-color: #ffcdd2;
+    border-radius: 50%;
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    line-height: 30px;
+    transition: all 0.3s ease;
+}
+
+.trash-icon.drag-over {
+    background-color: #f44336;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* 拖放相关样式 */
+.selected-tile[draggable="true"] {
+    cursor: grab;
+}
+
+.selected-tile[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.drop-zone {
+    min-height: 60px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px dashed #ccc;
+    transition: all 0.2s;
+}
+
+.drop-zone.drag-over {
+    background-color: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.winning-drop-zone.drag-over {
+    background-color: #e8f5e9;
+    border-color: #4caf50;
+}
+
+#hand-tiles, #winning-tile {
+    min-height: 60px;
+}
+
+
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.section-header h2 {
+    margin-bottom: 0;
+}
+
+.trash-section {
+    display: flex;
+    align-items: center;
+}
+
+.trash-icon {
+    font-size: 1.5rem;
+    padding: 8px;
+    background-color: #ffcdd2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid #f44336;
+}
+
+.trash-icon:hover {
+    background-color: #f44336;
+    color: white;
+    transform: scale(1.1);
+}
+
+.trash-icon.drag-over {
+    background-color: #f44336;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* 调整已选牌型区域的布局 */
+.selected-tiles-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.tiles-group {
+    min-height: 60px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px dashed #ccc;
+    transition: all 0.2s;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .trash-section {
+        align-self: flex-end;
+    }
 }

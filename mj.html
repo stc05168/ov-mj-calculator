@@ -96,10 +96,16 @@
     </div>
     
     <div class="section">
-        <h2>已選牌型 <span id="tile-count">(0/16)</span></h2>
+        <div class="section-header">
+            <h2>已選牌型 <span id="tile-count">(0/16)</span></h2>
+            <div class="trash-section">
+                <div class="trash-icon" id="trash-icon" draggable="false" title="拖拽牌到此处删除">🗑️</div>
+            </div>
+        </div>
+        
         <div class="selected-tiles-container">
             <div class="group-title">手牌</div>
-            <div class="tiles-group" id="hand-tiles">
+            <div class="tiles-group drop-zone" id="hand-tiles">
                 <!-- 手牌會顯示在這裡 -->
             </div>
             
@@ -112,7 +118,7 @@
             
             <div class="winning-section">
                 <div class="group-title">糊牌</div>
-                <div class="tiles-group" id="winning-tile">
+                <div class="tiles-group drop-zone winning-drop-zone" id="winning-tile">
                     <!-- 糊牌會顯示在這裡 -->
                 </div>
                 <div class="info-text">只能選擇一張牌作為糊牌</div>

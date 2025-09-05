@@ -20,7 +20,372 @@ function initApp() {
     renderTiles();
     renderFlowers();
     setupEventListeners();
+    setupDragAndDrop();
     updateUI();
+}
+
+// 设置拖放事件监听
+function setupDragAndDrop() {
+    // 设置所有牌的拖拽属性
+    const allTiles = document.querySelectorAll('.tile');
+    allTiles.forEach(tile => {
+        tile.setAttribute('draggable', 'true');
+        tile.addEventListener('dragstart', handleDragStart);
+        // 阻止默认行为，避免拖动时出现禁止图标
+        tile.addEventListener('dragend', (e) => {
+            e.preventDefault();
+        });
+    });
+    
+    // 设置放置区域
+    const handTilesArea = document.getElementById('hand-tiles');
+    const winningTileArea = document.getElementById('winning-tile');
+    const trashIcon = document.getElementById('trash-icon');
+    
+    // 手牌区放置
+    handTilesArea.addEventListener('dragover', handleDragOver);
+    handTilesArea.addEventListener('drop', handleHandTilesDrop);
+    
+    // 糊牌区放置
+    winningTileArea.addEventListener('dragover', handleDragOver);
+    winningTileArea.addEventListener('drop', handleWinningTileDrop);
+    
+    // 垃圾筒放置
+    trashIcon.addEventListener('dragover', handleDragOver);
+    trashIcon.addEventListener('drop', handleTrashDrop);
+    
+    // 添加拖放视觉效果
+    const dropZones = [handTilesArea, winningTileArea, trashIcon];
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragenter', handleDragEnter);
+        zone.addEventListener('dragleave', handleDragLeave);
+    });
+    
+    // 为已存在的牌添加拖拽属性
+    updateDraggableTiles();
+    
+    // 添加点击垃圾筒的清空功能
+    trashIcon.addEventListener('click', () => {
+        if (confirm('確定要清空所有已選牌嗎？')) {
+            clearSelection();
+        }
+    });
+}
+
+// 拖拽开始事件处理
+function handleDragStart(e) {
+    const tileElement = e.target;
+    const type = tileElement.dataset.type;
+    const value = parseInt(tileElement.dataset.value);
+    const source = tileElement.dataset.source || tileElement.parentElement.id;
+    const display = tileElement.textContent;
+    
+    // 保存拖拽数据
+    e.dataTransfer.setData('application/json', JSON.stringify({
+        type: type,
+        value: value,
+        source: source,
+        display: display
+    }));
+    
+    // 设置拖拽图像
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // 设置拖拽图像为牌本身
+    setTimeout(() => {
+        tileElement.classList.add('dragging');
+    }, 0);
+}   
+
+document.addEventListener('dragend', (e) => {
+    const draggingElements = document.querySelectorAll('.dragging');
+    draggingElements.forEach(el => {
+        el.classList.remove('dragging');
+    });
+});
+
+// 拖拽经过事件处理
+function handleDragOver(e) {
+    e.preventDefault();
+    // 允许放置
+    e.dataTransfer.dropEffect = 'move';
+}
+
+// 修改拖拽进入事件处理
+function handleDragEnter(e) {
+    e.preventDefault();
+    // 确保我们只处理垃圾筒元素的dragenter事件
+    if (e.currentTarget.id === 'trash-icon' || 
+        e.currentTarget.id === 'hand-tiles' || 
+        e.currentTarget.id === 'winning-tile') {
+        e.currentTarget.classList.add('drag-over');
+    }
+}
+
+// 拖拽离开事件处理
+function handleDragLeave(e) {
+    e.preventDefault();
+    // 确保我们只处理垃圾筒元素的dragleave事件
+    if (e.currentTarget.id === 'trash-icon' || 
+        e.currentTarget.id === 'hand-tiles' || 
+        e.currentTarget.id === 'winning-tile') {
+        e.currentTarget.classList.remove('drag-over');
+    }
+}
+
+// 手牌区放置事件处理
+function handleTrashDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 移除拖拽视觉效果
+    const trashIcon = document.getElementById('trash-icon');
+    trashIcon.classList.remove('drag-over');
+    
+    try {
+        // 获取拖拽数据
+        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+        console.log('Trash drop data:', data);
+        
+        // 保存状态到历史记录
+        saveStateToHistory();
+        
+        // 根据来源删除相应的牌
+        if (data.source === 'hand-tiles') {
+            // 从手牌中删除
+            const index = state.handTiles.findIndex(t => 
+                t.type === data.type && parseInt(t.value) === parseInt(data.value)
+            );
+            
+            if (index !== -1) {
+                state.handTiles.splice(index, 1);
+                console.log('Removed from hand tiles:', data.display);
+            }
+        } else if (data.source === 'winning-tile') {
+            // 删除糊牌
+            if (state.winningTile && 
+                state.winningTile.type === data.type && 
+                parseInt(state.winningTile.value) === parseInt(data.value)) {
+                state.winningTile = null;
+                console.log('Removed winning tile:', data.display);
+            }
+        } else if (data.source.includes('container')) {
+            // 从选择区拖拽到垃圾筒，不做任何操作
+            console.log('Dropped from selection area to trash, ignoring');
+            return;
+        }
+        
+        updateUI();
+        
+        // 显示删除成功的提示
+        showStatusMessage(`已刪除: ${data.display}`, 'success');
+        
+    } catch (error) {
+        console.error('Error handling trash drop:', error);
+        showStatusMessage('刪除失敗', 'error');
+    }
+}
+
+function showStatusMessage(message, type = 'info') {
+    const statusDiv = document.createElement('div');
+    statusDiv.className = `status-message ${type}`;
+    statusDiv.textContent = message;
+    statusDiv.style.position = 'fixed';
+    statusDiv.style.top = '20px';
+    statusDiv.style.right = '20px';
+    statusDiv.style.padding = '10px 15px';
+    statusDiv.style.borderRadius = '5px';
+    statusDiv.style.zIndex = '1000';
+    
+    if (type === 'success') {
+        statusDiv.style.backgroundColor = '#4caf50';
+        statusDiv.style.color = 'white';
+    } else if (type === 'error') {
+        statusDiv.style.backgroundColor = '#f44336';
+        statusDiv.style.color = 'white';
+    } else {
+        statusDiv.style.backgroundColor = '#2196f3';
+        statusDiv.style.color = 'white';
+    }
+    
+    document.body.appendChild(statusDiv);
+    
+    // 3秒后自动消失
+    setTimeout(() => {
+        if (statusDiv.parentNode) {
+            statusDiv.parentNode.removeChild(statusDiv);
+        }
+    }, 3000);
+}
+
+function updateDraggableTiles() {
+    // 为手牌添加拖拽属性
+    const handTiles = document.querySelectorAll('#hand-tiles .selected-tile');
+    handTiles.forEach(tile => {
+        tile.setAttribute('draggable', 'true');
+        tile.dataset.source = 'hand-tiles';
+        // 移除旧的事件监听器（避免重复添加）
+        tile.removeEventListener('dragstart', handleDragStart);
+        tile.addEventListener('dragstart', handleDragStart);
+        tile.addEventListener('dragend', (e) => {
+            e.preventDefault();
+        });
+    });
+    
+    // 为糊牌添加拖拽属性
+    const winningTiles = document.querySelectorAll('#winning-tile .selected-tile');
+    winningTiles.forEach(tile => {
+        tile.setAttribute('draggable', 'true');
+        tile.dataset.source = 'winning-tile';
+        // 移除旧的事件监听器（避免重复添加）
+        tile.removeEventListener('dragstart', handleDragStart);
+        tile.addEventListener('dragstart', handleDragStart);
+        tile.addEventListener('dragend', (e) => {
+            e.preventDefault();
+        });
+    });
+}
+
+function handleHandTilesDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    // 获取拖拽数据
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    const tile = findTileByTypeAndValue(data.type, data.value);
+    
+    if (tile) {
+        // 检查是否从糊牌区拖拽
+        if (data.source === 'winning-tile' && state.winningTile && 
+            state.winningTile.type === data.type && state.winningTile.value === data.value) {
+            // 从糊牌区移动到手牌区
+            state.winningTile = null;
+            selectTile(tile);
+        } else if (data.source.includes('container')) {
+            // 从牌选择区拖拽
+            selectTile(tile);
+        }
+    }
+}
+
+// 糊牌区放置事件处理
+function handleWinningTileDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    // 获取拖拽数据
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    const tile = findTileByTypeAndValue(data.type, data.value);
+    
+    if (tile) {
+        // 检查是否从手牌区拖拽
+        if (data.source === 'hand-tiles') {
+            // 从手牌中移除该牌
+            const index = state.handTiles.findIndex(t => 
+                t.type === data.type && t.value === data.value
+            );
+            
+            if (index !== -1) {
+                state.handTiles.splice(index, 1);
+            }
+        }
+        
+        // 设置糊牌
+        state.winningTile = {...tile};
+        updateUI();
+    }
+}
+
+// 垃圾筒放置事件处理
+function handleTrashDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    // 获取拖拽数据
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    
+    // 根据来源删除相应的牌
+    if (data.source === 'hand-tiles') {
+        // 从手牌中删除
+        const index = state.handTiles.findIndex(t => 
+            t.type === data.type && t.value === data.value
+        );
+        
+        if (index !== -1) {
+            state.handTiles.splice(index, 1);
+        }
+    } else if (data.source === 'winning-tile' && state.winningTile && 
+               state.winningTile.type === data.type && state.winningTile.value === data.value) {
+        // 删除糊牌
+        state.winningTile = null;
+    }
+    
+    updateUI();
+}
+
+// 辅助函数：根据类型和值查找牌
+function findTileByTypeAndValue(type, value) {
+    // 在ALL_TILES中查找
+    const foundTile = ALL_TILES.find(t => 
+        t.type === type && t.value === value
+    );
+    
+    if (foundTile) return {...foundTile};
+    
+    // 在FLOWER_TILES中查找
+    const foundFlower = FLOWER_TILES.find(t => 
+        t.type === type && t.value === value
+    );
+    
+    if (foundFlower) return {...foundFlower};
+    
+    return null;
+}
+
+// 修改updateUI函数，为已选牌添加拖拽属性
+function updateUI() {
+    updateTileCount();
+    updateHandTilesDisplay();
+    updateFlowersDisplay();
+    updateExposedTilesDisplay();
+    updateWinningTileDisplay();
+    updateButtonStates();
+    calculateScore();
+    
+    // 更新拖拽属性
+    updateDraggableTiles();
+}
+
+// 修改updateHandTilesDisplay函数，添加data-source属性
+function updateHandTilesDisplay() {
+    const container = document.getElementById('hand-tiles');
+    container.innerHTML = '';
+    
+    state.handTiles.forEach(tile => {
+        const tileElement = document.createElement('div');
+        tileElement.className = `selected-tile ${tile.cssClass}`;
+        tileElement.textContent = tile.display;
+        tileElement.dataset.type = tile.type;
+        tileElement.dataset.value = tile.value;
+        tileElement.dataset.source = 'hand-tiles';
+        container.appendChild(tileElement);
+    });
+}
+
+// 修改updateWinningTileDisplay函数，添加data-source属性
+function updateWinningTileDisplay() {
+    const container = document.getElementById('winning-tile');
+    container.innerHTML = '';
+    
+    if (state.winningTile) {
+        const tileElement = document.createElement('div');
+        tileElement.className = `selected-tile winning-tile ${state.winningTile.cssClass}`;
+        tileElement.textContent = state.winningTile.display;
+        tileElement.dataset.type = state.winningTile.type;
+        tileElement.dataset.value = state.winningTile.value;
+        tileElement.dataset.source = 'winning-tile';
+        container.appendChild(tileElement);
+    }
 }
 
 // 渲染普通牌型選擇區（按類型分組）
@@ -150,7 +515,7 @@ function updateSelfDraw(e) {
 function selectTile(tile) {
     saveStateToHistory();
     
-    // 檢查是否已達到最大數量 (4張)
+    // 检查是否已达到最大数量 (4张)
     const count = state.handTiles.filter(t => 
         t.type === tile.type && t.value === tile.value
     ).length;
@@ -160,12 +525,12 @@ function selectTile(tile) {
         return;
     }
     
-    // 檢查總牌數是否已達上限
+    // 检查总牌数是否已达上限
     const exposedGroups = state.chows.length + state.pungs.length + state.openKongs.length + state.concealedKongs.length;
     const maxHandTiles = 16 - (exposedGroups * 3);
     
     if (state.handTiles.length >= maxHandTiles) {
-        // 如果已經達到16張，自動設為糊牌
+        // 如果已经达到16张，自动设为糊牌
         let maxLength = state.handTiles.length + 
         (state.chows.length * 3) + 
         (state.pungs.length * 3) + 

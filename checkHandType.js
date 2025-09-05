@@ -2975,17 +2975,45 @@ function isShiLiuBuDaDuDu(allTiles) {
 
     // 如果和牌張是字牌，檢查是否為獨聽
     if (state.winningTile.type === TILE_TYPES.HONORS) {
-        // 將眼必須是數牌
-        if (pairType !== TILE_TYPES.CHARACTERS && pairType !== TILE_TYPES.BAMBOOS && pairType !== TILE_TYPES.DOTS) {
-            return false;
-        }
-
         // 獲取現有字牌
         const honorValues = honorTiles.map(tile => tile.value);
         const winningHonorValue = state.winningTile.value;
 
-        // 定義所有可能的字牌
-        const allHonors = ['EAST', 'SOUTH', 'WEST', 'NORTH', 'RED', 'GREEN', 'WHITE'];
+        // 定義所有可能的字牌值（1:東, 2:南, 3:西, 4:北, 5:中, 6:發, 7:白）
+        const allHonors = [1, 2, 3, 4, 5, 6, 7];
+
+        // 檢查和牌張是否形成合法十六不搭
+        const currentTiles = [...allTiles];
+        const tileCounts = {};
+        currentTiles.forEach(tile => {
+            const key = `${tile.type}-${tile.value}`;
+            tileCounts[key] = (tileCounts[key] || 0) + 1;
+        });
+
+        let pairCount = 0;
+        let currentPairTile = null;
+        for (const key in tileCounts) {
+            if (tileCounts[key] > 2) return false; // 不能有刻子
+            if (tileCounts[key] === 2) {
+                pairCount++;
+                currentPairTile = key;
+            }
+        }
+        if (pairCount !== 1) return false; // 必須只有一對將眼
+
+        // 檢查數牌無順子
+        let hasSequence = false;
+        for (const suit in tilesBySuit) {
+            const values = tilesBySuit[suit].sort((a, b) => a - b);
+            for (let i = 0; i < values.length - 2; i++) {
+                if (values[i + 1] === values[i] + 1 && values[i + 2] === values[i] + 2) {
+                    hasSequence = true;
+                    break;
+                }
+            }
+            if (hasSequence) break;
+        }
+        if (hasSequence) return false; // 和牌張形成順子，無效
 
         // 檢查其他字牌是否可和牌
         let validWinningHonors = [];
@@ -2993,24 +3021,25 @@ function isShiLiuBuDaDuDu(allTiles) {
             if (honor === winningHonorValue || honorValues.includes(honor)) continue;
 
             // 模擬用其他字牌替換和牌張
-            const newHonorTiles = [...honorTiles, { type: TILE_TYPES.HONORS, value: honor }];
+            const newHonorTiles = [...honorTiles.filter(tile => tile.value !== winningHonorValue), 
+                                 { type: TILE_TYPES.HONORS, value: honor }];
             const newAllTiles = [
                 ...numberTiles,
                 ...newHonorTiles.filter(tile => tile.type === TILE_TYPES.HONORS)
             ];
 
             // 檢查新牌組是否滿足十六不搭（無順子、無刻子除將眼外）
-            const tileCounts = {};
+            const newTileCounts = {};
             newAllTiles.forEach(tile => {
                 const key = `${tile.type}-${tile.value}`;
-                tileCounts[key] = (tileCounts[key] || 0) + 1;
+                newTileCounts[key] = (newTileCounts[key] || 0) + 1;
             });
 
             let newPairCount = 0;
             let newPairTile = null;
-            for (const key in tileCounts) {
-                if (tileCounts[key] > 2) break; // 不能有刻子
-                if (tileCounts[key] === 2) {
+            for (const key in newTileCounts) {
+                if (newTileCounts[key] > 2) continue; // 不能有刻子
+                if (newTileCounts[key] === 2) {
                     newPairCount++;
                     newPairTile = key;
                 }
@@ -3018,8 +3047,27 @@ function isShiLiuBuDaDuDu(allTiles) {
 
             // 必須有且僅有一對將眼，且無順子
             if (newPairCount === 1) {
-                const [newPairType] = newPairTile.split('-');
-                if (newPairType === TILE_TYPES.CHARACTERS || newPairType === TILE_TYPES.BAMBOOS || newPairType === TILE_TYPES.DOTS) {
+                const newTilesBySuit = {};
+                newAllTiles.forEach(tile => {
+                    if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
+                        if (!newTilesBySuit[tile.type]) newTilesBySuit[tile.type] = [];
+                        newTilesBySuit[tile.type].push(tile.value);
+                    }
+                });
+
+                let newHasSequence = false;
+                for (const suit in newTilesBySuit) {
+                    const values = newTilesBySuit[suit].sort((a, b) => a - b);
+                    for (let i = 0; i < values.length - 2; i++) {
+                        if (values[i + 1] === values[i] + 1 && values[i + 2] === values[i] + 2) {
+                            newHasSequence = true;
+                            break;
+                        }
+                    }
+                    if (newHasSequence) break;
+                }
+
+                if (!newHasSequence) {
                     validWinningHonors.push(honor);
                 }
             }
