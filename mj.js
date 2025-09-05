@@ -156,7 +156,7 @@ function handleTileClick(e) {
     } else {
         const tile = ALL_TILES.find(t => t.type === type && t.value === value);
         if (tile) {
-            state.handTiles.push({ ...tile });
+            selectTile(tile);
             showStatusMessage('牌已加入手牌', 'info');
         }
     }
@@ -468,7 +468,7 @@ function handleHandTilesDrop(e) {
         const tile = ALL_TILES.find(t => t.type === data.type && t.value === data.value) ||
                      FLOWER_TILES.find(t => t.type === data.type && t.value === data.value);
         if (tile) {
-            state.handTiles.push({ ...tile });
+            selectTile(tile);
         }
     }
 
@@ -1083,6 +1083,45 @@ function initializeTiles() {
             });
         }
     });
+}
+
+function selectTile(tile) {
+    saveStateToHistory();
+    
+    // 检查是否已达到最大数量 (4张)
+    const count = state.handTiles.filter(t => 
+        t.type === tile.type && t.value === tile.value
+    ).length;
+    
+    if (count >= 4) {
+        alert('每種牌最多只能選擇4張');
+        return;
+    }
+    
+    // 检查总牌数是否已达上限
+    const exposedGroups = state.chows.length + state.pungs.length + state.openKongs.length + state.concealedKongs.length;
+    const maxHandTiles = 16 - (exposedGroups * 3);
+    
+    if (state.handTiles.length >= maxHandTiles) {
+        // 如果已经达到16张，自动设为糊牌
+        let maxLength = state.handTiles.length + 
+        (state.chows.length * 3) + 
+        (state.pungs.length * 3) + 
+        (state.openKongs.length * 4) + 
+        (state.concealedKongs.length * 4);
+
+        if (state.winningTile === null && getAllTiles().length === maxLength) {
+            state.winningTile = {...tile};
+            updateUI();
+            return;
+        }
+        
+        alert(`已有${exposedGroups}組副露，手牌最多只能有${maxHandTiles}張`);
+        return;
+    }
+    
+    state.handTiles.push({ ...tile });
+    updateUI();
 }
 
 window.addEventListener('DOMContentLoaded', initApp);
