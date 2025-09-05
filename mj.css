@@ -1,4 +1,3 @@
-/* 修改後的mj.css */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -11,7 +10,7 @@ body {
     color: #333;
     line-height: 1.6;
     padding: 15px;
-    max-width: 650px; /* 稍微增加最大寬度 */
+    max-width: 650px;
     margin: 0 auto;
 }
 
@@ -84,7 +83,7 @@ select, input[type="checkbox"] {
 }
 
 .tile {
-    width: 29px; /* 加寬按鈕 */
+    width: 29px;
     height: 52px;
     background-color: #fff;
     border: 1px solid #ccc;
@@ -127,11 +126,11 @@ select, input[type="checkbox"] {
 .selected-tiles-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
 }
 
 .tiles-group {
-    min-height: 120px;
+    min-height: 60px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
@@ -142,7 +141,7 @@ select, input[type="checkbox"] {
 }
 
 .selected-tile {
-    width: 35px; /* 與選擇區保持一致 */
+    width: 35px;
     height: 40px;
     background-color: #fff;
     border: 1px solid #ccc;
@@ -250,33 +249,37 @@ button:disabled {
 }
 
 .trash-section {
-    text-align: center;
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #ffebee;
-    border-radius: 5px;
-    border: 1px dashed #f44336;
+    display: flex;
+    align-items: center;
 }
 
 .trash-icon {
-    font-size: 2rem;
-    padding: 10px;
+    font-size: 1.5rem;
+    padding: 8px;
     background-color: #ffcdd2;
     border-radius: 50%;
-    display: inline-block;
-    width: 50px;
-    height: 50px;
-    line-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
     transition: all 0.3s ease;
+    border: 2px solid #f44336;
 }
 
-#trash-icon.drag-over, #trash-icon.touch-active {
-    background-color: #ffebee !important;
-    border: 2px solid #f44336 !important;
+.trash-icon:hover {
+    background-color: #f44336;
+    color: white;
+    transform: scale(1.1);
+}
+
+.trash-icon.drag-over, .trash-icon.touch-active {
+    background-color: #ffebee;
+    border: 2px solid #f44336;
     transition: all 0.2s ease;
 }
 
-/* 拖放相關樣式 */
 .selected-tile[draggable="true"] {
     cursor: grab;
 }
@@ -320,95 +323,7 @@ button:disabled {
 
 .section-header h2 {
     margin-bottom: 0;
-}
-
-.trash-section {
-    display: flex;
-    align-items: center;
-}
-
-.trash-icon {
-    font-size: 1.5rem;
-    padding: 8px;
-    background-color: #ffcdd2;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid #f44336;
-}
-
-.trash-icon:hover {
-    background-color: #f44336;
-    color: white;
-    transform: scale(1.1);
-}
-
-/* 調整已選牌型區域的佈局 */
-.selected-tiles-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.tiles-group {
-    min-height: 60px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    border: 1px dashed #ccc;
-    transition: all 0.2s;
-}
-
-/* 響應式設計 */
-@media (max-width: 480px) {
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    
-    .trash-section {
-        align-self: flex-end;
-    }
-    
-    .tile {
-        width: 29px; /* 在移動設備上稍微減小 */
-        height: 48px;
-    }
-}
-
-/* 在mj.css中添加觸摸相關樣式 */
-.tile.touch-active, .selected-tile.touch-active {
-    transform: scale(1.1);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    z-index: 100;
-    transition: transform 0.1s ease;
-}
-
-/* 改善移動設備上的觸摸體驗 */
-.tile, .selected-tile {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-/* 防止長按出現默認菜單 */
-.tile, .selected-tile, .trash-icon {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    flex-grow: 1;
 }
 
 .dragging {
@@ -419,20 +334,41 @@ button:disabled {
     pointer-events: none;
 }
 
-/* 放置區域反饋 */
+.tile.touch-active, .selected-tile.touch-active {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 100;
+    transition: transform 0.1s ease;
+}
+
+.tile, .selected-tile {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.tile, .selected-tile, .trash-icon {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 .drop-zone.drag-over, .drop-zone.touch-active {
-    background-color: #e3f2fd !important;
-    border: 2px solid #2196f3 !important;
+    background-color: #e3f2fd;
+    border: 2px solid #2196f3;
     transition: all 0.2s ease;
 }
 
 .winning-drop-zone.drag-over, .winning-drop-zone.touch-active {
-    background-color: #e8f5e9 !important;
-    border: 2px solid #4caf50 !important;
+    background-color: #e8f5e9;
+    border: 2px solid #4caf50;
     transition: all 0.2s ease;
 }
 
-/* 觸摸反饋 */
 .tile.touch-active, .selected-tile.touch-active {
     transform: scale(1.1);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -440,7 +376,6 @@ button:disabled {
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-/* 防止手機上的默認行為 */
 .tile, .selected-tile, .trash-icon {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
@@ -448,7 +383,6 @@ button:disabled {
     user-select: none;
     touch-action: manipulation;
 }
-
 
 #hand-tiles, #winning-tile, #trash-icon {
     position: relative;
@@ -467,4 +401,30 @@ button:disabled {
 html, body {
     overscroll-behavior: none;
     touch-action: manipulation;
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .trash-section {
+        margin-left: auto;
+    }
+    
+    .trash-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 1.2rem;
+        padding: 6px;
+    }
+    
+    .tile {
+        width: 29px;
+        height: 48px;
+    }
 }

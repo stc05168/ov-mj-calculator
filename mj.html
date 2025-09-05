@@ -3,143 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台灣牌計番</title>
+    <title>Patrick - 你的台灣牌計番助手</title>
     <link rel="stylesheet" href="mj.css">
 </head>
 <body>
-    
     <h1>Patrick - 你的台灣牌計番助手</h1>
-    <h2>One Victoria 版本</h2>  
-    
+    <h2>One Victoria 版本</h2>
+
     <div class="section">
         <h2>選擇牌型</h2>
-        <div class="tile-row">
-            <div class="tiles-container" id="characters-container">
-                <!-- 萬子 -->
-            </div>
-        </div>
-        <div class="tile-row">
-            <div class="tiles-container" id="bamboos-container">
-                <!-- 索子 -->
-            </div>
-        </div>
-        <div class="tile-row">
-            <div class="tiles-container" id="dots-container">
-                <!-- 筒子 -->
-            </div>
-        </div>
-        <div class="tile-row">
-            <div class="tiles-container" id="honors-container">
-                <!-- 字牌 -->
-            </div>
-        </div>
+        <div class="tiles-container" id="characters-container"></div>
+        <div class="tiles-container" id="bamboos-container"></div>
+        <div class="tiles-container" id="dots-container"></div>
+        <div class="tiles-container" id="honors-container"></div>
     </div>
-    
-    <div class="section">
+
+    <div class="section selected-tiles-container">
         <div class="section-header">
             <h2>已選牌型 <span id="tile-count">(0/16)</span></h2>
-            <div class="trash-icon" id="trash-icon" draggable="false" title="拖拽牌到此处删除">🗑️</div>
+            <div class="trash-section">
+                <span id="trash-icon" class="trash-icon">🗑️</span>
+            </div>
         </div>
-        
-        <div class="selected-tiles-container">
+
+        <div class="tiles-group" id="hand-tiles">
             <div class="group-title">手牌</div>
-            <div class="tiles-group drop-zone" id="hand-tiles">
-                <!-- 手牌會顯示在這裡 -->
-            </div>
-            
-            <div class="exposed-section">
-                <div class="group-title">副露區</div>
-                <div id="exposed-tiles">
-                    <!-- 吃、碰和槓的牌會顯示在這裡 -->
-                </div>
-            </div>
-            
-            <div class="winning-section">
-                <div class="group-title">糊牌</div>
-                <div class="tiles-group drop-zone winning-drop-zone" id="winning-tile">
-                    <!-- 糊牌會顯示在這裡 -->
-                </div>
-                <div class="info-text">只能選擇一張牌作為糊牌</div>
-            </div>
         </div>
-        
+
+        <div class="exposed-section">
+            <div class="group-title">副露區</div>
+            <div id="exposed-tiles"></div>
+        </div>
+
+        <div class="winning-section">
+            <div class="group-title">糊牌</div>
+            <div id="winning-tile" class="tiles-group winning-drop-zone"></div>
+            <div class="info-text">只能選擇一張牌作為糊牌</div>
+        </div>
+
         <div class="controls">
-            <button id="chow-btn" disabled>吃</button>
-            <button id="pung-btn" disabled>碰</button>
-            <button id="open-kong-btn" disabled>明槓</button>
-            <button id="concealed-kong-btn" disabled>暗槓</button>
-            <button id="undo-btn" title="Ctrl+Z">復原</button>
+            <button id="chow-btn">吃</button>
+            <button id="pung-btn">碰</button>
+            <button id="open-kong-btn">明槓</button>
+            <button id="concealed-kong-btn">暗槓</button>
+            <button id="undo-btn">復原</button>
             <button id="clear-btn">清除選擇</button>
         </div>
     </div>
-    
+
     <div class="section">
         <h2>花牌</h2>
-        <div class="tiles-container" id="flowers-container">
-            <!-- 花牌選擇區 -->
-        </div>
-        <div class="tiles-group" id="selected-flowers">
-            <!-- 已選花牌會顯示在這裡 -->
-        </div>
+        <div class="tiles-container" id="flowers-container"></div>
+        <div class="tiles-group" id="selected-flowers"></div>
     </div>
-    
-    <div class="section">
-        <div class="settings">
-            <div class="setting-group">
-                <label for="seat-wind">座位風位</label>
-                <select id="seat-wind">
-                    <option value="東">東</option>
-                    <option value="南">南</option>
-                    <option value="西">西</option>
-                    <option value="北">北</option>
-                </select>
+
+    <div class="section settings">
+        <div class="setting-group">
+            <label for="seat-wind">座位風位</label>
+            <select id="seat-wind">
+                <option value="東">東</option>
+                <option value="南">南</option>
+                <option value="西">西</option>
+                <option value="北">北</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label for="round-wind">圈風</label>
+            <select id="round-wind">
+                <option value="東">東</option>
+                <option value="南">南</option>
+                <option value="西">西</option>
+                <option value="北">北</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label>莊家設定</label>
+            <div class="dealer-setting">
+                <input type="checkbox" id="is-dealer">
+                <label for="is-dealer">是否莊家</label>
             </div>
-            <div class="setting-group">
-                <label for="round-wind">圈風</label>
-                <select id="round-wind">
-                    <option value="東">東</option>
-                    <option value="南">南</option>
-                    <option value="西">西</option>
-                    <option value="北">北</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label>莊家設定</label>
-                <div class="dealer-setting">
-                    <input type="checkbox" id="is-dealer">
-                    <label for="is-dealer">是否莊家</label>
-                </div>
-                <div id="dealer-count-container" style="display: none;">
-                    <label for="dealer-count">連莊次數</label>
-                    <select id="dealer-count">
-                        <option value="0">0</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="11">11</option>
-                        <option value="12">12</option>
-                        <option value="13">13</option>
-                        <option value="14">14</option>
-                        <option value="15">15</option>
-                        <option value="16">16</option>
-                        <option value="17">17</option>
-                        <option value="18">18</option>
-                    </select>
-                </div>
-            </div>
-            <div class="setting-group">
-                <label>其他設定</label>
-                <div class="dealer-setting">
-                    <input type="checkbox" id="is-self-draw">
-                    <label for="is-self-draw">是否自摸</label>
-                </div>
+            <label for="dealer-count">連莊次數</label>
+            <select id="dealer-count">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label>其他設定</label>
+            <div>
+                <input type="checkbox" id="is-self-draw">
+                <label for="is-self-draw">是否自摸</label>
             </div>
         </div>
     </div>
@@ -147,16 +120,11 @@
     <div class="section">
         <h2>計番結果</h2>
         <div id="status-message"></div>
-        <div id="hand-types">
-            <!-- 牌型結果會顯示在這裡 -->
-        </div>
-        <div class="score-display" id="score-display">
-            總番數: 0
-        </div>
+        <div id="hand-types"></div>
+        <div id="score-display" class="score-display">總番數: 0</div>
     </div>
 
     <script src="mjConst.js"></script>
-    <script src="checkHandType.js"></script>
     <script src="mj.js"></script>
 </body>
 </html>
