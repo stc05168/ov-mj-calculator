@@ -4,43 +4,20 @@ function detectHandTypes() {
     const allTiles = getAllTiles();
     
     // 優先檢查十三么（16張牌版本）
-    if (isShiSanYao(allTiles)) {
-        // 檢查是否是十三飞（和牌张是19万19筒19索或字牌）
-        let isThirteenFly = false;
-        if (state.winningTile) {
-            const wt = state.winningTile;
+    if (isValidShiSanYao(allTiles)) {
+        // 检查是否是独独
+        if (isShiSanYaoDuDu(state.handTiles, state.winningTile)) {
+            handTypes.push({ name: '十三么（獨獨）', score: 150 });
+        } else {
+            // 分析和牌前的听牌情况
+            const waits = analyzeWaitsBeforeWinForShiSanYao(state.handTiles);
             
-            // 檢查winning tile在allTiles中是否只有2隻（作為將眼）
-            const winningTileCount = allTiles.filter(tile => 
-                tile.type === wt.type && tile.value === wt.value
-            ).length;
-            
-            // 只有當winning tile正好有2張時才檢查十三飞條件
-            if (winningTileCount === 2) {
-                // 檢查是否是19万19筒19索
-                if (wt.type !== TILE_TYPES.HONORS && wt.type !== TILE_TYPES.FLOWERS) {
-                    if (wt.value === 1 || wt.value === 9) {
-                        isThirteenFly = true;
-                    }
-                }
-                // 檢查是否是字牌（东南西北中发白）
-                else if (wt.type === TILE_TYPES.HONORS) {
-                    isThirteenFly = true;
-                }
+            if (waits.length > 1) {
+                handTypes.push({ name: `十三么（${waits.length} 飛）`, score: 140 });
+            } else {
+                handTypes.push({ name: '十三么', score: 140 });
             }
         }
-
-        // 檢查十三么獨獨
-        if (isShiSanYaoDuDu(allTiles, shiSanYaoResult)) {
-            handTypes.push({ name: '十三么獨獨', score: 2 });
-        }
-        
-        // 根據十三飞條件計分
-        if (isThirteenFly) {
-            handTypes.push({ name: '十三么（十三飛）', score: 150 });
-        } else {
-            handTypes.push({ name: '十三么', score: 140 });
-        }        
     }
     
     // 檢查十六不搭（16張牌）
@@ -348,6 +325,180 @@ function detectHandTypes() {
     return sortHandTypes(handTypes);
 }
 
+function isValidShiSanYao(allTiles) {
+    if (allTiles.length !== 17) return false;
+    
+    // 检查基础13张牌是否齐全
+    const requiredTiles = [
+        { type: TILE_TYPES.CHARACTERS, value: 1 }, // 1万
+        { type: TILE_TYPES.CHARACTERS, value: 9 }, // 9万
+        { type: TILE_TYPES.DOTS, value: 1 },       // 1筒
+        { type: TILE_TYPES.DOTS, value: 9 },       // 9筒
+        { type: TILE_TYPES.BAMBOOS, value: 1 },    // 1索
+        { type: TILE_TYPES.BAMBOOS, value: 9 },    // 9索
+        { type: TILE_TYPES.HONORS, value: 1 },     // 东
+        { type: TILE_TYPES.HONORS, value: 2 },     // 南
+        { type: TILE_TYPES.HONORS, value: 3 },     // 西
+        { type: TILE_TYPES.HONORS, value: 4 },     // 北
+        { type: TILE_TYPES.HONORS, value: 5 },     // 中
+        { type: TILE_TYPES.HONORS, value: 6 },     // 发
+        { type: TILE_TYPES.HONORS, value: 7 }      // 白
+    ];
+    
+    // 统计每种牌的数量
+    const tileCounts = {};
+    allTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        tileCounts[key] = (tileCounts[key] || 0) + 1;
+    });
+    
+    // 检查基础13张牌是否齐全（每种至少一张）
+    for (const reqTile of requiredTiles) {
+        const key = `${reqTile.type}-${reqTile.value}`;
+        if (!tileCounts[key] || tileCounts[key] < 1) {
+            return false; // 缺少必要牌
+        }
+    }
+    
+    // 检查是否有且仅有一对将眼
+    let pairCount = 0;
+    for (const reqTile of requiredTiles) {
+        const key = `${reqTile.type}-${reqTile.value}`;
+        if (tileCounts[key] == 2) {
+            pairCount++;
+        }
+    }
+    
+    // 十三么必须有一对将眼
+    if (pairCount !== 1) return false;
+    
+    // 检查额外牌是否形成顺子或刻子
+    const extraTiles = allTiles.filter(tile => {
+        return !requiredTiles.some(reqTile => 
+            reqTile.type === tile.type && reqTile.value === tile.value
+        );
+    });
+    
+    // 如果没有额外牌，检查是否有四张相同的牌
+    if (extraTiles.length === 0) {
+        // 检查是否有四张相同的牌（四归一）
+        for (const key in tileCounts) {
+            if (tileCounts[key] === 4) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // 额外牌必须是3张，且能形成顺子或刻子
+    if (extraTiles.length !== 3) return false;
+    
+    // 检查是否形成刻子
+    const firstTile = extraTiles[0];
+    const isPung = extraTiles.every(tile => 
+        tile.type === firstTile.type && tile.value === firstTile.value
+    );
+    
+    // 检查是否形成顺子
+    const values = extraTiles.map(tile => tile.value).sort((a, b) => a - b);
+    const isChow = values[1] === values[0] + 1 && values[2] === values[1] + 1;
+    
+    return isPung || isChow;
+}
+
+function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
+    const waits = [];
+    
+    // 检查手牌是否接近和牌（16张牌）
+    if (handTiles.length !== 16) return waits;
+    
+    // 尝试每种可能的和牌
+    const allPossibleTiles = [];
+    
+    // 添加所有可能的牌（19万19筒19索东南西北中发白）
+    for (const type of [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS]) {
+        allPossibleTiles.push({ type, value: 1 });
+        allPossibleTiles.push({ type, value: 9 });
+    }
+    
+    for (let value = 1; value <= 7; value++) {
+        allPossibleTiles.push({ type: TILE_TYPES.HONORS, value });
+    }
+    
+    // 检查额外牌型可能需要的牌
+    const requiredTiles = [
+        { type: TILE_TYPES.CHARACTERS, value: 1 },
+        { type: TILE_TYPES.CHARACTERS, value: 9 },
+        { type: TILE_TYPES.DOTS, value: 1 },
+        { type: TILE_TYPES.DOTS, value: 9 },
+        { type: TILE_TYPES.BAMBOOS, value: 1 },
+        { type: TILE_TYPES.BAMBOOS, value: 9 },
+        { type: TILE_TYPES.HONORS, value: 1 },
+        { type: TILE_TYPES.HONORS, value: 2 },
+        { type: TILE_TYPES.HONORS, value: 3 },
+        { type: TILE_TYPES.HONORS, value: 4 },
+        { type: TILE_TYPES.HONORS, value: 5 },
+        { type: TILE_TYPES.HONORS, value: 6 },
+        { type: TILE_TYPES.HONORS, value: 7 }
+    ];
+    
+    // 找出额外牌
+    const extraTiles = handTiles.filter(tile => {
+        return !requiredTiles.some(reqTile => 
+            reqTile.type === tile.type && reqTile.value === tile.value
+        );
+    });
+    
+    // 如果额外牌是顺子的一部分，添加顺子可能需要的牌
+    if (extraTiles.length > 0) {
+        const firstTile = extraTiles[0];
+        
+        // 检查是否可能形成顺子
+        if (extraTiles.every(tile => tile.type === firstTile.type)) {
+            const values = extraTiles.map(tile => tile.value).sort((a, b) => a - b);
+            
+            // 检查是否是不完整的顺子
+            if (values.length === 2) {
+                const diff = values[1] - values[0];
+                
+                // 中洞（如35听4）
+                if (diff === 2) {
+                    allPossibleTiles.push({ type: firstTile.type, value: values[0] + 1 });
+                }
+                // 边张（如12听3，89听7）
+                else if (diff === 1) {
+                    if (values[0] > 1) {
+                        allPossibleTiles.push({ type: firstTile.type, value: values[0] - 1 });
+                    }
+                    if (values[1] < 9) {
+                        allPossibleTiles.push({ type: firstTile.type, value: values[1] + 1 });
+                    }
+                }
+            }
+            // 检查是否是三张牌但需要形成顺子或刻子
+            else if (values.length === 3) {
+                // 已经是完整的顺子或刻子，不需要额外牌
+            }
+        }
+    }
+    
+    // 检查每张可能的牌是否能使手牌和牌
+    for (const tile of allPossibleTiles) {
+        const testHand = [...handTiles, tile];
+        if (isValidShiSanYao(testHand)) {
+            // 检查这张牌是否已经在waits中
+            const alreadyExists = waits.some(w => 
+                w.type === tile.type && w.value === tile.value
+            );
+            
+            if (!alreadyExists) {
+                waits.push(tile);
+            }
+        }
+    }
+    
+    return waits;
+}
 // 新增龍牌型檢測函數
 function detectDragonHandTypes(allTiles) {
     const results = [];
@@ -3016,6 +3167,23 @@ function isShiLiuBuDa(allTiles) {
     }
 
     return { isValid: true, pairTile, isShiLiuFei };
+}
+
+function isShiSanYaoDuDu(handTiles, winningTile) {
+    // 确保是16张手牌和1张和牌
+    if (handTiles.length !== 16 || !winningTile) return false;
+    
+    // 合并所有牌以便分析
+    const allTiles = [...handTiles, winningTile];
+    
+    // 检查是否是有效的十三么
+    if (!isValidShiSanYao(allTiles)) return false;
+    
+    // 分析和牌前的听牌情况
+    const waitsBeforeWin = analyzeWaitsBeforeWinForShiSanYao(handTiles);
+    
+    // 独独必须只听一张牌
+    return waitsBeforeWin.length === 1;
 }
 
 // 檢查十六不搭獨獨
