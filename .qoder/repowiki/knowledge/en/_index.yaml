@@ -1,0 +1,24 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+nodes_managed: true
+exported_at: "2026-08-25T04:36:28Z"
+modules:
+    "":
+        dir_name: Mahjong Hand Scoring Calculator (Web UI)
+        title: Mahjong Hand Scoring Calculator (Web UI)
+        scope:
+            - .
+            - .gitignore
+            - LICENSE
+            - README.md
+            - checkHandType.js
+            - mj.css
+            - mj.html
+            - mj.js
+            - mjConst.js
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

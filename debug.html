@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Debug</title></head>
+<body>
+<pre id="output">Start</pre>
+<script>
+try {
+  document.getElementById('output').textContent = 'Step 1: JS works';
+  const x = 42;
+  document.getElementById('output').textContent = 'Step 2: const works: ' + x;
+  const arr = [1,2,3];
+  const found = arr.find(v => v === 2);
+  document.getElementById('output').textContent = 'Step 3: arrow works: ' + found;
+  document.getElementById('output').textContent = 'Step 4: All ES6 works';
+} catch(e) {
+  document.getElementById('output').textContent = 'ERROR: ' + e.message;
+}
+</script>
+</body></html>

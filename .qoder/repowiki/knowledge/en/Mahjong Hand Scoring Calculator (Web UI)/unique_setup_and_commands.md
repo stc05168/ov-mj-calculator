@@ -1,0 +1,1 @@
+No build or install step — open `mj.html` in any modern browser (or serve it via GitHub Pages / any static file server).

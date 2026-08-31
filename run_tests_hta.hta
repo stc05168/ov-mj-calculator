@@ -1,0 +1,86 @@
+<html>
+<head>
+<script language="javascript">
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var outFile = fso.CreateTextFile("c:\\stc05168\\ov-mj-calculator\\test_results.txt", true);
+
+// Load files
+function loadFile(path) {
+    var f = fso.OpenTextFile(path, 1);
+    var content = f.ReadAll();
+    f.Close();
+    return content;
+}
+
+try {
+    // Load mjConst.js
+    eval(loadFile("c:\\stc05168\\ov-mj-calculator\\mjConst.js"));
+    
+    // Define state
+    var state = {
+        handTiles:[], flowers:[], chows:[], pungs:[], openKongs:[], concealedKongs:[],
+        winningTile:null, seatWind:'\u6771', roundWind:'\u6771', isDealer:false, dealerCount:0,
+        isSelfDraw:false, isDeclaredReady:false, isIppatsu:false, isLastTileDraw:false,
+        isLastDiscard:false, isFlowerDraw:false, isKongDraw:false, isRobbingKong:false,
+        isDoubleKongDraw:false, isRobbingDoubleKong:false, isTenhou:false, isChihou:false,
+        isTenReady:false, isChiReady:false, isFaceDown:false, isMultiWin:0,
+        isMultiWinSelfDraw:false, visibleWinTileCount:0, history:[]
+    };
+    
+    function getAllTiles(){
+        var t = state.handTiles.slice();
+        state.chows.forEach(function(c){ t = t.concat(c.tiles); });
+        state.pungs.forEach(function(p){ t = t.concat(p.tiles); });
+        state.openKongs.forEach(function(k){ t = t.concat(k.tiles); });
+        state.concealedKongs.forEach(function(k){ t = t.concat(k.tiles); });
+        if(state.winningTile) t.push(state.winningTile);
+        return t;
+    }
+    
+    // Load checkHandType.js
+    eval(loadFile("c:\\stc05168\\ov-mj-calculator\\checkHandType.js"));
+    
+    // Tile helpers
+    function mt(type,value){
+        return {type:type, value:value, display:type+'-'+value};
+    }
+    function w(v){return mt(TILE_TYPES.CHARACTERS,v)}
+    function s(v){return mt(TILE_TYPES.BAMBOOS,v)}
+    function t(v){return mt(TILE_TYPES.DOTS,v)}
+    function h(v){return mt(TILE_TYPES.HONORS,v)}
+    function fl(v){return{type:TILE_TYPES.FLOWERS,value:v,display:'flower-'+v}}
+    function mkPung(fn,v){return{tiles:[fn(v),fn(v),fn(v)],type:fn(v).type,value:v}}
+    function mkChow(fn,a,b,c){return{tiles:[fn(a),fn(b),fn(c)],type:fn(a).type,value:a}}
+    function mkKong(fn,v){return{tiles:[fn(v),fn(v),fn(v),fn(v)],type:fn(v).type,value:v}}
+    
+    function resetState(){
+        state.handTiles=[];state.flowers=[];state.chows=[];state.pungs=[];
+        state.openKongs=[];state.concealedKongs=[];state.winningTile=null;
+        state.seatWind='\u6771';state.roundWind='\u6771';state.isDealer=false;state.dealerCount=0;
+        state.isSelfDraw=false;state.isDeclaredReady=false;state.isIppatsu=false;
+        state.isLastTileDraw=false;state.isLastDiscard=false;state.isFlowerDraw=false;
+        state.isKongDraw=false;state.isRobbingKong=false;state.isDoubleKongDraw=false;
+        state.isRobbingDoubleKong=false;state.isTenhou=false;state.isChihou=false;
+        state.isTenReady=false;state.isChiReady=false;state.isFaceDown=false;
+        state.isMultiWin=0;state.isMultiWinSelfDraw=false;state.visibleWinTileCount=0;
+    }
+    
+    function baseHand(){
+        return{ht:[w(2),w(3),w(4),w(6),w(7),w(8),s(2),s(3),s(4),s(6),s(7),s(8),t(2),t(3),t(4),t(5)],wt:t(5)};
+    }
+    function applyBase(b){
+        state.handTiles=b.ht.slice();state.winningTile=b.wt?{type:b.wt.type,value:b.wt.value}:null;
+    }
+    
+    outFile.WriteLine("JS loaded successfully, TILE_TYPES: " + JSON.stringify(TILE_TYPES));
+    
+} catch(e) {
+    outFile.WriteLine("ERROR loading: " + e.message);
+}
+
+outFile.Close();
+window.close();
+</script>
+</head>
+<body></body>
+</html>

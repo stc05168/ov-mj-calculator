@@ -12,6 +12,23 @@ const state = {
     isDealer: false, // 是否莊家
     dealerCount: 0, // 連莊次數
     isSelfDraw: false, // 是否自摸
+    isDeclaredReady: false,     // 宣告聽牌 (叮)
+    isIppatsu: false,           // 一發
+    isLastTileDraw: false,      // 海底撈月
+    isLastDiscard: false,       // 河底撈魚
+    isFlowerDraw: false,        // 花上自摸
+    isKongDraw: false,          // 槓上自摸
+    isRobbingKong: false,       // 搶槓食糊
+    isDoubleKongDraw: false,    // 槓上槓食糊
+    isRobbingDoubleKong: false, // 搶槓上槓糊
+    isTenhou: false,            // 天糊
+    isChihou: false,            // 地糊
+    isTenReady: false,          // 天聽
+    isChiReady: false,          // 地聽
+    isFaceDown: false,          // 蓋牌
+    isMultiWin: 0,              // 雙響/三響 (0=none, 2=雙響, 3=三響)
+    isMultiWinSelfDraw: false,  // 錦上添花
+    visibleWinTileCount: 0,     // 明絕/絕絕 (桌面可見食糊牌數量 0-3)
     history: [] // 操作歷史
 };
 
@@ -590,6 +607,97 @@ function setupEventListeners() {
 
     document.getElementById('is-self-draw').addEventListener('change', (e) => {
         state.isSelfDraw = e.target.checked;
+        calculateScore();
+    });
+
+    // 特殊條件 - 基本
+    document.getElementById('is-declared-ready').addEventListener('change', (e) => {
+        state.isDeclaredReady = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-ippatsu').addEventListener('change', (e) => {
+        state.isIppatsu = e.target.checked;
+        calculateScore();
+    });
+
+    // 特殊條件 - 特殊摸牌
+    document.getElementById('is-flower-draw').addEventListener('change', (e) => {
+        state.isFlowerDraw = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-kong-draw').addEventListener('change', (e) => {
+        state.isKongDraw = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-double-kong-draw').addEventListener('change', (e) => {
+        state.isDoubleKongDraw = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-robbing-kong').addEventListener('change', (e) => {
+        state.isRobbingKong = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-robbing-double-kong').addEventListener('change', (e) => {
+        state.isRobbingDoubleKong = e.target.checked;
+        calculateScore();
+    });
+
+    // 特殊條件 - 天地
+    document.getElementById('is-tenhou').addEventListener('change', (e) => {
+        state.isTenhou = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-chihou').addEventListener('change', (e) => {
+        state.isChihou = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-ten-ready').addEventListener('change', (e) => {
+        state.isTenReady = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-chi-ready').addEventListener('change', (e) => {
+        state.isChiReady = e.target.checked;
+        calculateScore();
+    });
+
+    // 特殊條件 - 其他
+    document.getElementById('is-face-down').addEventListener('change', (e) => {
+        state.isFaceDown = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-last-tile-draw').addEventListener('change', (e) => {
+        state.isLastTileDraw = e.target.checked;
+        calculateScore();
+    });
+
+    document.getElementById('is-last-discard').addEventListener('change', (e) => {
+        state.isLastDiscard = e.target.checked;
+        calculateScore();
+    });
+
+    // 特殊條件 - 多響
+    document.getElementById('is-multi-win').addEventListener('change', (e) => {
+        state.isMultiWin = parseInt(e.target.value);
+        calculateScore();
+    });
+
+    document.getElementById('is-multi-win-self-draw').addEventListener('change', (e) => {
+        state.isMultiWinSelfDraw = e.target.checked;
+        calculateScore();
+    });
+
+    // 特殊條件 - 明絕
+    document.getElementById('visible-win-tile-count').addEventListener('change', (e) => {
+        state.visibleWinTileCount = parseInt(e.target.value);
         calculateScore();
     });
 }

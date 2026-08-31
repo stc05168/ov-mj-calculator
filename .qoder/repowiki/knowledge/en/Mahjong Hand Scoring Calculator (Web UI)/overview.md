@@ -1,0 +1,1 @@
+A single-page browser app that lets users build a Mahjong hand via drag-and-drop and click, then detects eligible hand types and computes total fan/points.

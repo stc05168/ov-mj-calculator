@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Debug2</title></head>
+<body>
+<pre id="output">Start</pre>
+<script>
+window.onerror = function(msg, url, line, col, error) {
+  document.getElementById('output').textContent += '\nGLOBAL ERROR: ' + msg + ' at line ' + line + ': ' + (error ? error.stack : '');
+};
+</script>
+<script src="mjConst.js"></script>
+<script>
+document.getElementById('output').textContent = 'Step 1: mjConst loaded OK';
+try {
+  document.getElementById('output').textContent += '\nTILE_TYPES: ' + JSON.stringify(TILE_TYPES);
+} catch(e) {
+  document.getElementById('output').textContent += '\nError after mjConst: ' + e.message;
+}
+</script>
+<script>
+const state = {
+    handTiles:[], flowers:[], chows:[], pungs:[], openKongs:[], concealedKongs:[],
+    winningTile:null, seatWind:'東', roundWind:'東', isDealer:false, dealerCount:0,
+    isSelfDraw:false, isDeclaredReady:false, isIppatsu:false, isLastTileDraw:false,
+    isLastDiscard:false, isFlowerDraw:false, isKongDraw:false, isRobbingKong:false,
+    isDoubleKongDraw:false, isRobbingDoubleKong:false, isTenhou:false, isChihou:false,
+    isTenReady:false, isChiReady:false, isFaceDown:false, isMultiWin:0,
+    isMultiWinSelfDraw:false, visibleWinTileCount:0, history:[]
+};
+function getAllTiles(){
+    const t=[...state.handTiles];
+    state.chows.forEach(c=>t.push(...c.tiles));
+    state.pungs.forEach(p=>t.push(...p.tiles));
+    state.openKongs.forEach(k=>t.push(...k.tiles));
+    state.concealedKongs.forEach(k=>t.push(...k.tiles));
+    if(state.winningTile) t.push(state.winningTile);
+    return t;
+}
+document.getElementById('output').textContent += '\nStep 2: state+getAllTiles OK';
+</script>
+<script src="checkHandType.js"></script>
+<script>
+document.getElementById('output').textContent += '\nStep 3: checkHandType loaded OK';
+try {
+  document.getElementById('output').textContent += '\ndetectHandTypes type: ' + typeof detectHandTypes;
+} catch(e) {
+  document.getElementById('output').textContent += '\nError after checkHandType: ' + e.message + '\n' + e.stack;
+}
+</script>
+</body></html>

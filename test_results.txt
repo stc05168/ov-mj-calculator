@@ -1,0 +1,55 @@
+﻿ERROR #11: "無字" - value is not defined
+FAIL #13: "獨獨" expected score=2
+  Got: 暗槓x1(2), 無花(2), 二相逢x1(3), 二相逢x1(3), 門清(5), 四歸一 (暗)(10)
+FAIL #15: "二相逢x1" expected score=3
+  Got: 大雞糊(30)
+FAIL #23: "兩兄弟" expected score=5
+  Got: 將眼(2), 斷么(5), 小雜兄弟(8)
+FAIL #25: "宣告聽牌" expected score=5
+  Got: 假獨(1), 將眼(2), 斷么(5), 三相逢x1 (暗)(20), 全姊妹(25)
+FAIL #26: "平糊" expected score=5
+  Got: 將眼(2), 斷么(5), 三相逢x1(10), 全姊妹(25)
+ERROR #29: "斷么+平糊+門清" - value is not defined
+FAIL #32: "無字花" expected score=5
+  Got: 將眼(2), 二相逢x1(3), 明雜龍(5)
+FAIL #37: "門清自摸" expected score=8
+  Got: 假獨(1), 將眼(2), 斷么(5), 三相逢x1 (暗)(20), 全姊妹(25)
+FAIL #38: "門清自摸+無字花大平糊" expected score=8
+  Got: 假獨(1), 將眼(2), 斷么(5), 三相逢x1 (暗)(20), 全姊妹(25)
+FAIL #40: "五門齊（小）" expected score=10
+  Got: 元牌(中)(2), 將眼(2), 無花(2), 二相逢x1(3), 風牌(東圈東位)(3), 五門齊（大）(15)
+FAIL #43: "暗雜龍" expected score=10
+  Got: 大雞糊(30)
+FAIL #45: "絕絕" expected score=10
+  Got: 假獨(1), 將眼(2), 二相逢x1(3), 明絕(5), 門清(5), 暗清龍(萬子)(20)
+FAIL #50: "雙般高" expected score=10
+  Got: 將眼(2), 一般高(5)
+FAIL #57: "三小兄弟" expected score=15
+  Got: 二相逢x1(3), 斷么(5), 小雜兄弟(8)
+FAIL #60: "半求人" expected score=15
+  Got: 自摸(1), 對碰(2), 斷么(5)
+FAIL #61: "大雜兄弟" expected score=15
+  Got: 將眼(2), 斷么(5), 二相逢x3(9), 三姊妹(15), 三般高 (暗)(30)
+FAIL #62: "無字花大平糊" expected score=15
+  Got: 將眼(2), 二相逢x1(3), 二相逢x1(3), 明雜龍(5), 明雜龍(5)
+FAIL #63: "門清大叮" expected score=15
+  Got: 假獨(1), 將眼(2), 斷么(5), 三相逢x1 (暗)(20), 全姊妹(25)
+FAIL #64: "七子" expected score=20
+  Got: 大雞糊(30)
+ERROR #65: "七門齊（小）" - value is not defined
+ERROR #71: "七門齊（大）" - value is not defined
+FAIL #76: "四子" expected score=30
+  Got: 自摸(1), 將眼(2), 對碰(2), 斷么(5)
+FAIL #84: "混全帶" expected score=30
+  Got: 元牌(中)(2), 對碰(2), 無花(2), 風牌(東圈東位)(3), 三相逢x1(10), 混全帶123(10), 五門齊（大）(15), 全求人(30), 混全帶么九(40)
+FAIL #93: "嚦咕嚦咕" expected score=50
+  Got: 將眼(2), 對碰(2), 2暗刻(5), 門清(5), 四歸一 (暗)(10), 四歸四 (暗)(40)
+FAIL #97: "嚦咕嚦咕六/八飛" expected score=60
+  Got: 將眼(2), 門清(5), 缺一門(10)
+ERROR #102: "花糊:兩台花" - value is not defined
+FAIL #112: "十三么" expected score=140
+  Got: 無花(2), 四歸一 (暗)(10), 混么碰(60), 十三么（12 飛）(150)
+FAIL #113: "大四喜+字一色" expected score=150
+  Got: 元牌(中)(2), 無花(2), 對對糊(40), 六小姊妹(100), 大四喜(120), 字一色(150)
+
+88 passed / 29 failed / 117 total

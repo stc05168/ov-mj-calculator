@@ -403,6 +403,69 @@ html, body {
     touch-action: manipulation;
 }
 
+/* 特殊條件區塊 */
+.special-conditions {
+    padding: 15px;
+}
+
+.special-conditions h2 {
+    margin-bottom: 12px;
+}
+
+.condition-group {
+    margin-bottom: 10px;
+}
+
+.condition-group:last-child {
+    margin-bottom: 0;
+}
+
+.condition-group-title {
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #b71c1c;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #f0e0e0;
+}
+
+.condition-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+.condition-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.condition-item input[type="checkbox"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.condition-item label {
+    display: inline;
+    font-weight: normal;
+    font-size: 0.85rem;
+    margin-bottom: 0;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.condition-item select {
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+}
+
 /* 響應式設計 */
 @media (max-width: 480px) {
     .section-header {

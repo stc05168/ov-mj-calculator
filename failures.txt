@@ -1,0 +1,41 @@
+﻿<pre id="output">ERROR #11: "無字" - value is not defined
+FAIL #13: "獨獨" expected score=2
+FAIL #15: "二相逢x1" expected score=3
+FAIL #23: "兩兄弟" expected score=5
+FAIL #25: "宣告聽牌" expected score=5
+FAIL #26: "平糊" expected score=5
+ERROR #29: "斷么+平糊+門清" - value is not defined
+FAIL #32: "無字花" expected score=5
+FAIL #37: "門清自摸" expected score=8
+FAIL #38: "門清自摸+無字花大平糊" expected score=8
+FAIL #40: "五門齊（小）" expected score=10
+FAIL #43: "暗雜龍" expected score=10
+FAIL #45: "絕絕" expected score=10
+FAIL #50: "雙般高" expected score=10
+FAIL #57: "三小兄弟" expected score=15
+FAIL #60: "半求人" expected score=15
+FAIL #61: "大雜兄弟" expected score=15
+FAIL #62: "無字花大平糊" expected score=15
+FAIL #63: "門清大叮" expected score=15
+FAIL #64: "七子" expected score=20
+ERROR #65: "七門齊（小）" - value is not defined
+ERROR #71: "七門齊（大）" - value is not defined
+FAIL #76: "四子" expected score=30
+FAIL #84: "混全帶" expected score=30
+FAIL #93: "嚦咕嚦咕" expected score=50
+FAIL #97: "嚦咕嚦咕六/八飛" expected score=60
+ERROR #102: "花糊:兩台花" - value is not defined
+FAIL #112: "十三么" expected score=140
+FAIL #113: "大四喜+字一色" expected score=150
+88 passed / 29 failed / 117 total</pre>
+window.onerror = function(msg, url, line, col, error) {
+el.textContent += '\nERROR: ' + msg + ' line:' + line + ' col:' + col + (error ? '\n' + error.stack : '');
+let passed=0, failed=0;
+if(match) { passed++; }
+failed++;
+lines.push('FAIL #'+(i+1)+': "'+test.name+'" expected score='+test.score);
+failed++;
+lines.push('ERROR #'+(i+1)+': "'+test.name+'" - '+e.message);
+lines.push(passed+' passed / '+failed+' failed / '+T.length+' total');
+document.title = 'DONE:' + passed + '/' + failed + '/' + T.length;
+document.getElementById('output').textContent += '\nRUN ERROR: ' + e.message + '\n' + e.stack;

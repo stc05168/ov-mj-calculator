@@ -1,0 +1,16 @@
+schema_version: 1
+module_path: ""
+title: Mahjong Hand Scoring Calculator (Web UI)
+scope:
+    - .
+    - .gitignore
+    - LICENSE
+    - README.md
+    - checkHandType.js
+    - mj.css
+    - mj.html
+    - mj.js
+    - mjConst.js
+source_files: []
+depends_on: []
+related_to: []

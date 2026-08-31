@@ -117,6 +117,123 @@
         </div>
     </div>
 
+    <div class="section special-conditions">
+        <h2>特殊條件</h2>
+
+        <div class="condition-group">
+            <div class="condition-group-title">基本</div>
+            <div class="condition-grid">
+                <div class="condition-item">
+                    <input type="checkbox" id="is-declared-ready">
+                    <label for="is-declared-ready">宣告聽牌(叮)</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-ippatsu">
+                    <label for="is-ippatsu">一發</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="condition-group">
+            <div class="condition-group-title">特殊摸牌</div>
+            <div class="condition-grid">
+                <div class="condition-item">
+                    <input type="checkbox" id="is-flower-draw">
+                    <label for="is-flower-draw">花上自摸</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-kong-draw">
+                    <label for="is-kong-draw">槓上自摸</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-double-kong-draw">
+                    <label for="is-double-kong-draw">槓上槓食糊</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-robbing-kong">
+                    <label for="is-robbing-kong">搶槓食糊</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-robbing-double-kong">
+                    <label for="is-robbing-double-kong">搶槓上槓糊</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="condition-group">
+            <div class="condition-group-title">天地</div>
+            <div class="condition-grid">
+                <div class="condition-item">
+                    <input type="checkbox" id="is-tenhou">
+                    <label for="is-tenhou">天糊</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-chihou">
+                    <label for="is-chihou">地糊</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-ten-ready">
+                    <label for="is-ten-ready">天聽</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-chi-ready">
+                    <label for="is-chi-ready">地聽</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="condition-group">
+            <div class="condition-group-title">其他</div>
+            <div class="condition-grid">
+                <div class="condition-item">
+                    <input type="checkbox" id="is-face-down">
+                    <label for="is-face-down">蓋牌</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-last-tile-draw">
+                    <label for="is-last-tile-draw">海底撈月</label>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-last-discard">
+                    <label for="is-last-discard">河底撈魚</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="condition-group">
+            <div class="condition-group-title">多響</div>
+            <div class="condition-grid">
+                <div class="condition-item">
+                    <label for="is-multi-win">雙響/三響</label>
+                    <select id="is-multi-win">
+                        <option value="0">無</option>
+                        <option value="2">雙響</option>
+                        <option value="3">三響</option>
+                    </select>
+                </div>
+                <div class="condition-item">
+                    <input type="checkbox" id="is-multi-win-self-draw">
+                    <label for="is-multi-win-self-draw">錦上添花</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="condition-group">
+            <div class="condition-group-title">明絕</div>
+            <div class="condition-grid">
+                <div class="condition-item">
+                    <label for="visible-win-tile-count">桌面可見食糊牌數</label>
+                    <select id="visible-win-tile-count">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="section">
         <h2>計番結果</h2>
         <div id="status-message"></div>

@@ -1,0 +1,1 @@
+Vanilla HTML/CSS/JavaScript running in the browser; drag-and-drop implemented with both native `drag*` events and a custom touch-drag pipeline using `elementFromPoint` and cloned floating images.

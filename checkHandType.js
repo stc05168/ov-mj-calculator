@@ -1,3 +1,106 @@
+// 不能重複計算牌型番數 - Exclusion rules table
+// When a hand type (key) is detected, all hand types matching any entry in its value array are excluded.
+// Matching uses prefix: e.g. '風牌' matches '風牌(東)', '風牌(東圈)', etc.
+const EXCLUSION_RULES = {
+    '門清大叮': ['門清', '宣告聽牌'],
+    '門清自摸': ['門清', '自摸'],
+    '無字花大平糊': ['無字', '無字花', '平糊'],
+    '無字花': ['無字'],
+    '小三元': ['元牌'],
+    '大三元': ['元牌'],
+    '小三風': ['風牌'],
+    '大三風': ['風牌'],
+    '小四喜': ['風牌'],
+    '大四喜': ['風牌'],
+    '字一色': ['混么碰', '混全帶么九'],
+    '五暗刻': ['對對糊', '門清', '2暗刻', '3暗刻', '4暗刻'],
+    '坎坎糊': ['對對糊', '門清', '門清自摸', '自摸', '2暗刻', '3暗刻', '4暗刻', '5暗刻'],
+    '斷么': ['無字', '無字花'],
+    '純全帶么九': ['無字', '無字花', '混全帶么九'],
+    '混么碰': ['混全帶么九'],
+    '清么碰': ['無字', '無字花', '混全帶么九', '純全帶么九', '混么碰', '斷么'],
+    '純全帶X': ['無字', '無字花'],
+    '缺一門': ['無字', '無字花'],
+    '清一色': ['無字', '無字花', '無字花大平糊'],
+    '大於五': ['無字', '無字花', '缺五'],
+    '小於五': ['無字', '無字花', '缺五'],
+    '缺五': ['無字', '無字花'],
+    '樓梯': ['平糊', '無字花大平糊'],
+    '全姊妹': ['二相逢', '一般高', '平糊', '無字花大平糊'],
+    '全求人': ['獨獨'],
+    '半求人': ['獨獨'],
+    '天糊': ['四子', '天聽'],
+    '地糊': ['四子', '天聽'],
+    '天聽': ['門清', '門清自摸', '自摸'],
+    '地聽': ['門清', '門清自摸', '自摸'],
+    '十三么': ['門清', '門清自摸', '自摸'],
+    '十六不搭': ['門清', '門清自摸', '自摸'],
+    '嚦咕嚦咕': ['門清', '門清自摸', '自摸'],
+    '嚦咕嚦咕六/八飛': ['門清', '門清自摸', '自摸'],
+};
+
+function applyExclusions(handTypes) {
+    const detectedNames = handTypes.map(h => h.name);
+    const toRemove = new Set();
+
+    for (const ht of handTypes) {
+        // Check exact match first
+        let rules = EXCLUSION_RULES[ht.name];
+        if (!rules) {
+            // Also check if any key is a prefix of the detected name (for names like '純全帶X(5)')
+            for (const key of Object.keys(EXCLUSION_RULES)) {
+                if (ht.name.startsWith(key)) {
+                    rules = EXCLUSION_RULES[key];
+                    break;
+                }
+            }
+        }
+        if (!rules) continue;
+
+        for (const excluded of rules) {
+            for (const detected of detectedNames) {
+                if (detected === excluded || detected.startsWith(excluded)) {
+                    toRemove.add(detected);
+                }
+            }
+        }
+    }
+
+    return handTypes.filter(h => !toRemove.has(h.name));
+}
+
+function checkDaJiHu(handTypes, isSelfDraw) {
+    const rewardTypes = ['天聽', '地聽', '宣告聽牌', '一發', '蓋牌', '雪上霜', '雪上冰', '錦上添花'];
+
+    // Calculate non-reward fan total
+    let nonRewardFan = 0;
+    for (const ht of handTypes) {
+        const isReward = rewardTypes.some(r => ht.name.startsWith(r));
+        if (!isReward) {
+            nonRewardFan += ht.score;
+        }
+    }
+
+    // 大雞糊: non-reward fan ≤ 5, win by discard
+    // 鴨糊: non-reward fan ≤ 5, self-draw
+    if (nonRewardFan <= 5) {
+        // Keep only reward-type hand types
+        const rewardHandTypes = handTypes.filter(ht => rewardTypes.some(r => ht.name.startsWith(r)));
+
+        if (isSelfDraw) {
+            // 鴨糊: 10番 + keep reward types + 自摸 is already in the list
+            rewardHandTypes.unshift({ name: '鴨糊', score: 10 });
+        } else {
+            // 大雞糊: 30番 + keep reward types
+            rewardHandTypes.unshift({ name: '大雞糊', score: 30 });
+        }
+
+        return rewardHandTypes;
+    }
+
+    return handTypes;
+}
+
 // 檢測牌型
 function detectHandTypes() {
     const handTypes = [];
@@ -118,6 +221,11 @@ function detectHandTypes() {
     gaoxiangResults.forEach(result => {
         handTypes.push(result);
     });
+
+    // 全姊妹: 三相逢 + 二相逢 or 一般高
+    if (isQuanJieMei(gaoxiangResults)) {
+        handTypes.push({ name: '全姊妹', score: 25 });
+    }
     
     // 新增龍牌型檢測
     if (!shiLiuBuDaResult.isValid) {
@@ -147,8 +255,122 @@ function detectHandTypes() {
     
     // 檢查基本牌型
     // 檢查門前清 (沒有吃、碰和槓)
-    if (!shiLiuBuDaResult.isValid && !isShiSanYao(allTiles) && state.chows.length === 0 && state.pungs.length === 0) {
-        handTypes.push({ name: '門前清', score: 5 });
+    const isMenQing = state.chows.length === 0 && state.pungs.length === 0;
+    if (!shiLiuBuDaResult.isValid && !isShiSanYao(allTiles) && isMenQing) {
+        handTypes.push({ name: '門清', score: 5 });
+    }
+
+    // === Group A: State-based simple checks ===
+
+    // 自摸
+    if (state.isSelfDraw) {
+        handTypes.push({ name: '自摸', score: 1 });
+    }
+
+    // 門清自摸 (門清 + 自摸 combined, score: 門清1+自摸1+組合=5)
+    if (isMenQing && state.isSelfDraw && !shiLiuBuDaResult.isValid && !isShiSanYao(allTiles)) {
+        handTypes.push({ name: '門清自摸', score: 8 });
+    }
+
+    // 宣告聽牌 (叮)
+    if (state.isDeclaredReady) {
+        handTypes.push({ name: '宣告聽牌', score: 5 });
+    }
+
+    // 門清大叮 (門清 + 宣告聽牌 combined, score: 門清1+宣告聽牌5+組合=10)
+    if (isMenQing && state.isDeclaredReady && !shiLiuBuDaResult.isValid && !isShiSanYao(allTiles)) {
+        handTypes.push({ name: '門清大叮', score: 15 });
+    }
+
+    // 一發
+    if (state.isIppatsu) {
+        handTypes.push({ name: '一發', score: 5 });
+    }
+
+    // 海底撈月
+    if (state.isLastTileDraw) {
+        handTypes.push({ name: '海底撈月', score: 20 });
+    }
+
+    // 河底撈魚
+    if (state.isLastDiscard) {
+        handTypes.push({ name: '河底撈魚', score: 10 });
+    }
+
+    // 花上自摸
+    if (state.isFlowerDraw) {
+        handTypes.push({ name: '花上自摸', score: 1 });
+    }
+
+    // 槓上自摸
+    if (state.isKongDraw) {
+        handTypes.push({ name: '槓上自摸', score: 1 });
+    }
+
+    // 搶槓食糊
+    if (state.isRobbingKong) {
+        handTypes.push({ name: '搶槓食糊', score: 5 });
+    }
+
+    // 槓上槓食糊
+    if (state.isDoubleKongDraw) {
+        handTypes.push({ name: '槓上槓食糊', score: 30 });
+    }
+
+    // 搶槓上槓糊
+    if (state.isRobbingDoubleKong) {
+        handTypes.push({ name: '搶槓上槓糊', score: 30 });
+    }
+
+    // 蓋牌
+    if (state.isFaceDown) {
+        handTypes.push({ name: '蓋牌', score: 10 });
+    }
+
+    // === Group B: Tile-counting based ===
+
+    // 全求人: All melds exposed, single-wait on discard, no concealed kongs
+    const exposedMeldCount = state.chows.length + state.pungs.length + state.openKongs.length;
+    const handTileCount = state.handTiles.length;
+    if (exposedMeldCount >= 4 && state.concealedKongs.length === 0 && handTileCount <= 2 && !state.isSelfDraw) {
+        handTypes.push({ name: '全求人', score: 30 });
+    }
+
+    // 半求人: All melds exposed, single-wait self-draw, no concealed kongs
+    if (exposedMeldCount >= 4 && state.concealedKongs.length === 0 && handTileCount <= 2 && state.isSelfDraw) {
+        handTypes.push({ name: '半求人', score: 15 });
+    }
+
+    // 四子/七子/十子: Based on concealed tile count
+    const concealedCount = state.handTiles.length + (state.winningTile ? 1 : 0);
+    if (concealedCount === 4) {
+        handTypes.push({ name: '四子', score: 30 });
+    } else if (concealedCount === 7) {
+        handTypes.push({ name: '七子', score: 20 });
+    } else if (concealedCount === 10) {
+        handTypes.push({ name: '十子', score: 10 });
+    }
+
+    // === Group C: Situational (天地) ===
+
+    // 天糊
+    if (state.isTenhou && !state.isDealer) {
+        handTypes.push({ name: '天糊', score: 100 });
+    }
+
+    // 地糊
+    if (state.isChihou && !state.isDealer) {
+        handTypes.push({ name: '地糊', score: 90 });
+    }
+
+    // 天聽
+    if (state.isTenReady) {
+        handTypes.push({ name: '天聽', score: 40 });
+    }
+
+    // 地聽
+    if (state.isChiReady) {
+        handTypes.push({ name: '地聽', score: 30 });
     }
     
     // 檢查平糊 (全部是順子)
@@ -213,20 +435,8 @@ function detectHandTypes() {
             // 5暗刻+自摸=坎坎糊
             if (concealedPungCount >= 5 && state.isSelfDraw) {
                 handTypes.push({ name: '坎坎糊', score: 200 });
-                
-                // 移除對對糊
-                const duiDuiHuIndex = handTypes.findIndex(h => h.name === '對對糊');
-                if (duiDuiHuIndex !== -1) handTypes.splice(duiDuiHuIndex, 1);
-                
-                // 移除暗刻
-                const concealedPungIndex = handTypes.findIndex(h => h.name.includes('暗刻'));
-                if (concealedPungIndex !== -1) handTypes.splice(concealedPungIndex, 1);
             } else {
                 handTypes.push({ name: '5暗刻', score: 100 });
-                
-                // 移除對對糊
-                const duiDuiHuIndex = handTypes.findIndex(h => h.name === '對對糊');
-                if (duiDuiHuIndex !== -1) handTypes.splice(duiDuiHuIndex, 1);
             }
         }
     }
@@ -259,11 +469,16 @@ function detectHandTypes() {
 
     // 4. 檢查嚦咕嚦咕（七對子 + 1組刻子）
     if (isLiguligu(allTiles)) {
-        results.push({ name: '嚦咕嚦咕', score: 50 });
+        const liguWaits = analyzeLiguliguWaits(state.handTiles);
+        if (liguWaits >= 6) {
+            handTypes.push({ name: '嚦咕嚦咕六/八飛', score: 60 });
+        } else {
+            handTypes.push({ name: '嚦咕嚦咕', score: 50 });
+        }
     }
     
     // 為了避免假獨和對碰同時出現，將獨獨/假獨檢查放在對碰為false時
-    if (!isShiSanYao(allTiles) && !isShiLiuBuDa(allTiles)) {
+    if (!isShiSanYao(allTiles) && !shiLiuBuDaResult.isValid) {
         const isPair = isPairWait(allTiles);
     
         // 先检查是否是真正的独独
@@ -286,29 +501,33 @@ function detectHandTypes() {
         handTypes.push({ name: '將眼', score: 2 });
     }
     
-    // g. 風牌
+    // g. 風牌（合併計番： base 1 + 正圈 +1 + 正位 +1）
     const windPungs = getWindPungs();
-    if (!isWindsResult) {
+    {
+        const roundWindValue = { '東': 1, '南': 2, '西': 3, '北': 4 }[state.roundWind];
+        const seatWindValue  = { '東': 1, '南': 2, '西': 3, '北': 4 }[state.seatWind];
+        const windValueMap  = { '東': 1, '南': 2, '西': 3, '北': 4 };
+
         windPungs.forEach(wind => {
-            handTypes.push({ name: `風牌(${wind})`, score: 1 });
+            const wv = windValueMap[wind];
+            const isRoundWind = (wv === roundWindValue);
+            const isSeatWind  = (wv === seatWindValue);
+            let fan = 1; // base
+            if (isRoundWind) fan++;
+            if (isSeatWind)  fan++;
+
+            let label = `風牌(${wind})`;
+            if (isRoundWind && isSeatWind) label = `風牌(${wind}圈${wind}位)`;
+            else if (isRoundWind)          label = `風牌(${wind}圈)`;
+            else if (isSeatWind)           label = `風牌(${wind}位)`;
+
+            handTypes.push({ name: label, score: fan });
         });
     }
     
-    // g2. 風牌 (圈)
-    const roundWindPungs = getRoundWindPungs();
-    roundWindPungs.forEach(wind => {
-        handTypes.push({ name: `風牌(${wind}圈)`, score: 1 });
-    });
-    
-    // g3. 風牌 (位)
-    const seatWindPungs = getSeatWindPungs();
-    seatWindPungs.forEach(wind => {
-        handTypes.push({ name: `風牌(${wind}位)`, score: 1 });
-    });
-    
     // h. 元牌
     const dragonPungs = getDragonPungs();
-    if (!isDragonsResult) {
+    {
         dragonPungs.forEach(dragon => {
             handTypes.push({ name: `元牌(${dragon})`, score: 2 });
         });
@@ -322,8 +541,49 @@ function detectHandTypes() {
             score: flowerScoreInfo.totalScore 
         });
     }
+
+    // === Group D: Special patterns - 明絕/絕絕 ===
+
+    // 明絕/絕絕: 食糊牌為桌面上第四隻
+    if (state.visibleWinTileCount === 3) {
+        if (isSingleWait(allTiles)) {
+            handTypes.push({ name: '絕絕', score: 10 });
+        } else {
+            handTypes.push({ name: '明絕', score: 5 });
+        }
+    }
+
+    // === Group E: Flower-based wins ===
+
+    // 花糊: 兩台花 (8 flowers = instant win)
+    if (state.flowers.length === 8) {
+        handTypes.push({ name: '花糊:兩台花', score: 80 });
+    }
+
+    // === Group F: Multi-win ===
+
+    // 雪上霜 (雙響)
+    if (state.isMultiWin === 2) {
+        handTypes.push({ name: '雪上霜(雙響)', score: 5 });
+    }
+
+    // 雪上冰 (三響)
+    if (state.isMultiWin === 3) {
+        handTypes.push({ name: '雪上冰(三響)', score: 10 });
+    }
+
+    // 錦上添花
+    if (state.isMultiWinSelfDraw) {
+        if (state.isMultiWin === 3) {
+            handTypes.push({ name: '錦上添花(三響劈)', score: 20 });
+        } else {
+            handTypes.push({ name: '錦上添花(雙響劈)', score: 10 });
+        }
+    }
     
-    return sortHandTypes(handTypes);
+    let finalHandTypes = applyExclusions(handTypes);
+    finalHandTypes = checkDaJiHu(finalHandTypes, state.isSelfDraw);
+    return sortHandTypes(finalHandTypes);
 }
 
 function isValidShiSanYao(allTiles) {
@@ -474,8 +734,8 @@ function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
                         allPossibleTiles.push({ type: firstTile.type, value: values[1] + 1 });
                     }
                 }else if (diff === 0) {
-                    waits.push(firstTile)
-                    return waits;
+                    // Two identical extra tiles - pung already complete or forming pair
+                    // Don't add extra candidates; the main loop will check all 34 tiles
                 }
             }
             // 检查是否是三张牌但需要形成顺子或刻子
@@ -487,6 +747,11 @@ function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
     
     // 检查每张可能的牌是否能使手牌和牌
     for (const tile of allPossibleTiles) {
+        // Skip tiles where all 4 copies are already in hand (impossible to draw)
+        const tileKey = `${tile.type}-${tile.value}`;
+        const countInHand = handTiles.filter(t => t.type === tile.type && t.value === tile.value).length;
+        if (countInHand >= 4) continue;
+
         const testHand = [...handTiles, tile];
         if (isValidShiSanYao(testHand)) {
             // 检查这张牌是否已经在waits中
@@ -779,23 +1044,48 @@ function detectSiguiHandTypes(allTiles) {
     for (const key in tileCounts) {
         if (tileCounts[key] === 4) {
             const [type, value] = key.split('-');
+            const numValue = parseInt(value);
+            const isConcealed = isSiguiConcealed(type, numValue);
             
             // 檢查四歸四（順子中使用四張相同的牌）
-            if (isSiguiSi(allTiles, type, parseInt(value))) {
-                results.push({ name: '四歸四', score: 20 });
+            if (isSiguiSi(allTiles, type, numValue)) {
+                results.push({ name: isConcealed ? '四歸四 (暗)' : '四歸四', score: isConcealed ? 40 : 20 });
             } 
             // 檢查四歸二（兩隻做眼）
-            else if (isSiguiEr(allTiles, type, parseInt(value))) {
-                results.push({ name: '四歸二', score: 10 });
+            else if (isSiguiEr(allTiles, type, numValue)) {
+                results.push({ name: isConcealed ? '四歸二 (暗)' : '四歸二', score: isConcealed ? 20 : 10 });
             }
             // 四歸一
             else {
-                results.push({ name: '四歸一', score: 5 });
+                results.push({ name: isConcealed ? '四歸一 (暗)' : '四歸一', score: isConcealed ? 10 : 5 });
             }
         }
     }
     
     return results;
+}
+
+// 檢查四歸是否暗（四張牌都不在任何明組中）
+function isSiguiConcealed(type, value) {
+    // 檢查是否在明的順子中
+    const inExposedChow = state.chows.some(chow =>
+        chow.tiles.some(t => t.type === type && t.value === value)
+    );
+    if (inExposedChow) return false;
+
+    // 檢查是否在明的刻子中
+    const inExposedPung = state.pungs.some(pung =>
+        pung.type === type && pung.value === value
+    );
+    if (inExposedPung) return false;
+
+    // 檢查是否在明的槓中
+    const inExposedKong = state.openKongs.some(kong =>
+        kong.type === type && kong.value === value
+    );
+    if (inExposedKong) return false;
+
+    return true;
 }
 
 // 檢查四歸四（順子中使用四張相同的牌）
@@ -845,13 +1135,13 @@ function detectQuanDaiXHandTypes(allTiles) {
     // 檢查混全帶X
     const hunQuanDaiX = detectHunQuanDaiX(allTiles);
     if (hunQuanDaiX && Array.isArray(hunQuanDaiX.numbers) && hunQuanDaiX.numbers.length > 0) {
-        const { numbers, score } = hunQuanDaiX;
+        const { numbers } = hunQuanDaiX;
         if (numbers.length === 1) {
             results.push({ name: `混全帶${numbers[0]}`, score: 30 });
         } else if (numbers.length === 2) {
-            results.push({ name: `混全帶${numbers.join('')}`, score: 50 });
+            results.push({ name: `混全帶${numbers.join('')}`, score: 20 });
         } else if (numbers.length === 3) {
-            results.push({ name: `混全帶${numbers.join('')}`, score: 60 });
+            results.push({ name: `混全帶${numbers.join('')}`, score: 10 });
         }
     }
 
@@ -878,7 +1168,7 @@ function detectHunQuanDaiX(allTiles) {
         if (isAllCombinationsContainNumbersOrHonors(allTiles, targetNumbers)) {
             return {
                 numbers: targetNumbers,
-                score: targetNumbers.length === 1 ? 30 : targetNumbers.length === 2 ? 50 : 60
+                score: targetNumbers.length === 1 ? 30 : targetNumbers.length === 2 ? 20 : 10
             };
         }
     }
@@ -1090,15 +1380,15 @@ function isLaoShaoPeng(allTiles) {
 
 // 4. 檢查嚦咕嚦咕（七對子 + 1組刻子）
 function isLiguligu(allTiles) {
-    // 檢查是否為七對子
-    if (!isEightPairs(allTiles)) return false;
+    // 檢查是否為七對子（使用手牌，不含和牌，共16張）
+    if (!isEightPairs(state.handTiles)) return false;
     
     // 檢查是否有至少一組刻子
     const allPungs = getAllPungs(allTiles);
     return allPungs.length >= 1;
 }
 
-// 檢查是否為七對子
+// 檢查是否為七對子（8 pairs in 16 tiles，可包含單張配和牌）
 function isEightPairs(allTiles) {
     if (allTiles.length !== 16) return false;
     
@@ -1108,18 +1398,24 @@ function isEightPairs(allTiles) {
         counts[key] = (counts[key] || 0) + 1;
     });
     
+    // 計算可形成的對子數（4張=2對，3張=1對+1單，2張=1對，1張=單張）
     let pairCount = 0;
+    let singleCount = 0;
     for (const key in counts) {
-        if (counts[key] === 2) {
-            pairCount++;
-        } else if (counts[key] === 4) {
-            pairCount += 2; // 四張相同算兩對
-        } else {
-            return false; // 有不是2或4張的牌
-        }
+        const c = counts[key];
+        if (c === 4) pairCount += 2;
+        else if (c === 3) { pairCount += 1; singleCount += 1; }
+        else if (c === 2) pairCount += 1;
+        else if (c === 1) singleCount += 1;
+        else return false;
     }
     
-    return pairCount === 7;
+    // 8 pairs: pairCount=8, singleCount=0
+    // 7 pairs + 2 singles: pairCount=7, singleCount=2 (singles pair with WT)
+    // 6 pairs + 1 quad + 2 singles: pairCount=8 (quad=2), singleCount=2
+    if (pairCount === 8 && singleCount === 0) return true;
+    if (pairCount >= 7 && singleCount <= 2 && pairCount + Math.floor(singleCount / 2) >= 7) return true;
+    return false;
 }
 
 // 5. 檢查斷么（全副牌沒有么九及番子）
@@ -1328,20 +1624,22 @@ function detectGaoxiangHandTypes(allTiles) {
 function getAllChows(allTiles) {
     const chows = [];
     
-    // 添加玩家標記的順子
+    // 添加玩家標記的順子（明順）
     state.chows.forEach(chow => {
         chows.push({
             type: chow.type,
             values: chow.tiles.map(tile => tile.value).sort((a, b) => a - b),
-            startValue: Math.min(...chow.tiles.map(tile => tile.value))
+            startValue: Math.min(...chow.tiles.map(tile => tile.value)),
+            isExposed: true
         });
     });
 
-    // 從手牌中找出順子（排除已標記的牌）
+    // 從手牌中找出順子（排除已標記的牌）（暗順）
     const handTiles = allTiles.filter(tile => 
         !state.chows.some(chow => chow.tiles.some(ct => ct.type === tile.type && ct.value === tile.value))
     );
     const handChows = findChowsInHand(handTiles);
+    handChows.forEach(chow => { chow.isExposed = false; });
     chows.push(...handChows);
 
     return chows;
@@ -1388,41 +1686,57 @@ function findChowsInHand(allTiles) {
 // 檢測相逢牌型
 function detectXiangfeng(allChows) {
     const results = [];
-    const chowCountsByValueAndSuit = {};
+    const chowGroupsByValueAndSuit = {};
     
-    // 統計每個數值起始點和花色的順子數量
+    // 統計每個數值起始點和花色的順子（追蹤明暗）
     allChows.forEach(chow => {
         const key = chow.startValue.toString();
-        if (!chowCountsByValueAndSuit[key]) {
-            chowCountsByValueAndSuit[key] = {};
+        if (!chowGroupsByValueAndSuit[key]) {
+            chowGroupsByValueAndSuit[key] = {};
         }
-        if (!chowCountsByValueAndSuit[key][chow.type]) {
-            chowCountsByValueAndSuit[key][chow.type] = 0;
+        if (!chowGroupsByValueAndSuit[key][chow.type]) {
+            chowGroupsByValueAndSuit[key][chow.type] = [];
         }
-        chowCountsByValueAndSuit[key][chow.type]++;
+        chowGroupsByValueAndSuit[key][chow.type].push(chow);
     });
     
     // 計算每個數值起始點的相逢組合次數
-    for (const startValue in chowCountsByValueAndSuit) {
-        const suitCounts = chowCountsByValueAndSuit[startValue];
-        const suits = Object.keys(suitCounts);
-        const counts = Object.values(suitCounts);
+    for (const startValue in chowGroupsByValueAndSuit) {
+        const suitGroups = chowGroupsByValueAndSuit[startValue];
+        const suits = Object.keys(suitGroups);
         
         if (suits.length >= 3) {
             // 先計算三相逢組合次數
             let sanxiangfengCount = 0;
+            let sanxiangfengDarkCount = 0;
             
             // 計算所有可能的三花色組合
             for (let i = 0; i < suits.length - 2; i++) {
                 for (let j = i + 1; j < suits.length - 1; j++) {
                     for (let k = j + 1; k < suits.length; k++) {
-                        sanxiangfengCount += counts[i] * counts[j] * counts[k];
+                        const chowsA = suitGroups[suits[i]];
+                        const chowsB = suitGroups[suits[j]];
+                        const chowsC = suitGroups[suits[k]];
+                        const total = chowsA.length * chowsB.length * chowsC.length;
+                        sanxiangfengCount += total;
+                        // 暗：三隻順子都來自暗順
+                        const darkCount = chowsA.filter(c => !c.isExposed).length *
+                                          chowsB.filter(c => !c.isExposed).length *
+                                          chowsC.filter(c => !c.isExposed).length;
+                        sanxiangfengDarkCount += darkCount;
                     }
                 }
             }
             
             if (sanxiangfengCount > 0) {
-                results.push({ name: `三相逢x${sanxiangfengCount}`, score: 10 * sanxiangfengCount });
+                const sanxiangfengMingCount = sanxiangfengCount - sanxiangfengDarkCount;
+                const score = (sanxiangfengMingCount * 10) + (sanxiangfengDarkCount * 20);
+                const label = sanxiangfengDarkCount > 0 && sanxiangfengMingCount === 0
+                    ? `三相逢x${sanxiangfengCount} (暗)`
+                    : sanxiangfengDarkCount > 0
+                        ? `三相逢x${sanxiangfengCount} (明暗混合)`
+                        : `三相逢x${sanxiangfengCount}`;
+                results.push({ name: label, score });
                 
                 // 已經計算了三相逢，不再計算二相逢（避免重複計算）
                 continue; // 跳過這個數值起始點的後續計算
@@ -1434,7 +1748,7 @@ function detectXiangfeng(allChows) {
             let erxiangfengCount = 0;
             for (let i = 0; i < suits.length - 1; i++) {
                 for (let j = i + 1; j < suits.length; j++) {
-                    erxiangfengCount += counts[i] * counts[j];
+                    erxiangfengCount += suitGroups[suits[i]].length * suitGroups[suits[j]].length;
                 }
             }
             
@@ -1456,21 +1770,24 @@ function detectGaoxiang(allChows) {
     allChows.forEach(chow => {
         const key = `${chow.type}-${chow.startValue}`;
         if (!chowGroups[key]) {
-            chowGroups[key] = 0;
+            chowGroups[key] = { count: 0, allConcealed: true };
         }
-        chowGroups[key]++;
+        chowGroups[key].count++;
+        if (chow.isExposed) {
+            chowGroups[key].allConcealed = false;
+        }
     });
     
     // 計算每個組的數量
     const gaoxiangCounts = {};
     for (const key in chowGroups) {
-        const count = chowGroups[key];
+        const { count, allConcealed } = chowGroups[key];
         if (count >= 2) {
             const [type, startValue] = key.split('-');
             if (!gaoxiangCounts[type]) {
                 gaoxiangCounts[type] = {};
             }
-            gaoxiangCounts[type][startValue] = count;
+            gaoxiangCounts[type][startValue] = { count, allConcealed };
         }
     }
     
@@ -1478,11 +1795,13 @@ function detectGaoxiang(allChows) {
     let yibangaoTotal = 0; // 一般高總次數
     let shuangbangaoTotal = 0; // 雙般高總次數
     let sanbangaoFound = false; // 三般高
+    let sanbangaoDark = false;  // 三般高是否暗
     let sibangaoFound = false; // 四般高
+    let sibangaoDark = false;   // 四般高是否暗
     
     for (const type in gaoxiangCounts) {
         for (const startValue in gaoxiangCounts[type]) {
-            const count = gaoxiangCounts[type][startValue];
+            const { count, allConcealed } = gaoxiangCounts[type][startValue];
             
             // 計算組合數：C(n,2) = n*(n-1)/2
             const combinations = count * (count - 1) / 2;
@@ -1490,10 +1809,12 @@ function detectGaoxiang(allChows) {
             
             if (count === 4) {
                 sibangaoFound = true;
+                sibangaoDark = allConcealed;
                 // 四般高包含6個一般高組合，但我們只算最高番的
                 shuangbangaoTotal += 3; // C(4,2)=6，但雙般高是2個一般高組合
             } else if (count === 3) {
                 sanbangaoFound = true;
+                sanbangaoDark = allConcealed;
                 // 三般高包含3個一般高組合
                 shuangbangaoTotal += 1; // C(3,2)=3，但雙般高是2個一般高組合
             }
@@ -1502,10 +1823,13 @@ function detectGaoxiang(allChows) {
     
     // 添加牌型（按最高番優先）
     if (sibangaoFound) {
-        results.push({ name: '四般高', score: 30 });
+        results.push({ name: sibangaoDark ? '四般高 (暗)' : '四般高', score: sibangaoDark ? 60 : 30 });
     } else if (sanbangaoFound) {
-        results.push({ name: '三般高', score: 15 });
+        results.push({ name: sanbangaoDark ? '三般高 (暗)' : '三般高', score: sanbangaoDark ? 30 : 15 });
     } else if (shuangbangaoTotal >= 1) {
+        results.push({ name: '雙般高', score: 10 });
+    } else if (yibangaoTotal >= 2) {
+        // 2+ separate groups of identical chows = 雙般高
         results.push({ name: '雙般高', score: 10 });
     } else if (yibangaoTotal >= 1) {
         results.push({ name: '一般高', score: 5 });
@@ -1519,23 +1843,27 @@ function detectBubugao(allChows) {
     const results = [];
     const chowsBySuit = {};
     
-    // 按花色分組順子
+    // 按花色分組順子（保留完整順子物件以追蹤明暗）
     allChows.forEach(chow => {
         if (!chowsBySuit[chow.type]) {
             chowsBySuit[chow.type] = [];
         }
-        chowsBySuit[chow.type].push(chow.startValue);
+        chowsBySuit[chow.type].push(chow);
     });
     
     // 檢查一色步步高（同花色漸進式順子）
     for (const suit in chowsBySuit) {
-        const values = chowsBySuit[suit].sort((a, b) => a - b);
+        const suitChows = chowsBySuit[suit].sort((a, b) => a.startValue - b.startValue);
         
-        if (values.length >= 3) {
+        if (suitChows.length >= 3) {
             // 檢查是否有連續三個漸進式順子
-            for (let i = 0; i < values.length - 2; i++) {
-                if (values[i] + 1 === values[i + 1] && values[i + 1] + 1 === values[i + 2]) {
-                    results.push({ name: '一色步步高', score: 15 });
+            for (let i = 0; i < suitChows.length - 2; i++) {
+                const c1 = suitChows[i];
+                const c2 = suitChows[i + 1];
+                const c3 = suitChows[i + 2];
+                if (c1.startValue + 1 === c2.startValue && c2.startValue + 1 === c3.startValue) {
+                    const isDark = !c1.isExposed && !c2.isExposed && !c3.isExposed;
+                    results.push({ name: isDark ? '一色步步高 (暗)' : '一色步步高', score: isDark ? 30 : 15 });
                     break;
                 }
             }
@@ -1543,26 +1871,18 @@ function detectBubugao(allChows) {
     }
     
     // 檢查三色步步高（不同花色漸進式順子）
-    const allStartValues = [];
-    allChows.forEach(chow => {
-        allStartValues.push({
-            suit: chow.type,
-            value: chow.startValue
-        });
-    });
-    
-    // 按起始數值排序
-    allStartValues.sort((a, b) => a.value - b.value);
+    const allSortedChows = [...allChows].sort((a, b) => a.startValue - b.startValue);
     
     // 檢查三色步步高
-    for (let i = 0; i < allStartValues.length - 2; i++) {
-        const first = allStartValues[i];
-        const second = allStartValues[i + 1];
-        const third = allStartValues[i + 2];
+    for (let i = 0; i < allSortedChows.length - 2; i++) {
+        const first = allSortedChows[i];
+        const second = allSortedChows[i + 1];
+        const third = allSortedChows[i + 2];
         
-        if (first.value + 1 === second.value && second.value + 1 === third.value &&
-            first.suit !== second.suit && first.suit !== third.suit && second.suit !== third.suit) {
-            results.push({ name: '三色步步高', score: 5 });
+        if (first.startValue + 1 === second.startValue && second.startValue + 1 === third.startValue &&
+            first.type !== second.type && first.type !== third.type && second.type !== third.type) {
+            const isDark = !first.isExposed && !second.isExposed && !third.isExposed;
+            results.push({ name: isDark ? '三色步步高 (暗)' : '三色步步高', score: isDark ? 10 : 5 });
             break;
         }
     }
@@ -1631,37 +1951,49 @@ function detectSisterHandTypes(allTiles) {
 // 獲取所有刻子（包括碰、明槓、暗槓和手牌中的刻子）
 function getAllPungs(allTiles) {
     const pungs = [];
-    
+    const addedKeys = new Set();
+
     // 添加碰的刻子
     state.pungs.forEach(pung => {
         pungs.push({ type: pung.type, value: pung.value });
+        addedKeys.add(`${pung.type}-${pung.value}`);
     });
-    
+
     // 添加明槓和暗槓的刻子
     state.openKongs.forEach(kong => {
         pungs.push({ type: kong.type, value: kong.value });
+        addedKeys.add(`${kong.type}-${kong.value}`);
     });
-    
+
     state.concealedKongs.forEach(kong => {
         pungs.push({ type: kong.type, value: kong.value });
+        addedKeys.add(`${kong.type}-${kong.value}`);
     });
-    
-    // 添加手牌中的刻子
+
+    // 從手牌中找刻子（排除已標記的組合和明組中的牌）
+    const exposedMeldTiles = [];
+    state.pungs.forEach(p => exposedMeldTiles.push(...p.tiles));
+    state.chows.forEach(c => exposedMeldTiles.push(...c.tiles));
+    state.openKongs.forEach(k => exposedMeldTiles.push(...k.tiles));
+    state.concealedKongs.forEach(k => exposedMeldTiles.push(...k.tiles));
+
+    const handOnlyTiles = allTiles.filter(tile =>
+        !exposedMeldTiles.some(et => et.type === tile.type && et.value === tile.value)
+    );
+
     const handCounts = {};
-    allTiles.forEach(tile => {
-        if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
-            const key = `${tile.type}-${tile.value}`;
-            handCounts[key] = (handCounts[key] || 0) + 1;
-        }
+    handOnlyTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        handCounts[key] = (handCounts[key] || 0) + 1;
     });
-    
+
     for (const key in handCounts) {
-        if (handCounts[key] >= 3) {
+        if (handCounts[key] >= 3 && !addedKeys.has(key)) {
             const [type, value] = key.split('-');
             pungs.push({ type, value: parseInt(value) });
         }
     }
-    
+
     return pungs;
 }
 
@@ -2039,11 +2371,11 @@ function isSmallMixedBrothers(allTiles) {
     const allPungs = [...state.pungs, ...state.openKongs, ...state.concealedKongs];
     const sequentialPungs = [];
     
-    // 找出數值相連的刻子
+    // 找出數值相連的不同花色刻子
     for (let i = 0; i < allPungs.length; i++) {
         for (let j = i + 1; j < allPungs.length; j++) {
-            if (allPungs[i].type === allPungs[j].type && 
-                Math.abs(allPungs[i].value - allPungs[j].value) === 1) {
+            if (allPungs[i].type !== allPungs[j].type && 
+                Math.abs(allPungs[i].value - allPungs[j].value) <= 1) {
                 sequentialPungs.push(allPungs[i], allPungs[j]);
             }
         }
@@ -2051,7 +2383,7 @@ function isSmallMixedBrothers(allTiles) {
     
     if (sequentialPungs.length < 2) return false;
     
-    // 檢查是否有相連的對子
+    // 檢查是否有相連的對子（第三款色）
     const counts = {};
     allTiles.forEach(tile => {
         if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
@@ -2060,15 +2392,14 @@ function isSmallMixedBrothers(allTiles) {
         }
     });
     
-    // 尋找與刻子相連的對子
+    // 尋找與刻子相連的對子（不同花色）
     for (const key in counts) {
         if (counts[key] >= 2) {
             const [type, value] = key.split('-');
             const numValue = parseInt(value);
             
-            // 檢查這個對子是否與刻子相連
             for (const pung of sequentialPungs) {
-                if (pung.type !== type && Math.abs(pung.value - numValue) === 1) {
+                if (pung.type !== type && Math.abs(pung.value - numValue) <= 1) {
                     return true;
                 }
             }
@@ -2081,20 +2412,19 @@ function isSmallMixedBrothers(allTiles) {
 // e2. 大雜兄弟: 三款不同而數子相連的刻子
 function isBigMixedBrothers(allTiles) {
     const allPungs = [...state.pungs, ...state.openKongs, ...state.concealedKongs];
-    const sequentialPungs = [];
     
-    // 找出數值相連的刻子
+    // 找出三款不同花色且數值相連的刻子
     for (let i = 0; i < allPungs.length; i++) {
         for (let j = i + 1; j < allPungs.length; j++) {
-            if (allPungs[i].type === allPungs[j].type && 
-                Math.abs(allPungs[i].value - allPungs[j].value) === 1) {
-                sequentialPungs.push(allPungs[i], allPungs[j]);
-                
-                // 檢查是否有第三個相連的刻子
+            if (allPungs[i].type !== allPungs[j].type && 
+                Math.abs(allPungs[i].value - allPungs[j].value) <= 1) {
                 for (let k = j + 1; k < allPungs.length; k++) {
-                    if (allPungs[i].type === allPungs[k].type && 
-                        Math.abs(allPungs[i].value - allPungs[k].value) === 2) {
-                        return true;
+                    if (allPungs[k].type !== allPungs[i].type && 
+                        allPungs[k].type !== allPungs[j].type) {
+                        const vals = [allPungs[i].value, allPungs[j].value, allPungs[k].value].sort((a,b)=>a-b);
+                        if (vals[2] - vals[0] <= 2) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -2710,34 +3040,7 @@ function tryFormMelds(tiles) {
     return false;
 }
 
-function getAllPungs(allTiles) {
-    const pungs = [];
-    const tileCounts = {};
-
-    // 統計每張牌的出現次數
-    allTiles.forEach(tile => {
-        const key = `${tile.type}-${tile.value}`;
-        tileCounts[key] = (tileCounts[key] || 0) + 1;
-    });
-
-    // 找出刻子（三張相同的牌）
-    for (const key in tileCounts) {
-        if (tileCounts[key] >= 3) {
-            const [type, value] = key.split('-');
-            pungs.push({
-                type,
-                value: parseInt(value)
-            });
-        }
-    }
-
-    // 過濾掉已標記的刻子和槓
-    return pungs.filter(pung => 
-        !state.pungs.some(spung => spung.type === pung.type && spung.value === pung.value) &&
-        !state.openKongs.some(kong => kong.type === pung.type && kong.value === pung.value) &&
-        !state.concealedKongs.some(kong => kong.type === pung.type && kong.value === pung.value)
-    );
-}
+// (getAllPungs defined above at ~line 1938)
 
 // 新增計數老少上
 function countLaoShaoShang(allTiles) {
@@ -2791,12 +3094,7 @@ function countLaoShaoShang(allTiles) {
 
 // 新增計數老少碰
 function countLaoShaoPeng(allTiles) {
-    const allPungs = [
-        ...state.pungs,
-        ...state.openKongs,
-        ...state.concealedKongs,
-        ...getAllPungs(allTiles)
-    ];
+    const allPungs = getAllPungs(allTiles);
 
     // 按花色分組刻子
     const pungsByType = {};
@@ -3847,8 +4145,10 @@ function analyzeWaitsBeforeWin(handTiles, chows, pungs, openKongs, concealedKong
     openKongs.forEach(kong => meldedTiles.push(...Array(4).fill({ type: kong.type, value: kong.value })));
     concealedKongs.forEach(kong => meldedTiles.push(...Array(4).fill({ type: kong.type, value: kong.value })));
 
-    // 检查手牌是否接近和牌（16张牌）
-    if (filteredTiles.length !== 16) return waits;
+    // 检查手牌是否接近和牌（总牌数=16，包括副露牌）
+    const meldTileCount = chows.reduce((sum, c) => sum + c.tiles.length, 0) +
+        pungs.length * 3 + openKongs.length * 4 + concealedKongs.length * 4;
+    if (filteredTiles.length + meldTileCount !== 16) return waits;
 
     // 尝试每种可能的和牌
     const allPossibleTiles = [];
@@ -3891,25 +4191,51 @@ function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
         return a.value - b.value;
     });
 
-    // 获取所有已暴露的组合
-    const melds = [
-        ...chows.map(chow => ({ type: chow.type, values: chow.tiles.map(t => t.value).sort((a, b) => a - b) })),
-        ...pungs.map(pung => ({ type: pung.type, value: pung.value })),
-        ...openKongs.map(kong => ({ type: kong.type, value: kong.value })),
-        ...concealedKongs.map(kong => ({ type: kong.type, value: kong.value }))
-    ];
+    // Remove specific meld tile instances from sortedTiles using index tracking
+    const usedIndices = new Set();
 
-    const meldCount = melds.length;
+    // Remove chow tiles (specific value sequences)
+    for (const chow of chows) {
+        const chowValues = [...chow.tiles.map(t => t.value)].sort((a, b) => a - b);
+        for (const val of chowValues) {
+            for (let i = 0; i < sortedTiles.length; i++) {
+                if (!usedIndices.has(i) && sortedTiles[i].type === chow.type && sortedTiles[i].value === val) {
+                    usedIndices.add(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Remove pung tiles (3 copies of same value)
+    for (const pung of pungs) {
+        let removed = 0;
+        for (let i = 0; i < sortedTiles.length && removed < 3; i++) {
+            if (!usedIndices.has(i) && sortedTiles[i].type === pung.type && sortedTiles[i].value === pung.value) {
+                usedIndices.add(i);
+                removed++;
+            }
+        }
+    }
+
+    // Remove kong tiles (4 copies of same value)
+    for (const kong of [...openKongs, ...concealedKongs]) {
+        let removed = 0;
+        for (let i = 0; i < sortedTiles.length && removed < 4; i++) {
+            if (!usedIndices.has(i) && sortedTiles[i].type === kong.type && sortedTiles[i].value === kong.value) {
+                usedIndices.add(i);
+                removed++;
+            }
+        }
+    }
+
+    const remainingTiles = sortedTiles.filter((_, i) => !usedIndices.has(i));
+
+    const meldCount = chows.length + pungs.length + openKongs.length + concealedKongs.length;
 
     // 计算还需要的手牌组合数
     const neededMelds = 5 - meldCount; // 5个组合加一对
     const neededTilesForMelds = neededMelds * 3;
-    const remainingTiles = sortedTiles.filter(tile =>
-        !melds.some(meld =>
-            (meld.values && meld.type === tile.type && meld.values.includes(tile.value)) ||
-            (meld.value && meld.type === tile.type && meld.value === tile.value)
-        )
-    );
 
     // 检查剩余牌是否能组成需要的组合数加一对
     if (remainingTiles.length !== neededTilesForMelds + 2) return false;
@@ -3930,4 +4256,53 @@ function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
     }
 
     return false;
+}
+
+// 全姊妹: 三相逢 + 二相逢 or 一般高 (5 chows forming the pattern)
+function isQuanJieMei(gaoxiangResults) {
+    const has3xf = gaoxiangResults.some(r => r.name.includes('三相逢'));
+    const has2xf = gaoxiangResults.some(r => r.name.includes('二相逢'));
+    const hasYiBanGao = gaoxiangResults.some(r => r.name.includes('一般高'));
+    return has3xf && (has2xf || hasYiBanGao);
+}
+
+// 嚦咕嚦咕六/八飛: Count how many different tiles could complete the 7-pairs pattern
+function analyzeLiguliguWaits(allTiles) {
+    // Build tile count map
+    const tileMap = {};
+    allTiles.forEach(tile => {
+        const key = `${tile.type}-${tile.value}`;
+        tileMap[key] = (tileMap[key] || 0) + 1;
+    });
+
+    // For 嚦咕嚦咕 (7 pairs + 1 pung), count pairs and singletons
+    const waits = new Set();
+    const pairs = [];
+    const singles = [];
+
+    for (const key in tileMap) {
+        const count = tileMap[key];
+        // Skip tiles with 4 copies already in hand - no more copies available
+        if (count >= 4) continue;
+        if (count >= 2) {
+            pairs.push(key);
+        }
+        if (count === 1 || count === 3) {
+            singles.push(key);
+        }
+    }
+
+    // If we have exactly 7 pairs, any pair tile could be a wait (for the pung part)
+    // If we have fewer pairs, singletons need to pair up
+    if (pairs.length >= 7) {
+        // Already 7+ pairs - each pair could potentially form a pung wait
+        pairs.forEach(p => waits.add(p));
+    } else {
+        // Need more pairs - singletons that could pair up are waits
+        singles.forEach(s => waits.add(s));
+        // Also pairs that could become pungs
+        pairs.forEach(p => waits.add(p));
+    }
+
+    return waits.size;
 }

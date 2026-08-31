@@ -1,0 +1,6 @@
+- Tile identity is consistently expressed as `{ type, value, display, cssClass }` objects defined once in `mjConst.js` and referenced everywhere else.
+- Application state is kept in a single top-level `state` object whose boolean/string fields mirror each checkbox/radio in the UI, with every input listener mutating the field and immediately calling `calculateScore()`.
+- Meld-creation functions (`addChow`, `addPung`, `addOpenKong`, `addConcealedKong`) follow the same pattern: validate selected tiles → `saveStateToHistory()` → push a group into the corresponding `state.*` array → remove consumed tiles from `state.handTiles` → `updateUI()`.
+- Hand-type detection is additive: `detectHandTypes` starts with an empty `handTypes` array and pushes `{ name, score }` entries from many independent checks before applying `applyExclusions` and `checkDaJiHu` at the end.
+- Drag-and-drop handlers first strip old listeners via `removeEventListener` before re-adding them, preventing duplicate bindings when `setupDragEvents` is called on dynamically created tiles.
+- Status feedback is emitted through the shared `showStatusMessage(message, type)` helper rather than inline alerts or console-only logging.
