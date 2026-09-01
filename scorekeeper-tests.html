@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台牌整場記分測試</title>
+    <style>
+        body { margin: 0; padding: 24px; background: #eef2ed; color: #17211e; font-family: "Microsoft JhengHei", sans-serif; }
+        main { width: min(960px, 100%); margin: 0 auto; }
+        h1 { margin-bottom: 6px; }
+        #summary { margin: 16px 0; padding: 14px; border-radius: 12px; background: #fff; font-weight: 700; }
+        button { padding: 10px 16px; border: 0; border-radius: 9px; background: #123c35; color: #fff; font: inherit; }
+        table { width: 100%; margin-top: 16px; border-collapse: collapse; background: #fff; }
+        th, td { padding: 9px 10px; border-bottom: 1px solid #dce3dd; text-align: left; }
+        .passed { color: #236b5e; }
+        .failed, .error { color: #b9463f; }
+        iframe { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>台牌整場記分情境測試</h1>
+    <p>測試正式計分核心、瀏覽器啟動、DOM、儲存與復原流程。</p>
+    <button id="run-tests" type="button">執行全部測試</button>
+    <div id="summary" role="status">尚未執行</div>
+    <table>
+        <thead><tr><th>ID</th><th>情境</th><th>結果</th><th>訊息</th></tr></thead>
+        <tbody id="results"></tbody>
+    </table>
+</main>
+<iframe id="app-frame" title="Scorekeeper test fixture"></iframe>
+<script id="scorekeeper-test-completion" type="application/json"></script>
+<script>
+(function () {
+    'use strict';
+
+    var tests = [];
+    var frame = document.getElementById('app-frame');
+    var resultsBody = document.getElementById('results');
+    var summary = document.getElementById('summary');
+    var completion = document.getElementById('scorekeeper-test-completion');
+    var api = null;
+    var browserAppState = 'missing';
+    var sequence = 0;
+    var legacyStorageValue = JSON.stringify({ legacy: true, marker: 'must-not-be-read-or-overwritten' });
+
+    function test(id, name, fn) { tests.push({ id: id, name: name, fn: fn }); }
+    function assert(condition, message) { if (!condition) throw new Error(message || 'assertion failed'); }
+    function equal(actual, expected, message) {
+        if (actual !== expected) throw new Error((message || 'values differ') + ': expected ' + expected + ', got ' + actual);
+    }
+    function deepEqual(actual, expected, message) {
+        var left = JSON.stringify(actual);
+        var right = JSON.stringify(expected);
+        if (left !== right) throw new Error((message || 'objects differ') + ': expected ' + right + ', got ' + left);
+    }
+    function expectThrow(fn, text) {
+        var thrown = null;
+        try { fn(); } catch (error) { thrown = error; }
+        assert(thrown, 'expected function to throw');
+        if (text) assert(String(thrown.message).indexOf(text) >= 0, 'unexpected error: ' + thrown.message);
+    }
+    function delay(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+    function waitFor(predicate, description, timeout) {
+        var deadline = Date.now() + (timeout || 5000);
+        return new Promise(function (resolve, reject) {
+            function check() {
+                try {
+                    if (predicate()) { resolve(); return; }
+                } catch (_error) { /* The fixture may still be replacing its DOM. */ }
+                if (Date.now() >= deadline) {
+                    reject(new Error('timeout waiting for ' + description));
+                    return;
+                }
+                setTimeout(check, 20);
+            }
+            check();
+        });
+    }
+    function defaultSession() { return api.createDefaultSession(); }
+    function hand(type, options) {
+        options = options || {};
+        sequence += 1;
+        return {
+            id: 'case-' + sequence,
+            type: type,
+            createdAt: new Date(2026, 0, 1, 0, 0, sequence).toISOString(),
+            note: options.note || '',
+            winnerIds: options.winnerIds || [],
+            discarderId: options.discarderId || '',
+            tai: options.tai == null ? 5 : options.tai,
+            multiplier: options.multiplier || 1,
+            baoPlayerId: options.baoPlayerId || '',
+            dealerAction: options.dealerAction || 'auto',
+            breakPullAfter: Boolean(options.breakPullAfter)
+        };
+    }
+    function adjustment(payerId, receiverId, amount) {
+        sequence += 1;
+        return { id: 'adjust-' + sequence, type: 'adjustment', createdAt: new Date().toISOString(), note: '罰台', payerId: payerId, receiverId: receiverId, amount: amount };
+    }
+    function breakPull() {
+        sequence += 1;
+        return { id: 'break-' + sequence, type: 'breakPull', createdAt: new Date().toISOString(), note: '手動斷拉' };
+    }
+    function deriveWith(entries, configure) {
+        var session = defaultSession();
+        if (configure) configure(session);
+        session.entries = entries;
+        return api.deriveSession(session);
+    }
+    function sumDeltas(deltas) {
+        return Object.keys(deltas).reduce(function (sum, id) { return sum + deltas[id]; }, 0);
+    }
+
+    function loadApp() {
+        return new Promise(function (resolve, reject) {
+            var timer = setTimeout(function () {
+                reject(new Error('scorekeeper iframe startup timeout; probe=' + (frame.contentDocument && frame.contentDocument.documentElement.dataset.tmsProbe)));
+            }, 10000);
+            frame.onload = function () {
+                setTimeout(function () {
+                    clearTimeout(timer);
+                    var win = frame.contentWindow;
+                    var doc = frame.contentDocument;
+                    var state = doc.documentElement.dataset.tmsApp || doc.documentElement.dataset.tmsProbe || 'missing';
+                    if (state !== 'ready' || !win.OVMJSessionTest) {
+                        var status = doc.getElementById('tms-storage-status');
+                        reject(new Error('scorekeeper did not become ready; state=' + state + '; status=' + (status ? status.textContent : 'missing')));
+                        return;
+                    }
+                    api = win.OVMJSessionTest;
+                    browserAppState = state;
+                    resolve();
+                }, 100);
+            };
+            localStorage.setItem('ovmj.session-scorekeeper.v1', legacyStorageValue);
+            frame.src = 'session-scorekeeper/?test=' + Date.now();
+        });
+    }
+
+    function loadFixture(url, ready) {
+        return new Promise(function (resolve, reject) {
+            var timer = setTimeout(function () { reject(new Error('fixture startup timeout: ' + url)); }, 10000);
+            frame.onload = function () {
+                setTimeout(function () {
+                    clearTimeout(timer);
+                    try {
+                        if (!ready(frame.contentWindow, frame.contentDocument)) throw new Error('fixture API missing: ' + url);
+                        resolve();
+                    } catch (error) { reject(error); }
+                }, 100);
+            };
+            frame.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'test=' + Date.now();
+        });
+    }
+
+    test('startup-001', '正式頁面完成啟動並產生四張玩家卡', function () {
+        equal(frame.contentDocument.documentElement.dataset.tmsApp, 'ready', 'app state');
+        equal(frame.contentDocument.querySelectorAll('.tms-player-score').length, 4, 'player cards');
+        assert(frame.contentDocument.getElementById('tms-session-subtitle').textContent.indexOf('今晚牌局') >= 0, 'dynamic subtitle missing');
+    });
+
+    test('rule-001', '預設莊家基本加一台', function () {
+        var session = defaultSession();
+        equal(api.dealerBonusTai({ playerId: 'p1', streak: 0, pull: 0 }, session.config), 1);
+    });
+
+    test('settle-001', '閒家胡閒家：底30台10、5台收80', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p3' })]);
+        deepEqual(result.entries[0].deltas, { p1: 0, p2: 80, p3: -80, p4: 0 });
+    });
+
+    test('settle-002', '莊家放槍時套用莊家加台', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p1' })]);
+        deepEqual(result.entries[0].deltas, { p1: -90, p2: 90, p3: 0, p4: 0 });
+    });
+
+    test('dealer-001', '莊家胡牌後成為連一拉一', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p1'], discarderId: 'p2' })]);
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 1 });
+        equal(api.dealerBonusTai(result.dealerState, defaultSession().config), 3);
+    });
+
+    test('dealer-002', '連一拉一的下一局套用加三台', function () {
+        var result = deriveWith([
+            hand('discard', { winnerIds: ['p1'], discarderId: 'p2', tai: 5 }),
+            hand('discard', { winnerIds: ['p1'], discarderId: 'p3', tai: 5 })
+        ]);
+        equal(result.entries[1].transfers[0].amount, 110);
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 2, pull: 2 });
+    });
+
+    test('dealer-003', '莊家下莊後按東南西北順序輪莊', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p3'], discarderId: 'p4' })]);
+        deepEqual(result.dealerState, { playerId: 'p2', streak: 0, pull: 0 });
+    });
+
+    test('pull-001', '手動斷拉只歸零拉莊並保留連莊', function () {
+        var result = deriveWith([
+            hand('discard', { winnerIds: ['p1'], discarderId: 'p2' }),
+            breakPull()
+        ]);
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 0 });
+        equal(api.dealerBonusTai(result.dealerState, defaultSession().config), 2);
+    });
+
+    test('pull-002', '本局後斷拉在續莊時拉數歸零', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p1'], discarderId: 'p2', breakPullAfter: true })]);
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 0 });
+    });
+
+    test('selfdraw-001', '閒家自摸：莊家付90、兩閒家各80', function () {
+        var result = deriveWith([hand('selfDraw', { winnerIds: ['p2'] })]);
+        deepEqual(result.entries[0].deltas, { p1: -90, p2: 250, p3: -80, p4: -80 });
+    });
+
+    test('selfdraw-002', '莊家自摸：三家各付90並續莊', function () {
+        var result = deriveWith([hand('selfDraw', { winnerIds: ['p1'] })]);
+        deepEqual(result.entries[0].deltas, { p1: 270, p2: -90, p3: -90, p4: -90 });
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 1 });
+    });
+
+    test('selfdraw-003', '包自摸由包牌者支付三家義務總額', function () {
+        var result = deriveWith([hand('selfDraw', { winnerIds: ['p2'], baoPlayerId: 'p3' })]);
+        deepEqual(result.entries[0].deltas, { p1: 0, p2: 250, p3: -250, p4: 0 });
+        equal(result.entries[0].transfers.length, 1);
+    });
+
+    test('multi-001', '一炮雙響分別計算兩位贏家且保持零和', function () {
+        var result = deriveWith([hand('multiWin', { winnerIds: ['p2', 'p3'], discarderId: 'p1' })]);
+        deepEqual(result.entries[0].deltas, { p1: -180, p2: 90, p3: 90, p4: 0 });
+        equal(sumDeltas(result.entries[0].deltas), 0);
+    });
+
+    test('draw-001', '預設流局續莊並加連加拉', function () {
+        var result = deriveWith([hand('draw', { tai: 0 })]);
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 1 });
+        deepEqual(result.entries[0].deltas, { p1: 0, p2: 0, p3: 0, p4: 0 });
+    });
+
+    test('draw-002', '可設定流局續莊但不加拉', function () {
+        var result = deriveWith([hand('draw', { tai: 0 })], function (session) { session.config.drawAddsPull = false; });
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 0 });
+    });
+
+    test('draw-003', '可設定流局直接下莊', function () {
+        var result = deriveWith([hand('draw', { tai: 0 })], function (session) { session.config.drawContinues = false; });
+        deepEqual(result.dealerState, { playerId: 'p2', streak: 0, pull: 0 });
+    });
+
+    test('override-001', '閒家胡牌可強制莊家續莊', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p3', dealerAction: 'continue' })]);
+        deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 1 });
+    });
+
+    test('override-002', '莊家胡牌可強制下莊', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p1'], discarderId: 'p2', dealerAction: 'rotate' })]);
+        deepEqual(result.dealerState, { playerId: 'p2', streak: 0, pull: 0 });
+    });
+
+    test('adjust-001', '賞罰調整為直接零和轉帳', function () {
+        var result = deriveWith([adjustment('p4', 'p2', 500)]);
+        deepEqual(result.entries[0].deltas, { p1: 0, p2: 500, p3: 0, p4: -500 });
+        equal(sumDeltas(result.entries[0].deltas), 0);
+    });
+
+    test('config-001', '自訂底台與莊家公式可正確套用', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p1', tai: 4 })], function (session) {
+            session.config.baseAmount = 20;
+            session.config.taiValue = 5;
+            session.config.dealerBaseTai = 2;
+            session.config.streakTai = 2;
+            session.config.pullTai = 3;
+        });
+        equal(result.entries[0].transfers[0].amount, 50);
+    });
+
+    test('config-002', '台值倍率不會重複乘到底', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p1', tai: 5, multiplier: 2 })]);
+        equal(result.entries[0].transfers[0].amount, 150);
+    });
+
+    test('initial-001', '起始分數與每局變動分開累計', function () {
+        var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p3' })], function (session) {
+            session.players.forEach(function (player) { player.initialScore = 1000; });
+        });
+        deepEqual(result.totals, { p1: 1000, p2: 1080, p3: 920, p4: 1000 });
+    });
+
+    test('recompute-001', '編輯早期結果後會重算後續莊家狀態', function () {
+        var first = hand('discard', { winnerIds: ['p2'], discarderId: 'p3' });
+        var second = hand('discard', { winnerIds: ['p2'], discarderId: 'p4' });
+        var before = deriveWith([first, second]);
+        equal(before.entries[1].dealerBefore.playerId, 'p2');
+        first.winnerIds = ['p1'];
+        first.discarderId = 'p3';
+        var after = deriveWith([first, second]);
+        equal(after.entries[1].dealerBefore.playerId, 'p1');
+        deepEqual(after.dealerState, { playerId: 'p2', streak: 0, pull: 0 });
+    });
+
+    test('stats-001', '胡牌、自摸、放槍統計正確', function () {
+        var result = deriveWith([
+            hand('discard', { winnerIds: ['p2'], discarderId: 'p3' }),
+            hand('selfDraw', { winnerIds: ['p2'] })
+        ]);
+        equal(result.stats.p2.wins, 2);
+        equal(result.stats.p2.selfDraws, 1);
+        equal(result.stats.p3.discards, 1);
+    });
+
+    test('chart-001', '每筆紀錄都有一個衍生走勢點', function () {
+        var result = deriveWith([adjustment('p1', 'p2', 20), adjustment('p3', 'p4', 30)]);
+        equal(result.chartPoints.length, 3);
+        deepEqual(result.chartPoints[2].totals, result.totals);
+    });
+
+    test('schema-001', 'JSON 正規化可完整往返', function () {
+        var session = defaultSession();
+        session.entries = [hand('discard', { winnerIds: ['p2'], discarderId: 'p3' })];
+        var normalized = api.normalizeSession(JSON.parse(JSON.stringify(session)));
+        equal(normalized.schemaVersion, api.schemaVersion);
+        equal(normalized.entries.length, 1);
+        deepEqual(api.deriveSession(normalized).totals, api.deriveSession(session).totals);
+    });
+
+    test('schema-002', '拒絕不支援的 schema', function () {
+        var session = defaultSession();
+        session.schemaVersion = 'unknown/v9';
+        expectThrow(function () { api.normalizeSession(session); }, '不支援');
+    });
+
+    test('schema-003', '拒絕非四人資料', function () {
+        var session = defaultSession();
+        session.players.pop();
+        expectThrow(function () { api.normalizeSession(session); }, '四個');
+    });
+
+    test('schema-004', '拒絕贏家與放槍者相同', function () {
+        var session = defaultSession();
+        session.entries = [hand('discard', { winnerIds: ['p2'], discarderId: 'p2' })];
+        expectThrow(function () { api.normalizeSession(session); }, '同時');
+    });
+
+    test('schema-005', '拒絕不明紀錄類型', function () {
+        var session = defaultSession();
+        session.entries = [{ id: 'bad', type: 'mystery', createdAt: new Date().toISOString(), note: '' }];
+        expectThrow(function () { api.normalizeSession(session); }, '類型');
+    });
+
+    test('settlement-001', '精簡找數建議可完整清償且無自我轉帳', function () {
+        var session = defaultSession();
+        session.entries = [adjustment('p1', 'p2', 100), adjustment('p3', 'p4', 50)];
+        var plan = api.settlementPlan(session);
+        equal(plan.length, 2);
+        equal(plan.reduce(function (sum, item) { return sum + item.amount; }, 0), 150);
+        assert(plan.every(function (item) { return item.fromId !== item.toId && item.amount > 0; }), 'invalid transfer');
+    });
+
+    test('export-001', 'TXT 匯出包含規則、紀錄、結算與找數', function () {
+        var session = defaultSession();
+        session.title = '測試晚局';
+        session.entries = [adjustment('p1', 'p2', 100)];
+        var text = api.buildTextExport(session);
+        ['測試晚局', '牌局紀錄', '最終結算', '精簡找數建議', '東家 → 南家：100'].forEach(function (value) {
+            assert(text.indexOf(value) >= 0, 'missing text: ' + value);
+        });
+    });
+
+    test('filter-001', '歷史篩選正確分類胡牌、流局、賞罰與斷拉', function () {
+        var result = deriveWith([
+            hand('discard', { winnerIds: ['p2'], discarderId: 'p3' }),
+            hand('draw', { tai: 0 }),
+            adjustment('p1', 'p2', 20),
+            breakPull()
+        ]);
+        equal(result.entries.filter(function (entry) { return api.historyMatchesFilter(entry, 'win'); }).length, 1);
+        equal(result.entries.filter(function (entry) { return api.historyMatchesFilter(entry, 'draw'); }).length, 1);
+        equal(result.entries.filter(function (entry) { return api.historyMatchesFilter(entry, 'adjustment'); }).length, 1);
+        equal(result.entries.filter(function (entry) { return api.historyMatchesFilter(entry, 'breakPull'); }).length, 1);
+    });
+
+    test('schema-006', '拒絕重複的紀錄 ID', function () {
+        var session = defaultSession();
+        var first = adjustment('p1', 'p2', 10);
+        var second = adjustment('p3', 'p4', 20);
+        second.id = first.id;
+        session.entries = [first, second];
+        expectThrow(function () { api.normalizeSession(session); }, '紀錄 ID');
+    });
+
+    test('scale-001', '一百筆賞罰仍保持零和及完整圖表', function () {
+        var entries = [];
+        for (var i = 0; i < 100; i += 1) entries.push(adjustment(i % 2 ? 'p1' : 'p3', i % 2 ? 'p2' : 'p4', i + 1));
+        var result = deriveWith(entries);
+        equal(result.entries.length, 100);
+        equal(result.chartPoints.length, 101);
+        equal(Object.keys(result.totals).reduce(function (sum, id) { return sum + result.totals[id]; }, 0), 0);
+    });
+
+    test('ui-001', 'UI 提交一局後更新帳本、分數與圖表', async function () {
+        var doc = frame.contentDocument;
+        doc.getElementById('tms-winner').value = 'p1';
+        doc.getElementById('tms-discarder').value = 'p2';
+        doc.getElementById('tms-tai').value = '2';
+        doc.getElementById('tms-round-form').dispatchEvent(new frame.contentWindow.Event('submit', { bubbles: true, cancelable: true }));
+        await delay(50);
+        var live = api.getSession();
+        equal(live.entries.length, 1);
+        equal(api.deriveSession(live).totals.p1, 60);
+        equal(doc.querySelectorAll('.tms-history-item').length, 1);
+        assert(doc.getElementById('tms-score-chart').childNodes.length > 0, 'chart was not rendered');
+    });
+
+    test('ui-002', 'UI 復原與重做會恢復完整牌局', async function () {
+        var doc = frame.contentDocument;
+        doc.getElementById('tms-undo').click();
+        await delay(30);
+        equal(api.getSession().entries.length, 0);
+        doc.getElementById('tms-redo').click();
+        await delay(30);
+        equal(api.getSession().entries.length, 1);
+    });
+
+    test('ui-003', '訪客牌局嚴格只存記憶體並忽略舊 localStorage', function () {
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        equal(win.localStorage.getItem(api.storageKey), legacyStorageValue, 'legacy storage was read or overwritten');
+        equal(doc.body.dataset.sessionPersistence, 'memory', 'persistence marker');
+        equal(doc.getElementById('tms-storage-status').textContent, '此頁暫存', 'memory status');
+        equal(api.hasStorageConflict(), false, 'memory mode must not report storage conflicts');
+        equal(win.OVMJSessionHost.hasStorageConflict(), false, 'host must not report storage conflicts');
+    });
+
+    test('guest-controls-001', '訪客保存匯入匯出分享控制不可見且登入連結使用集中設定', function () {
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        [
+            'tms-export-json', 'tms-import-trigger', 'tms-share-image', 'tms-export-csv',
+            'tms-export-txt', 'tms-settings-export', 'tms-settings-export-txt',
+            'tms-settings-import', 'tms-settings-share'
+        ].forEach(function (id) {
+            var control = doc.getElementById(id);
+            assert(control, 'missing guest control: ' + id);
+            equal(win.getComputedStyle(control).display, 'none', id + ' must be hidden');
+        });
+        var loginLink = doc.querySelector('#tms-memory-notice a');
+        assert(win.OVMJ_APP_CONFIG && Object.isFrozen(win.OVMJ_APP_CONFIG), 'public config missing or mutable');
+        equal(loginLink.href, win.OVMJ_APP_CONFIG.accountEntryUrl, 'account link did not use public config');
+    });
+
+    test('ui-004', '四個主要分頁可切換且保持單一顯示', function () {
+        var doc = frame.contentDocument;
+        ['score', 'chart', 'history', 'settings'].forEach(function (name) {
+            doc.querySelector('[data-tab="' + name + '"]').click();
+            equal(doc.querySelectorAll('.tms-view.is-active').length, 1);
+            assert(doc.getElementById('tms-view-' + name).classList.contains('is-active'), name + ' tab did not activate');
+        });
+    });
+
+    test('ui-005', '底台預設按鈕會更新設定與公式示例', function () {
+        var doc = frame.contentDocument;
+        doc.querySelector('[data-tab="settings"]').click();
+        doc.querySelector('[data-preset-base="100"][data-preset-tai="50"]').click();
+        equal(doc.getElementById('tms-base-amount').value, '100');
+        equal(doc.getElementById('tms-tai-value').value, '50');
+        assert(doc.getElementById('tms-rule-example').textContent.indexOf('底 100') >= 0, 'rule example not refreshed');
+    });
+
+    test('ui-006', '歷史篩選會隱藏不符合類型的紀錄', function () {
+        var doc = frame.contentDocument;
+        doc.querySelector('[data-tab="history"]').click();
+        var filter = doc.getElementById('tms-history-filter');
+        filter.value = 'draw';
+        filter.dispatchEvent(new frame.contentWindow.Event('change', { bubbles: true }));
+        equal(doc.querySelectorAll('.tms-history-item').length, 0);
+        assert(!doc.getElementById('tms-history-empty').hidden, 'filtered empty state should show');
+        filter.value = 'win';
+        filter.dispatchEvent(new frame.contentWindow.Event('change', { bubbles: true }));
+        equal(doc.querySelectorAll('.tms-history-item').length, 1);
+    });
+
+    test('scorekeeper-draft-001', '正式 host 帶入草稿但不提交或改動牌局', async function () {
+        var host = frame.contentWindow.OVMJSessionHost;
+        assert(host && host.ready, 'session host missing');
+        await host.ready;
+        var before = host.getSession();
+        var applied = host.fillRoundDraft({
+            tai: 13,
+            note: '固定A (5番)、固定B (8番)',
+            isSelfDraw: true
+        });
+        deepEqual(applied, { tai: 13, note: '固定A (5番)、固定B (8番)', isSelfDraw: true });
+        equal(frame.contentDocument.getElementById('tms-tai').value, '13', 'draft tai');
+        equal(frame.contentDocument.getElementById('tms-note').value, '固定A (5番)、固定B (8番)', 'draft note');
+        assert(frame.contentDocument.querySelector('[data-outcome="selfDraw"]').classList.contains('is-selected'), 'self-draw outcome not selected');
+        deepEqual(host.getSession(), before, 'filling a draft changed session history');
+        host.fillRoundDraft({ tai: 0, note: '', isSelfDraw: false });
+        deepEqual(host.getSession(), before, 'restoring the draft changed session history');
+    });
+
+    test('calculator-bridge-001', '計番橋接提供不可變且拆分莊番的結果', async function () {
+        await loadFixture('mj.html', function (win) { return win.OVMJCalculator; });
+        var bridge = frame.contentWindow.OVMJCalculator;
+        var initial = bridge.getLastResult();
+        assert(initial && initial.valid === false, 'empty calculator should publish an invalid result');
+        var result = bridge.buildResult([
+            { name: '固定A', score: 5 },
+            { name: '固定B', score: 8 }
+        ], { valid: true, isDealer: true, dealerCount: 2, isSelfDraw: true });
+        equal(result.schemaVersion, 'ov-mj-calculation-result/v1');
+        equal(result.handTai, 13, 'hand tai');
+        equal(result.dealerBonusTai, 5, 'dealer bonus tai');
+        equal(result.totalTai, 18, 'display total tai');
+        assert(result.isSelfDraw, 'self-draw state missing');
+        assert(Object.isFrozen(result), 'result payload is mutable');
+        assert(Object.isFrozen(result.handTypes), 'hand type list is mutable');
+        assert(result.handTypes.every(Object.isFrozen), 'hand type item is mutable');
+    });
+
+    test('unified-shell-001', '統一入口只把牌型番帶入本局草稿', async function () {
+        await loadFixture('mahjong-suite/?shellTest=1', function (win) { return win.OVMJSuiteTest; });
+        var suite = frame.contentWindow.OVMJSuiteTest;
+        var result = {
+            schemaVersion: 'ov-mj-calculation-result/v1',
+            valid: true,
+            handTai: 13,
+            dealerBonusTai: 5,
+            totalTai: 18,
+            handTypes: [{ name: '固定A', score: 5 }, { name: '固定B', score: 8 }],
+            isSelfDraw: true,
+            isDealer: true,
+            dealerCount: 2
+        };
+        var draft = suite.buildRoundDraft(result);
+        equal(draft.tai, 13, 'shell must not transfer totalTai');
+        equal(draft.note, '固定A (5番)、固定B (8番)', 'hand summary');
+        assert(draft.isSelfDraw, 'self-draw state not transferred');
+        expectThrow(function () {
+            suite.buildRoundDraft({ schemaVersion: result.schemaVersion, valid: false, handTai: 13, handTypes: [] });
+        }, '尚未完成');
+        await new Promise(function (resolve) {
+            frame.onload = function () { resolve(); };
+            frame.src = 'about:blank';
+        });
+    });
+
+    test('unified-shell-002', '統一入口訪客與戶口模式使用集中導航設定', async function () {
+        await loadFixture('mahjong-suite/?shellTest=1', function (win) { return win.OVMJSuiteTest && win.OVMJ_APP_CONFIG; });
+        var guestWin = frame.contentWindow;
+        var guestDoc = frame.contentDocument;
+        equal(guestWin.OVMJSuiteTest.accountMode, false, 'guest mode flag');
+        equal(guestDoc.documentElement.dataset.suiteMode, 'guest', 'guest mode marker');
+        equal(guestDoc.getElementById('suite-login').href, guestWin.OVMJ_APP_CONFIG.accountEntryUrl, 'configured account entry');
+        assert(Object.isFrozen(guestWin.OVMJ_APP_CONFIG), 'public config must be frozen');
+        deepEqual(Object.keys(guestWin.OVMJ_APP_CONFIG).sort(), ['accountEntryUrl', 'apiBaseUrl', 'guestEntryUrl', 'requestTimeoutMs'], 'public config surface');
+        assert(Object.keys(guestWin.OVMJ_APP_CONFIG).every(function (key) {
+            return !/(password|username|dbHost|dbPort)/i.test(key);
+        }), 'browser config exposed a database secret field');
+
+        await loadFixture('mahjong-suite/?shellTest=1&account=1', function (win) { return win.OVMJSuiteTest; });
+        var accountSuite = frame.contentWindow.OVMJSuiteTest;
+        equal(accountSuite.accountMode, true, 'account mode flag');
+        equal(frame.contentDocument.documentElement.dataset.suiteMode, 'account', 'account mode marker');
+        assert(frame.contentDocument.getElementById('suite-login').hidden, 'login CTA should hide inside authenticated workspace');
+        assert(!frame.contentDocument.getElementById('suite-account-badge').hidden, 'account badge should show');
+    });
+
+    test('online-auth-001', '登入驗證後才建立工作區並支援版本化保存載入、登出及 401 卸載', async function () {
+        sessionStorage.removeItem('ovmj.api.token');
+        sessionStorage.removeItem('ovmj.api.url');
+        await loadFixture('session-scorekeeper-online/?shellTest=1', function (win) { return win.OVMJOnlineTest; });
+
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        var online = win.OVMJOnlineTest;
+        var calls = [];
+        var savedRequest = null;
+        var replacedSession = null;
+        var forceUnauthorizedPlayer = false;
+        var sessionSummary = {
+            id: 'cloud-1', title: '雲端測試局', version: 7, updatedAt: '2026-01-01T00:00:00.000Z'
+        };
+        var cloudPayload = {
+            schemaVersion: 'ov-mj-session/v1', id: 'cloud-1', title: '資料庫載入局', entries: []
+        };
+
+        function response(value, status) {
+            var code = status == null ? 200 : status;
+            var body = code === 204 ? null : JSON.stringify(value == null ? {} : value);
+            return Promise.resolve(new win.Response(body, {
+                status: code,
+                headers: code === 204 ? {} : { 'Content-Type': 'application/json' }
+            }));
+        }
+
+        win.fetch = function (resource, options) {
+            var url = new win.URL(String(resource), win.location.href);
+            var method = (options && options.method) || 'GET';
+            calls.push({ path: url.pathname, method: method, body: options && options.body });
+
+            if (/\/auth\/login$/.test(url.pathname) && method === 'POST') return response({ token: 'mock-account-token' });
+            if (/\/auth\/logout$/.test(url.pathname) && method === 'POST') return response(null, 204);
+            if (/\/me$/.test(url.pathname)) return response({ displayName: '測試戶口', email: 'tester@example.com' });
+            if (/\/sessions\/cloud-1$/.test(url.pathname) && method === 'PUT') {
+                savedRequest = JSON.parse(options.body);
+                return response(sessionSummary);
+            }
+            if (/\/sessions\/cloud-1$/.test(url.pathname) && method === 'GET') {
+                return response({ id: 'cloud-1', version: 7, payload: cloudPayload });
+            }
+            if (/\/sessions$/.test(url.pathname)) return response([sessionSummary]);
+            if (/\/players$/.test(url.pathname) && method === 'POST' && forceUnauthorizedPlayer) {
+                return response({ message: 'expired' }, 401);
+            }
+            if (/\/players$/.test(url.pathname)) return response([]);
+            return response({ message: 'unexpected mock route: ' + method + ' ' + url.pathname }, 404);
+        };
+
+        assert(doc.getElementById('account-workspace').hidden, 'workspace visible before login');
+        assert(!online.isWorkspaceLoaded(), 'workspace marked loaded before login');
+        assert(!online.isWorkspaceRequested(), 'iframe requested before login');
+        equal(online.validateApiUrl('/api/'), '/api', 'relative API normalization');
+        equal(online.validateApiUrl('http://localhost:8080/api/'), 'http://localhost:8080/api', 'loopback API normalization');
+        equal(online.validateApiUrl('https://api.example.test/api/'), 'https://api.example.test/api', 'HTTPS API normalization');
+        expectThrow(function () { online.validateApiUrl('http://api.example.test/api'); }, 'HTTPS');
+        expectThrow(function () { online.validateApiUrl('https://user:secret@api.example.test/api'); }, '帳密');
+
+        doc.getElementById('email').value = 'tester@example.com';
+        doc.getElementById('password').value = 'password123';
+        doc.getElementById('login').click();
+        await waitFor(function () {
+            return doc.documentElement.dataset.accountState === 'authenticated';
+        }, 'authenticated online workspace');
+        assert(online.isWorkspaceLoaded(), 'workspace did not become available after verified login');
+        assert(!doc.getElementById('account-workspace').hidden, 'workspace remained hidden after login');
+        assert(!online.isWorkspaceRequested(), 'shellTest must not request the production iframe');
+        ['auth/login', '/me', '/sessions', '/players'].forEach(function (part) {
+            assert(calls.some(function (call) { return call.path.indexOf(part) >= 0; }), 'missing API call: ' + part);
+        });
+
+        var hostedSession = { schemaVersion: 'ov-mj-session/v1', id: 'cloud-1', title: '本頁測試局', entries: [] };
+        doc.getElementById('scorekeeper').contentWindow.OVMJSessionHost = Object.freeze({
+            ready: win.Promise.resolve(),
+            getSession: function () { return hostedSession; },
+            normalizeSession: function (value) { return JSON.parse(JSON.stringify(value)); },
+            hasStorageConflict: function () { return false; },
+            replaceSession: function (value) { replacedSession = value; }
+        });
+        doc.getElementById('save-current').click();
+        await waitFor(function () { return savedRequest !== null; }, 'versioned DB save request');
+        equal(savedRequest.expectedVersion, 7, 'optimistic version');
+        equal(savedRequest.payload.id, 'cloud-1', 'saved payload id');
+        await waitFor(function () {
+            return doc.getElementById('message').textContent.indexOf('保存') >= 0;
+        }, 'save completion');
+
+        win.confirm = function () { return true; };
+        doc.querySelector('.session .mini').click();
+        await waitFor(function () { return replacedSession !== null; }, 'DB session load');
+        equal(replacedSession.title, '資料庫載入局', 'loaded payload');
+
+        doc.getElementById('logout').click();
+        await waitFor(function () { return doc.documentElement.dataset.accountState === 'guest'; }, 'local logout');
+        assert(doc.getElementById('account-workspace').hidden, 'workspace not hidden on logout');
+        assert(!online.isWorkspaceLoaded(), 'workspace state survived logout');
+        assert(!online.isWorkspaceRequested(), 'iframe survived logout');
+        equal(win.sessionStorage.getItem('ovmj.api.token'), null, 'token survived logout');
+        assert(calls.some(function (call) { return /\/auth\/logout$/.test(call.path); }), 'server logout was not attempted');
+
+        doc.getElementById('login').click();
+        await waitFor(function () { return doc.documentElement.dataset.accountState === 'authenticated'; }, 'second login');
+        forceUnauthorizedPlayer = true;
+        doc.getElementById('player-name').value = '過期測試';
+        doc.getElementById('player-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+        await waitFor(function () { return doc.documentElement.dataset.accountState === 'guest'; }, '401 logout');
+        assert(doc.getElementById('account-workspace').hidden, 'workspace not hidden after 401');
+        assert(!online.isWorkspaceLoaded(), 'workspace state survived 401');
+        equal(win.sessionStorage.getItem('ovmj.api.token'), null, 'token survived 401');
+    });
+
+    async function runAll() {
+        document.getElementById('run-tests').disabled = true;
+        resultsBody.textContent = '';
+        completion.textContent = '';
+        var results = [];
+        var startupError = null;
+        try { await loadApp(); } catch (error) { startupError = error; }
+
+        for (var i = 0; i < tests.length; i += 1) {
+            var item = tests[i];
+            var status = 'passed';
+            var message = '';
+            try {
+                if (startupError) throw startupError;
+                await item.fn();
+            } catch (error) {
+                status = 'failed';
+                message = error && error.message ? error.message : String(error);
+            }
+            results.push({ id: item.id, name: item.name, status: status, message: message });
+            var row = document.createElement('tr');
+            [item.id, item.name, status === 'passed' ? 'PASS' : 'FAIL', message].forEach(function (text, index) {
+                var cell = document.createElement('td');
+                cell.textContent = text;
+                if (index === 2) cell.className = status;
+                row.appendChild(cell);
+            });
+            resultsBody.appendChild(row);
+        }
+
+        localStorage.removeItem('ovmj.session-scorekeeper.v1');
+        sessionStorage.removeItem('ovmj.api.token');
+        sessionStorage.removeItem('ovmj.api.url');
+        if (frame.isConnected) frame.remove();
+        var passed = results.filter(function (item) { return item.status === 'passed'; }).length;
+        var failed = results.length - passed;
+        var payload = {
+            schemaVersion: 'ov-mj-scorekeeper-tests/v1',
+            status: failed === 0 ? 'success' : 'failure',
+            counts: { discovered: tests.length, executed: results.length, passed: passed, failed: failed, errors: 0 },
+            invariant: tests.length === results.length && passed + failed === results.length,
+            browserAppState: browserAppState,
+            results: results
+        };
+        summary.textContent = passed + ' passed, ' + failed + ' failed, 0 errors, ' + results.length + ' discovered';
+        summary.className = failed ? 'failed' : 'passed';
+        completion.textContent = JSON.stringify(payload);
+        document.documentElement.dataset.scorekeeperTests = payload.status;
+        document.getElementById('run-tests').disabled = false;
+        if (new URLSearchParams(location.search).get('run') === 'auto') {
+            sessionStorage.setItem('ovmj.scorekeeper.tests.completion', JSON.stringify(payload));
+            try {
+                await fetch('/__scorekeeper_completion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    keepalive: true
+                });
+            } catch (_error) { /* DOM completion remains available as fallback. */ }
+            location.replace('scorekeeper-tests.html?completion=1');
+        }
+    }
+
+    var pageParams = new URLSearchParams(location.search);
+    if (pageParams.get('completion') === '1') {
+        var savedCompletion = sessionStorage.getItem('ovmj.scorekeeper.tests.completion');
+        if (frame.isConnected) frame.remove();
+        if (savedCompletion) {
+            var savedPayload = JSON.parse(savedCompletion);
+            completion.textContent = savedCompletion;
+            summary.textContent = savedPayload.counts.passed + ' passed, ' + savedPayload.counts.failed + ' failed, ' + savedPayload.counts.errors + ' errors, ' + savedPayload.counts.discovered + ' discovered';
+            summary.className = savedPayload.status === 'success' ? 'passed' : 'failed';
+            document.documentElement.dataset.scorekeeperTests = savedPayload.status;
+            sessionStorage.removeItem('ovmj.scorekeeper.tests.completion');
+        } else {
+            summary.textContent = '找不到自動測試完成資料';
+            summary.className = 'failed';
+        }
+    } else {
+        document.getElementById('run-tests').addEventListener('click', runAll);
+        if (pageParams.get('run') === 'auto') runAll();
+    }
+}());
+</script>
+</body>
+</html>

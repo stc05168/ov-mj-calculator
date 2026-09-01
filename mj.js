@@ -1,3 +1,5 @@
+document.documentElement.dataset.embedded = String(new URLSearchParams(location.search).get('embedded') === '1');
+
 // 應用狀態
 const state = {
     handTiles: [], // 手牌
@@ -1079,6 +1081,45 @@ function updateButtonStates() {
     concealedKongBtn.disabled = !canKong;
 }
 
+const CALCULATION_RESULT_SCHEMA_VERSION = 'ov-mj-calculation-result/v1';
+const CALCULATION_RESULT_EVENT_NAME = 'ovmj:calculation-result';
+let lastCalculationResult = null;
+
+function buildCalculationResult(handTypes, options = {}) {
+    const valid = options.valid !== false;
+    const isSelfDraw = Boolean(options.isSelfDraw);
+    const isDealer = Boolean(options.isDealer);
+    const parsedDealerCount = Number(options.dealerCount);
+    const dealerCount = Number.isFinite(parsedDealerCount) ? parsedDealerCount : 0;
+    const sourceHandTypes = valid && Array.isArray(handTypes) ? handTypes : [];
+    const copiedHandTypes = sourceHandTypes.map((hand) => Object.freeze({
+        name: String(hand.name),
+        score: Number(hand.score)
+    }));
+    Object.freeze(copiedHandTypes);
+
+    const handTai = copiedHandTypes.reduce((sum, hand) => sum + hand.score, 0);
+    const dealerBonusTai = valid && isDealer ? 2 * dealerCount + 1 : 0;
+
+    return Object.freeze({
+        schemaVersion: CALCULATION_RESULT_SCHEMA_VERSION,
+        valid,
+        handTai,
+        dealerBonusTai,
+        totalTai: valid ? handTai + dealerBonusTai : 0,
+        handTypes: copiedHandTypes,
+        isSelfDraw,
+        isDealer,
+        dealerCount
+    });
+}
+
+function publishCalculationResult(result) {
+    lastCalculationResult = result;
+    window.dispatchEvent(new CustomEvent(CALCULATION_RESULT_EVENT_NAME, { detail: result }));
+    return result;
+}
+
 function calculateScore() {
     const statusMessage = document.getElementById('status-message');
     statusMessage.innerHTML = '';
@@ -1092,40 +1133,41 @@ function calculateScore() {
                       (state.winningTile ? 1 : 0);
     
     const requiredTiles = 17 + kongCount;
+    const resultOptions = {
+        isSelfDraw: state.isSelfDraw,
+        isDealer: state.isDealer,
+        dealerCount: state.dealerCount
+    };
 
     if (totalTiles !== requiredTiles) {
+        const result = buildCalculationResult([], { ...resultOptions, valid: false });
         statusMessage.innerHTML = `<div class="status-message">請選擇足夠的牌（目前: ${totalTiles}/${requiredTiles}）</div>`;
         document.getElementById('hand-types').innerHTML = '';
         document.getElementById('score-display').textContent = '總番數: 0';
-        return;
+        return publishCalculationResult(result);
     }
     
-    const handTypes = detectHandTypes();
-    let totalScore = 0;
-    
+    const result = buildCalculationResult(detectHandTypes(), { ...resultOptions, valid: true });
     const handTypesContainer = document.getElementById('hand-types');
     handTypesContainer.innerHTML = '';
     
-    handTypes.forEach(hand => {
-        totalScore += hand.score;
-        
+    result.handTypes.forEach(hand => {
         const handElement = document.createElement('div');
         handElement.className = 'hand-type';
         handElement.textContent = `${hand.name} (${hand.score}番)`;
         handTypesContainer.appendChild(handElement);
     });
         
-    if (state.isDealer) {
-        const dealerScore = 2 * state.dealerCount + 1;
-        totalScore += dealerScore;
+    if (result.isDealer) {
         const dealerElement = document.createElement('div');
         dealerElement.className = 'hand-type';
-        dealerElement.textContent = `連莊${state.dealerCount}次 (${dealerScore}番)`;
+        dealerElement.textContent = `連莊${result.dealerCount}次 (${result.dealerBonusTai}番)`;
         handTypesContainer.appendChild(dealerElement);
     }
     
     document.getElementById('score-display').textContent = 
-        `總番數: ${totalScore}`;
+        `總番數: ${result.totalTai}`;
+    return publishCalculationResult(result);
 }
 
 function getAllTiles() {
@@ -1207,5 +1249,11 @@ function selectTile(tile) {
     state.handTiles.push({ ...tile });
     updateUI();
 }
+
+window.OVMJCalculator = Object.freeze({
+    eventName: CALCULATION_RESULT_EVENT_NAME,
+    getLastResult: () => lastCalculationResult,
+    buildResult: buildCalculationResult
+});
 
 window.addEventListener('DOMContentLoaded', initApp);

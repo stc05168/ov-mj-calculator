@@ -491,3 +491,79 @@ html, body {
         height: 48px;
     }
 }
+
+
+/* Unified shell and touch-friendly overrides */
+html[data-embedded="true"] body {
+    padding-top: 8px;
+}
+
+html[data-embedded="true"] body > h2:first-of-type,
+html[data-embedded="true"] body > h3:first-of-type {
+    display: none;
+}
+
+select {
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+    background: #fff;
+    font: inherit;
+}
+
+.controls button {
+    min-height: 44px;
+}
+
+.setting-group input[type="checkbox"],
+.condition-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 8px;
+    }
+
+    .section {
+        margin-bottom: 12px;
+        padding: 11px;
+    }
+
+    .tiles-container {
+        gap: 5px;
+    }
+
+    .tile {
+        width: calc((100% - 24px) / 5);
+        min-width: 44px;
+        height: 56px;
+    }
+
+    .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .controls button {
+        width: 100%;
+        padding: 9px 7px;
+    }
+
+    .settings {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .setting-group {
+        min-width: 0;
+    }
+
+    .condition-item {
+        min-height: 44px;
+    }
+}

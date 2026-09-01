@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#123c35">
+    <meta name="description" content="台灣麻將整場記分、連莊拉莊、斷拉、歷史與走勢圖工具">
+    <title>台牌整場記分</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="tms-body" data-session-persistence="memory">
+    <a class="tms-skip-link" href="#tms-main">跳到主要內容</a>
+
+    <div class="tms-app" id="tms-app">
+        <header class="tms-header">
+            <div class="tms-header__brand">
+                <p class="tms-eyebrow">ONE VICTORIA</p>
+                <h1>台牌整場記分</h1>
+                <p class="tms-header__subtitle" id="tms-session-subtitle">訪客暫存 · 關閉即清除</p>
+            </div>
+            <div class="tms-header__actions" aria-label="牌局操作">
+                <button class="tms-icon-button" id="tms-new-session" type="button" title="建立新的獨立牌局">新牌局</button>
+                <button class="tms-icon-button" id="tms-export-json" type="button" title="匯出牌局 JSON">匯出</button>
+                <button class="tms-icon-button" id="tms-import-trigger" type="button" title="匯入牌局 JSON">匯入</button>
+                <input id="tms-import-file" type="file" accept="application/json,.json" hidden>
+            </div>
+        </header>
+
+        <noscript>
+            <div class="tms-notice tms-notice--error">此工具需要啟用 JavaScript。</div>
+        </noscript>
+
+        <section class="tms-memory-notice" id="tms-memory-notice" aria-label="訪客資料提示">
+            <div><strong>免登入暫存模式</strong><span>牌局只保留在目前頁面；重新整理、關閉或前往登入頁後會清除。</span></div>
+            <a href="../session-scorekeeper-online/index.html" target="_top">登入後保存到 DB</a>
+        </section>
+
+        <section class="tms-scoreboard" aria-labelledby="tms-scoreboard-title">
+            <div class="tms-section-heading tms-section-heading--compact">
+                <div>
+                    <p class="tms-kicker" id="tms-scoreboard-title">目前總分</p>
+                    <p class="tms-round-label" id="tms-round-label">第 1 局</p>
+                </div>
+                <div class="tms-storage-status" id="tms-storage-status" role="status">此頁暫存</div>
+            </div>
+            <div class="tms-score-grid" id="tms-score-grid" aria-live="polite"></div>
+        </section>
+
+        <main id="tms-main" tabindex="-1">
+            <section class="tms-view is-active" id="tms-view-score" data-view="score" aria-labelledby="tms-tab-score">
+                <section class="tms-card tms-quick-ledger" aria-labelledby="tms-quick-ledger-title">
+                    <div class="tms-section-heading tms-section-heading--compact">
+                        <div>
+                            <p class="tms-kicker">三家快速帳</p>
+                            <h2 id="tms-quick-ledger-title">上家・對家・下家</h2>
+                            <p class="tms-round-label">以東家「我」為本位；連續同方向每次在上一級再 ×1.5（×1、×1.5、×2.25…）</p>
+                        </div>
+                        <div class="tms-quick-heading-actions">
+                            <span class="tms-badge" id="tms-quick-rule">拉番 × 每番 1・不另加底</span>
+                            <button class="tms-text-button" id="tms-quick-undo" type="button" disabled>↶ 復原</button>
+                        </div>
+                    </div>
+                    <div class="tms-quick-ledger-grid" id="tms-quick-ledger-grid" aria-live="polite"></div>
+                    <p class="tms-help">每欄未結算資料只保留在目前畫面。輸入番數已包含底，不另加底；正常連拉將同一 segment 的加權番數整段向上取整。按「斷拉」或方向反轉自動斷拉時，先把該段加權番數整段除以 2，再向下取整（不是逐筆除 2／逐筆取整），最後乘每番值。按「結算」後才會寫入牌局紀錄及目前總分。</p>
+                </section>
+
+                <details class="tms-advanced-entry" id="tms-advanced-entry">
+                    <summary><strong>進階記一局</strong><span>自摸、一炮多響、流局、莊家及計番帶入</span></summary>
+                <div class="tms-layout tms-layout--score">
+                    <article class="tms-card tms-dealer-card">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">莊家狀態</p>
+                                <h2 id="tms-dealer-name">東家</h2>
+                            </div>
+                            <span class="tms-badge" id="tms-dealer-bonus">莊家 +1 番</span>
+                        </div>
+                        <div class="tms-dealer-stats">
+                            <div><span>連莊</span><strong id="tms-streak-count">0</strong></div>
+                            <div><span>拉莊</span><strong id="tms-pull-count">0</strong></div>
+                            <div><span>本局加番</span><strong id="tms-bonus-count">1</strong></div>
+                        </div>
+                        <button class="tms-button tms-button--warning tms-button--full" id="tms-break-pull" type="button">立即斷拉</button>
+                        <p class="tms-help">斷拉只把拉莊次數歸零；連莊與莊家不會改變。</p>
+                    </article>
+
+                    <form class="tms-card tms-round-form" id="tms-round-form">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">快速記一局</p>
+                                <h2 id="tms-form-title">直接輸入本局番數</h2>
+                            </div>
+                            <button class="tms-text-button" id="tms-cancel-edit" type="button" hidden>取消編輯</button>
+                        </div>
+
+                        <p class="tms-direct-hint"><strong>不用先計番</strong><span>直接選結果、玩家及牌型番數即可記錄；若不確定番數，再回上方開啟「牌型計番（可選）」。</span></p>
+
+                        <fieldset class="tms-fieldset">
+                            <legend>結果類型</legend>
+                            <div class="tms-segmented" id="tms-outcome-picker">
+                                <button class="is-selected" type="button" data-outcome="discard" aria-pressed="true">胡牌</button>
+                                <button type="button" data-outcome="selfDraw" aria-pressed="false">自摸</button>
+                                <button type="button" data-outcome="multiWin" aria-pressed="false">一炮多響</button>
+                                <button type="button" data-outcome="draw" aria-pressed="false">流局</button>
+                                <button type="button" data-outcome="adjustment" aria-pressed="false">賞罰</button>
+                            </div>
+                        </fieldset>
+
+                        <div class="tms-form-grid">
+                            <label class="tms-field" id="tms-winner-field">
+                                <span>贏家</span>
+                                <select id="tms-winner"></select>
+                            </label>
+
+                            <fieldset class="tms-fieldset tms-field tms-field--wide" id="tms-multi-winner-field" hidden>
+                                <legend>多響贏家</legend>
+                                <div class="tms-check-grid" id="tms-multi-winners"></div>
+                            </fieldset>
+
+                            <label class="tms-field" id="tms-discarder-field">
+                                <span>放槍者</span>
+                                <select id="tms-discarder"></select>
+                            </label>
+
+                            <div class="tms-field" id="tms-tai-field">
+                                <span>牌型番數（直接輸入）</span>
+                                <div class="tms-stepper">
+                                    <button type="button" data-step-target="tms-tai" data-step="-1" aria-label="番數減一">−</button>
+                                    <input id="tms-tai" type="number" min="0" max="999" step="1" value="0" inputmode="numeric">
+                                    <button type="button" data-step-target="tms-tai" data-step="1" aria-label="番數加一">＋</button>
+                                </div>
+                                <div class="tms-quick-values" id="tms-quick-tai" aria-label="常用番數">
+                                    <button type="button" data-value="0">0</button>
+                                    <button type="button" data-value="1">1</button>
+                                    <button type="button" data-value="2">2</button>
+                                    <button type="button" data-value="3">3</button>
+                                    <button type="button" data-value="5">5</button>
+                                    <button type="button" data-value="8">8</button>
+                                    <button type="button" data-value="10">10</button>
+                                    <button type="button" data-value="15">15</button>
+                                    <button type="button" data-value="20">20</button>
+                                </div>
+                                <small class="tms-inline-help">可點選常用番數，或使用 ＋／− 微調。</small>
+                            </div>
+
+                            <label class="tms-field" id="tms-multiplier-field">
+                                <span>番值倍率</span>
+                                <select id="tms-multiplier">
+                                    <option value="1">一般 ×1</option>
+                                    <option value="2">加倍 ×2</option>
+                                    <option value="3">三倍 ×3</option>
+                                </select>
+                                <small>倍率只乘番錢，底不加倍。</small>
+                            </label>
+
+                            <label class="tms-field" id="tms-bao-field">
+                                <span>包自摸</span>
+                                <select id="tms-bao-player">
+                                    <option value="">不使用</option>
+                                </select>
+                            </label>
+
+                            <label class="tms-field" id="tms-dealer-action-field">
+                                <span>下局莊家</span>
+                                <select id="tms-dealer-action">
+                                    <option value="auto">自動（依胡牌／流局規則決定）</option>
+                                    <option value="continue">強制續莊（可配合本局後斷拉）</option>
+                                    <option value="rotate">強制下莊（連莊／拉莊清零）</option>
+                                </select>
+                            </label>
+
+                            <label class="tms-toggle tms-field--wide" id="tms-break-after-field">
+                                <input id="tms-break-after" type="checkbox">
+                                <span>
+                                    <strong>本局後斷拉</strong>
+                                    <small>若下局仍由同一位坐莊，保留連莊但把拉莊歸零；被食而自動下莊時，連／拉本來就會清零。</small>
+                                </span>
+                            </label>
+
+                            <div class="tms-auto-rule-note tms-field--wide">
+                                <strong>自動連拉：</strong>莊家食糊會自動連莊及拉莊各加 1。<strong>莊家被食：</strong>預設換下一家並清除連／拉；如牌桌只斷拉但仍續莊，請選「強制續莊」並勾選「本局後斷拉」。<strong>流局：</strong>依設定中的「流局續莊」與「流局也加拉」決定。
+                            </div>
+
+                            <label class="tms-field" id="tms-adjust-payer-field" hidden>
+                                <span>付款者</span>
+                                <select id="tms-adjust-payer"></select>
+                            </label>
+
+                            <label class="tms-field" id="tms-adjust-receiver-field" hidden>
+                                <span>收款者</span>
+                                <select id="tms-adjust-receiver"></select>
+                            </label>
+
+                            <label class="tms-field" id="tms-adjust-amount-field" hidden>
+                                <span>賞罰金額</span>
+                                <input id="tms-adjust-amount" type="number" min="1" max="99999999" step="1" value="100" inputmode="numeric">
+                            </label>
+
+                            <label class="tms-field tms-field--wide">
+                                <span>備註</span>
+                                <input id="tms-note" type="text" maxlength="120" placeholder="例如：門骰、詐胡、包牌原因">
+                            </label>
+                        </div>
+
+                        <section class="tms-preview" aria-labelledby="tms-preview-title">
+                            <div class="tms-preview__head">
+                                <h3 id="tms-preview-title">本局試算</h3>
+                                <span id="tms-preview-zero-sum">合計 0</span>
+                            </div>
+                            <div id="tms-preview-content" class="tms-preview__content"></div>
+                        </section>
+
+                        <button class="tms-button tms-button--primary tms-button--full" id="tms-submit-round" type="submit">記錄本局</button>
+                    </form>
+                </div>
+                </details>
+            </section>
+
+            <section class="tms-view" id="tms-view-chart" data-view="chart" aria-labelledby="tms-tab-chart" hidden>
+                <div class="tms-layout tms-layout--chart">
+                    <article class="tms-card tms-chart-card">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">整場走勢</p>
+                                <h2>累計分數</h2>
+                            </div>
+                            <button class="tms-text-button" id="tms-share-image" type="button">分享圖片</button>
+                        </div>
+                        <div class="tms-chart-legend" id="tms-chart-legend"></div>
+                        <div class="tms-chart-wrap">
+                            <svg id="tms-score-chart" viewBox="0 0 720 320" role="img" aria-label="四位玩家累計分數折線圖"></svg>
+                        </div>
+                        <p class="tms-empty-state" id="tms-chart-empty">記錄第一局後會顯示走勢。</p>
+                    </article>
+
+                    <article class="tms-card">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">牌局稱號</p>
+                                <h2>統計摘要</h2>
+                            </div>
+                        </div>
+                        <div class="tms-title-grid" id="tms-title-grid"></div>
+                    </article>
+
+                    <article class="tms-card tms-card--wide">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">找數</p>
+                                <h2>目前結算</h2>
+                            </div>
+                            <div class="tms-inline-actions">
+                                <button class="tms-text-button" id="tms-export-csv" type="button">匯出 CSV</button>
+                                <button class="tms-text-button" id="tms-export-txt" type="button">匯出 TXT</button>
+                            </div>
+                        </div>
+                        <div class="tms-settlement-list" id="tms-settlement-list"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="tms-view" id="tms-view-history" data-view="history" aria-labelledby="tms-tab-history" hidden>
+                <article class="tms-card">
+                    <div class="tms-section-heading">
+                        <div>
+                            <p class="tms-kicker">可追溯帳本</p>
+                            <h2>牌局紀錄</h2>
+                        </div>
+                        <div class="tms-inline-actions">
+                            <label class="tms-filter-label" for="tms-history-filter">篩選</label>
+                            <select class="tms-compact-select" id="tms-history-filter">
+                                <option value="all">全部</option>
+                                <option value="win">胡牌／自摸／多響</option>
+                                <option value="draw">流局</option>
+                                <option value="adjustment">賞罰</option>
+                                <option value="breakPull">斷拉</option>
+                            </select>
+                            <button class="tms-text-button" id="tms-undo" type="button">復原</button>
+                            <button class="tms-text-button" id="tms-redo" type="button">重做</button>
+                        </div>
+                    </div>
+                    <div class="tms-history" id="tms-history"></div>
+                    <p class="tms-empty-state" id="tms-history-empty">尚未記錄牌局。</p>
+                </article>
+            </section>
+
+            <section class="tms-view" id="tms-view-settings" data-view="settings" aria-labelledby="tms-tab-settings" hidden>
+                <form class="tms-settings-grid" id="tms-settings-form">
+                    <article class="tms-card">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">牌局資料</p>
+                                <h2>玩家與莊家</h2>
+                            </div>
+                        </div>
+                        <label class="tms-field">
+                            <span>牌局名稱</span>
+                            <input id="tms-session-title" type="text" maxlength="40">
+                        </label>
+                        <div class="tms-player-settings" id="tms-player-settings"></div>
+                        <label class="tms-field">
+                            <span>起始莊家</span>
+                            <select id="tms-initial-dealer"></select>
+                        </label>
+                    </article>
+
+                    <article class="tms-card">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">牌桌規則</p>
+                                <h2>底、番與連拉</h2>
+                            </div>
+                        </div>
+                        <div class="tms-rule-presets" id="tms-rule-presets" aria-label="常用底番預設">
+                            <button type="button" data-preset-base="5" data-preset-tai="1">5／1</button>
+                            <button type="button" data-preset-base="30" data-preset-tai="10">30／10</button>
+                            <button type="button" data-preset-base="50" data-preset-tai="20">50／20</button>
+                            <button type="button" data-preset-base="100" data-preset-tai="50">100／50</button>
+                        </div>
+                        <div class="tms-form-grid">
+                            <label class="tms-field">
+                                <span>底</span>
+                                <input id="tms-base-amount" type="number" min="0" max="999999" step="1">
+                            </label>
+                            <label class="tms-field">
+                                <span>每番</span>
+                                <input id="tms-tai-value" type="number" min="1" max="999999" step="1">
+                            </label>
+                            <label class="tms-field">
+                                <span>莊家基本加番</span>
+                                <input id="tms-dealer-base-tai" type="number" min="0" max="99" step="1">
+                            </label>
+                            <label class="tms-field">
+                                <span>每次連莊加番</span>
+                                <input id="tms-streak-tai" type="number" min="0" max="99" step="1">
+                            </label>
+                            <label class="tms-field">
+                                <span>每次拉莊加番</span>
+                                <input id="tms-pull-tai" type="number" min="0" max="99" step="1">
+                            </label>
+                            <label class="tms-field">
+                                <span>金額符號</span>
+                                <input id="tms-currency" type="text" maxlength="4">
+                            </label>
+                            <label class="tms-toggle tms-field--wide">
+                                <input id="tms-draw-continues" type="checkbox">
+                                <span><strong>流局續莊</strong><small>流局時保留同一位莊家。</small></span>
+                            </label>
+                            <label class="tms-toggle tms-field--wide">
+                                <input id="tms-draw-adds-pull" type="checkbox">
+                                <span><strong>流局也加拉</strong><small>僅在流局續莊時生效。</small></span>
+                            </label>
+                        </div>
+                        <div class="tms-rule-example" id="tms-rule-example"></div>
+                    </article>
+
+                    <article class="tms-card tms-card--wide">
+                        <div class="tms-section-heading">
+                            <div>
+                                <p class="tms-kicker">訪客模式</p>
+                                <h2>暫存資料與重設</h2>
+                            </div>
+                        </div>
+                        <div class="tms-data-actions">
+                            <button class="tms-button tms-button--secondary" id="tms-settings-export" type="button">匯出 JSON</button>
+                            <button class="tms-button tms-button--secondary" id="tms-settings-export-txt" type="button">匯出 TXT</button>
+                            <button class="tms-button tms-button--secondary" id="tms-settings-import" type="button">匯入 JSON</button>
+                            <button class="tms-button tms-button--secondary" id="tms-settings-share" type="button">產生分享圖</button>
+                            <button class="tms-button tms-button--danger" id="tms-reset-session" type="button">清除整場</button>
+                        </div>
+                        <p class="tms-help">免登入版不會寫入瀏覽器儲存或下載備份。要保存牌局及勝負紀錄，請先登入戶口版並按「儲存目前牌局到 DB」。</p>
+                    </article>
+
+                    <button class="tms-button tms-button--primary tms-button--full tms-settings-save" type="submit">儲存設定並重算</button>
+                </form>
+            </section>
+        </main>
+
+        <nav class="tms-tab-bar" aria-label="主要功能">
+            <button class="is-active" id="tms-tab-score" type="button" data-tab="score" aria-controls="tms-view-score" aria-selected="true"><span>記分</span></button>
+            <button id="tms-tab-chart" type="button" data-tab="chart" aria-controls="tms-view-chart" aria-selected="false"><span>走勢</span></button>
+            <button id="tms-tab-history" type="button" data-tab="history" aria-controls="tms-view-history" aria-selected="false"><span>紀錄</span></button>
+            <button id="tms-tab-settings" type="button" data-tab="settings" aria-controls="tms-view-settings" aria-selected="false"><span>設定</span></button>
+        </nav>
+    </div>
+
+    <div class="tms-toast" id="tms-toast" role="status" aria-live="polite" hidden></div>
+    <script>
+        window.addEventListener('error', function (event) {
+            var status = document.getElementById('tms-storage-status');
+            if (status) {
+                status.textContent = '啟動失敗：' + event.message + ' (' + event.lineno + ':' + event.colno + ')';
+                status.classList.add('is-error');
+            }
+            var quickGrid = document.getElementById('tms-quick-ledger-grid');
+            if (quickGrid && !quickGrid.children.length) {
+                quickGrid.textContent = '快速記分啟動失敗：' + event.message;
+                quickGrid.classList.add('tms-notice', 'tms-notice--error');
+            }
+        });
+        window.addEventListener('load', function () {
+            window.setTimeout(function () {
+                var state = document.documentElement.dataset.tmsApp || 'not-parsed';
+                document.documentElement.dataset.tmsProbe = state;
+                if (state !== 'ready') {
+                    var status = document.getElementById('tms-storage-status');
+                    if (status) {
+                        status.textContent = state === 'loading' ? '啟動未完成' : '腳本未解析';
+                        status.classList.add('is-error');
+                    }
+                }
+            }, 0);
+        });
+    </script>
+    <script src="../app-config.js" defer></script>
+    <script src="./app.js" defer></script>
+</body>
+</html>

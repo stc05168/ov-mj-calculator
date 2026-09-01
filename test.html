@@ -29,7 +29,8 @@ h1{text-align:center;color:#e94560;margin-bottom:20px;font-size:1.8rem}
 <h1>🀄 Mahjong Hand Type Test Suite</h1>
 <div id="controls"><button id="run-btn" onclick="runAllTests()">Run All Tests</button></div>
 <div id="summary"></div>
-<table id="results"><thead><tr><th>#</th><th>Hand Type</th><th>Score</th><th>Result</th><th>Hand Setup</th></tr></thead><tbody></tbody></table>
+<script id="test-completion" type="application/json"></script>
+<table id="results"><thead><tr><th>#</th><th>Case ID / Hand Type</th><th>Score</th><th>Result</th><th>Hand Setup</th></tr></thead><tbody></tbody></table>
 
 <script src="mjConst.js"></script>
 <script>
@@ -89,9 +90,29 @@ function applyBase(b){
     state.handTiles=[...b.ht];state.winningTile=b.wt?{...b.wt}:null;
 }
 
+// TEST-DEFINITIONS-BEGIN
 // ===== Test Definitions =====
+const TEST_SCHEMA_VERSION='mahjong-test-result/v1';
 const T=[];
-function add(name,score,desc,setup){T.push({name,score,desc,setup})}
+function add(name,score,desc,setup,options={}){
+    const ordinal=T.length+1;
+    const id=options.id||`canonical-${String(ordinal).padStart(3,'0')}`;
+    if(T.some(test=>test.id===id))throw new Error(`Duplicate test id: ${id}`);
+    const required=options.required||[{name,score,matcher:'exact',minCount:1,maxCount:1}];
+    T.push({
+        id,name,score,desc,setup,required,
+        prohibited:options.prohibited||[],
+        traceCandidates:!!options.traceCandidates,
+        seed:options.seed||null,
+        category:options.category||'canonical',
+        preservation:!!options.preservation,
+        expectLiguligu:options.expectLiguligu,
+        baselineResults:options.baselineResults||null
+    });
+}
+const PRE_FIX_CANONICAL_IDS=Array.from({length:117},(_,index)=>
+    `canonical-${String(index+1).padStart(3,'0')}`
+);
 
 // ---------- 1 fan ----------
 add('自摸',1,'Simple self-draw',()=>{
@@ -129,11 +150,9 @@ add('對碰',2,'Pair wait',()=>{
     state.winningTile=t(5);
 });
 add('獨獨',2,'Single wait',()=>{
-    // 4 exposed chows (different starts per suit) + exposed pung + concealed pung pair
-    state.chows=[mkChow(w,1,2,3),mkChow(w,4,5,6),mkChow(s,2,3,4),mkChow(s,5,6,7)];
-    state.pungs=[mkPung(h,2)];
-    state.handTiles=[h(1)];
-    state.winningTile=h(1);
+    // Four complete concealed pungs, one eye, and 12 waiting only on 3.
+    state.handTiles=[w(7),w(7),w(7),s(8),s(8),s(8),t(4),t(4),t(4),h(1),h(1),h(1),h(5),h(5),w(1),w(2)];
+    state.winningTile=w(3);
 });
 add('將眼',2,'Eye is 2/5/8',()=>{
     const b=baseHand();applyBase(b);// eye=55t (value 5)
@@ -176,7 +195,7 @@ add('老少上x1',3,'Same suit 123+789 chow',()=>{
 });
 add('二相逢x1',3,'Two same-number chows diff suits',()=>{
     state.chows=[mkChow(w,1,2,3),mkChow(s,1,2,3)];
-    state.handTiles=[w(7),w(8),w(9),t(4),t(5),t(6),t(7),t(8),t(9),s(7)];
+    state.handTiles=[w(7),w(8),w(9),t(4),t(5),t(6),s(2),s(3),s(4),s(7)];
     state.winningTile=s(7);
 });
 
@@ -191,11 +210,10 @@ add('無字花',5,'No honors AND no flowers',()=>{
 add('門清',5,'No exposed, not self-draw',()=>{
     const b=baseHand();applyBase(b);state.isSelfDraw=false;
 });
-add('平糊',5,'All chows + pair',()=>{
-    // 4 exposed chows + 1 concealed chow + pair, no 三相逢
+add('平糊',5,'All chows + pair (flower prevents 無字花大平糊 replacement)',()=>{
     state.chows=[mkChow(w,1,2,3),mkChow(w,7,8,9),mkChow(s,1,2,3),mkChow(s,7,8,9)];
     state.handTiles=[t(4),t(5),t(6),t(8)];
-    state.winningTile=t(8);
+    state.winningTile=t(8);state.flowers=[fl(1)];
 });
 add('宣告聽牌',5,'Declared ready',()=>{
     // Exposed pung blocks 門清, so no 門清大叮
@@ -315,11 +333,9 @@ add('缺五',10,'No 5 tiles, no honors',()=>{
 });
 add('明清龍',10,'123+456+789 same suit, exposed',()=>{
     state.chows=[mkChow(w,1,2,3),mkChow(w,4,5,6)];
-    state.handTiles=[w(7),w(8),w(9),s(2),s(3),s(4),t(2),t(3),t(4),t(5),t(5)];
-    state.winningTile=null;
     state.handTiles=[w(7),w(8),w(9),s(2),s(3),s(4),t(2),t(3),t(4),t(5)];
     state.winningTile=t(5);
-});
+},{required:[{name:'明清龍(',score:10,matcher:'prefix',minCount:1,maxCount:1}]});
 add('蓋牌',10,'Face down',()=>{
     const b=baseHand();applyBase(b);state.isFaceDown=true;
 });
@@ -327,11 +343,9 @@ add('雪上冰(三響)',10,'Multi win 3',()=>{
     const b=baseHand();applyBase(b);state.isMultiWin=3;
 });
 add('絕絕',10,'Visible=3 + single wait',()=>{
-    // 4 exposed melds + 1 hand tile = single wait, visibleWinTileCount=3
-    state.chows=[mkChow(w,1,2,3),mkChow(w,4,5,6),mkChow(s,7,8,9)];
-    state.pungs=[mkPung(h,3)];
-    state.handTiles=[t(5)];
-    state.winningTile=t(5);state.visibleWinTileCount=3;
+    // Concealed 12 waits only on 3; the winning tile is the fourth visible copy.
+    state.handTiles=[w(7),w(7),w(7),s(8),s(8),s(8),t(4),t(4),t(4),h(1),h(1),h(1),h(5),h(5),w(1),w(2)];
+    state.winningTile=w(3);state.visibleWinTileCount=3;
 });
 add('十子',10,'10 concealed tiles',()=>{
     state.openKongs=[mkKong(s,5)];
@@ -353,13 +367,11 @@ add('暗雜龍',10,'123+456+789 across suits, concealed',()=>{
     state.handTiles=[w(1),w(2),w(3),s(4),s(5),s(6),t(7),t(8),t(9),t(2),t(3),t(4),w(5),w(5),w(5),w(5)];
     state.winningTile=w(5);
 });
-add('五門齊（小）',10,'All 5 doors',()=>{
-    state.pungs=[mkPung(h,1),mkPung(h,5)];
-    state.chows=[mkChow(w,2,3,4),mkChow(t,5,6,7)];
-    state.handTiles=[s(2),s(3),s(4),s(5),s(5)];
-    state.winningTile=null;
-    state.handTiles=[s(2),s(3),s(4),s(5)];
-    state.winningTile=s(5);
+add('五門齊（小）',10,'All 5 doors without both honor pungs',()=>{
+    state.pungs=[mkPung(h,1)];
+    state.chows=[mkChow(w,2,3,4),mkChow(w,5,6,7),mkChow(s,2,3,4),mkChow(t,5,6,7)];
+    state.handTiles=[h(5)];
+    state.winningTile=h(5);
 });
 
 // ---------- 15 fan ----------
@@ -374,8 +386,7 @@ add('門清大叮',15,'MenQing + declared ready',()=>{
     state.winningTile=t(8);state.isDeclaredReady=true;
 });
 add('無字花大平糊',15,'No honors+flowers+all chows',()=>{
-    // Clean all-chow hand in 2 suits + pair in 3rd, no 雜龍/三相逢
-    state.handTiles=[w(1),w(2),w(3),w(4),w(5),w(6),s(2),s(3),s(4),s(5),s(6),s(7),s(8),s(9),t(4),t(5)];
+    state.handTiles=[w(1),w(2),w(3),w(4),w(5),w(6),s(2),s(3),s(4),s(5),s(6),s(7),s(7),s(8),s(9),t(5)];
     state.winningTile=t(5);
 });
 add('一色步步高',15,'3 ascending chows same suit',()=>{
@@ -395,24 +406,22 @@ add('三姊妹',15,'3 consecutive pungs same suit',()=>{
     state.handTiles=[s(2),s(3),s(4),t(5),t(6),t(7),t(2)];
     state.winningTile=t(2);
 });
-add('三小兄弟',15,'2 same-num pungs + another pair',()=>{
+add('三小兄弟',15,'2 same-number pungs + same-number pair in third suit',()=>{
     state.pungs=[mkPung(w,3),mkPung(s,3)];
-    state.chows=[mkChow(t,5,6,7)];
-    state.handTiles=[w(6),w(7),w(8),s(6),s(7),s(8),t(4),t(4)];
-    state.winningTile=null;
-    state.handTiles=[w(6),w(7),w(8),s(6),s(7),s(8),t(4)];
-    state.winningTile=t(4);
+    state.chows=[mkChow(t,5,6,7),mkChow(w,6,7,8),mkChow(s,6,7,8)];
+    state.handTiles=[t(3)];
+    state.winningTile=t(3);
 });
-add('大雜兄弟',15,'3 consec pungs same suit',()=>{
-    state.pungs=[mkPung(w,2),mkPung(w,3),mkPung(w,4)];
-    state.chows=[mkChow(s,5,6,7)];
-    state.handTiles=[t(2),t(3),t(4),t(5)];
+add('大雜兄弟',15,'3 consecutive pungs in three suits',()=>{
+    state.pungs=[mkPung(w,2),mkPung(s,3),mkPung(t,4)];
+    state.chows=[mkChow(w,5,6,7),mkChow(s,6,7,8)];
+    state.handTiles=[t(5)];
     state.winningTile=t(5);
 });
-add('半求人',15,'All exposed + self-draw',()=>{
+add('半求人',15,'Five exposed melds + self-drawn pair',()=>{
     state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7),mkChow(t,3,4,5)];
-    state.pungs=[mkPung(w,8)];
-    state.handTiles=[t(6),t(7),t(8),t(6)];state.winningTile=t(6);state.isSelfDraw=true;
+    state.pungs=[mkPung(w,8),mkPung(s,9)];
+    state.handTiles=[t(6)];state.winningTile=t(6);state.isSelfDraw=true;
 });
 add('五門齊（大）',15,'All 5 doors + wind pung + dragon pung',()=>{
     state.pungs=[mkPung(h,1),mkPung(h,5),mkPung(w,2)];
@@ -428,17 +437,29 @@ add('海底撈月',20,'Last tile draw + self-draw',()=>{
 add('暗清龍',20,'123+456+789 same suit concealed self-draw',()=>{
     state.handTiles=[w(1),w(2),w(3),w(4),w(5),w(6),w(7),w(8),w(9),s(1),s(1),s(1),t(7),t(7),t(9),t(9)];
     state.winningTile=s(2);state.isSelfDraw=true;
-});
+},{required:[{name:'暗清龍(',score:20,matcher:'prefix',minCount:1,maxCount:1}]});
 add('小三風',20,'2 wind pungs + 1 wind pair',()=>{
     state.pungs=[mkPung(h,1),mkPung(h,2)];
     state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7)];
     state.handTiles=[w(5),w(6),w(7),h(3)];
     state.winningTile=h(3);
+},{
+    seed:'preserve-ordinary-small-three-winds-v1',preservation:true,expectLiguligu:false,
+    prohibited:[
+        {name:'小三風',score:10,matcher:'exact'},
+        {name:'嚦咕嚦咕',matcher:'prefix'}
+    ],
+    baselineResults:[
+        {name:'無花',score:2},
+        {name:'二相逢x1',score:3},
+        {name:'三小姊妹',score:8},
+        {name:'小三風',score:20}
+    ]
 });
-add('七子',20,'7 concealed tiles',()=>{
+add('七子',20,'7 concealed tiles including the winning tile',()=>{
     state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7)];
     state.pungs=[mkPung(t,2)];
-    state.handTiles=[w(5),w(6),w(7),w(8),w(9),t(4),t(5)];
+    state.handTiles=[w(5),w(6),w(7),w(8),t(4),t(5)];
     state.winningTile=t(6);
 });
 add('四小姊妹',20,'3 consec pungs + connected pair',()=>{
@@ -447,11 +468,11 @@ add('四小姊妹',20,'3 consec pungs + connected pair',()=>{
     state.handTiles=[t(2),t(3),t(4),w(5)];
     state.winningTile=w(5);
 });
-add('七門齊（小）',20,'All 7 doors',()=>{
-    state.pungs=[mkPung(h,1),mkPung(h,5)];
-    state.chows=[mkChow(w,2,3,4),mkChow(t,5,6,7)];
-    state.handTiles=[s(2),s(3),s(4),s(5)];
-    state.winningTile=s(5);
+add('七門齊（小）',20,'All 7 doors without both honor pungs',()=>{
+    state.pungs=[mkPung(h,1)];
+    state.chows=[mkChow(w,2,3,4),mkChow(w,5,6,7),mkChow(s,2,3,4),mkChow(t,5,6,7)];
+    state.handTiles=[h(5)];
+    state.winningTile=h(5);
     state.flowers=[fl(1),fl(5)];
 });
 add('錦上添花(三響劈)',20,'MultiWinSelfDraw + multiWin=3',()=>{
@@ -491,9 +512,9 @@ add('全求人',30,'All exposed + discard',()=>{
     state.pungs=[mkPung(s,2)];
     state.handTiles=[t(8)];state.winningTile=t(8);state.isSelfDraw=false;
 });
-add('四子',30,'4 concealed tiles',()=>{
+add('四子',30,'4 concealed tiles including the winning tile',()=>{
     state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7),mkChow(t,3,4,5),mkChow(w,6,7,8)];
-    state.handTiles=[t(2),t(2),t(8),t(8)];
+    state.handTiles=[t(2),t(8),t(8)];
     state.winningTile=t(8);state.isSelfDraw=true;
 });
 add('4暗刻',30,'4 concealed pungs',()=>{
@@ -505,6 +526,18 @@ add('小三元',30,'2 dragon pungs + 1 dragon pair',()=>{
     state.chows=[mkChow(w,2,3,4),mkChow(s,6,7,8)];
     state.handTiles=[t(2),t(3),t(4),h(7)];
     state.winningTile=h(7);
+},{
+    seed:'preserve-ordinary-small-three-dragons-v1',preservation:true,expectLiguligu:false,
+    prohibited:[
+        {name:'小三元',score:15,matcher:'exact'},
+        {name:'嚦咕嚦咕',matcher:'prefix'}
+    ],
+    baselineResults:[
+        {name:'無花',score:2},
+        {name:'二相逢x1',score:3},
+        {name:'三小姊妹',score:8},
+        {name:'小三元',score:30}
+    ]
 });
 add('三兄弟',30,'Same-num pungs all 3 suits',()=>{
     state.pungs=[mkPung(w,2),mkPung(s,2),mkPung(t,2)];
@@ -576,10 +609,9 @@ add('小於五',50,'All tiles < 5, no honors',()=>{
     state.handTiles=[w(2),w(3),w(4),w(2),w(3),w(4),s(2),s(3),s(4),s(2),s(3),s(4),t(2),t(3),t(4),t(2)];
     state.winningTile=t(3);
 });
-add('嚦咕嚦咕',50,'Seven pairs + pung (17 tiles, <6 waits)',()=>{
-    // 7 pairs (1 quad + 5 normal pairs) + 2 singles + WT → pung
-    state.handTiles=[w(1),w(1),w(1),w(1),w(2),w(3),w(3),w(4),w(4),s(1),s(1),s(5),s(5),t(3),t(3),t(3)];
-    state.winningTile=t(3);
+add('嚦咕嚦咕',50,'Eight concealed pairs with two quads; fewer than six waits',()=>{
+    state.handTiles=[w(1),w(1),w(1),w(1),w(2),w(2),w(2),w(2),w(3),w(3),w(4),w(4),s(1),s(1),s(5),s(5)];
+    state.winningTile=s(5);
 });
 
 // ---------- 60 fan ----------
@@ -598,10 +630,9 @@ add('五小姊妹',60,'4 consec pungs + connected pair',()=>{
     state.winningTile=null;
     state.handTiles=[w(6)];state.winningTile=w(6);
 });
-add('嚦咕嚦咕六/八飛',60,'嚦咕嚦咕 with 6+ waits (17 tiles)',()=>{
-    // 7 pairs + 2 singles + WT → pung of WT tile, 8 waits
+add('嚦咕嚦咕六/八飛',60,'Seven pairs plus two singles with a paired winning tile',()=>{
     state.handTiles=[w(1),w(1),w(3),w(3),w(5),w(5),w(7),w(7),w(9),w(9),s(2),s(2),s(4),s(6),s(6),s(8)];
-    state.winningTile=s(4);
+    state.winningTile=w(1);
 });
 
 // ---------- 80 fan ----------
@@ -610,6 +641,17 @@ add('小四喜',80,'3 wind pungs + 1 wind pair',()=>{
     state.chows=[mkChow(w,2,3,4)];
     state.handTiles=[t(5),t(6),t(7),h(4)];
     state.winningTile=h(4);
+},{
+    seed:'preserve-ordinary-small-four-winds-v1',preservation:true,expectLiguligu:false,
+    prohibited:[
+        {name:'小四喜',score:40,matcher:'exact'},
+        {name:'嚦咕嚦咕',matcher:'prefix'}
+    ],
+    baselineResults:[
+        {name:'無花',score:2},
+        {name:'四小姊妹',score:20},
+        {name:'小四喜',score:80}
+    ]
 });
 add('純全帶么九',80,'Every meld has terminal, no honors',()=>{
     state.pungs=[mkPung(w,1),mkPung(w,9),mkPung(s,1),mkPung(s,9)];
@@ -666,7 +708,7 @@ add('大四喜',120,'All 4 wind pungs',()=>{
 add('十三么',150,'Thirteen orphans with many waits',()=>{
     state.handTiles=[w(1),w(9),t(1),t(9),s(1),s(9),h(1),h(2),h(3),h(4),h(5),h(6),h(7),w(1),w(1),w(1)];
     state.winningTile=w(9);
-});
+},{required:[{name:'十三么（',score:150,matcher:'prefix',minCount:1,maxCount:1}]});
 
 // ---------- 150 fan ----------
 add('字一色',150,'All honor tiles',()=>{
@@ -693,62 +735,235 @@ add('清么碰',200,'All terminals',()=>{
 });
 
 // ---------- 混全帶X ----------
-add('混全帶',30,'Every meld contains number 1 or honors',()=>{
-    state.chows=[mkChow(w,1,2,3),mkChow(s,1,2,3),mkChow(t,1,2,3)];
-    state.pungs=[mkPung(h,5),mkPung(h,1)];
+add('混全帶1',30,'Every numbered meld contains 1; honor melds are allowed',()=>{
+    state.pungs=[mkPung(w,1),mkPung(s,1),mkPung(t,1),mkPung(h,5),mkPung(h,1)];
     state.handTiles=[t(1)];
     state.winningTile=t(1);
 });
 
 // ---------- Combination Tests ----------
 add('清一色+對對糊',100,'Pure one suit + all pungs',()=>{
-    state.handTiles=[w(1),w(1),w(1),w(3),w(3),w(3),w(5),w(5),w(5),w(7),w(7),w(7),w(2),w(2),w(2),w(8)];
+    state.pungs=[mkPung(w,1),mkPung(w,3),mkPung(w,5),mkPung(w,7)];
+    state.handTiles=[w(2),w(2),w(2),w(8)];
     state.winningTile=w(8);
-});
+},{required:[
+    {name:'清一色',score:100,matcher:'exact',minCount:1,maxCount:1},
+    {name:'對對糊',score:40,matcher:'exact',minCount:1,maxCount:1}
+]});
 add('無字花大平糊自摸',15,'No honors+flowers+all chows + self-draw',()=>{
-    // Clean all-chow hand: w123,w456,s234,s567,s789 + pair=t5, no 三相逢
-    state.handTiles=[w(1),w(2),w(3),w(4),w(5),w(6),s(2),s(3),s(4),s(5),s(6),s(7),s(8),s(9),t(4),t(5)];
+    state.handTiles=[w(1),w(2),w(3),w(4),w(5),w(6),s(2),s(3),s(4),s(5),s(6),s(7),s(7),s(8),s(9),t(5)];
     state.winningTile=t(5);state.isSelfDraw=true;
-});
+},{required:[
+    {name:'無字花大平糊',score:15,matcher:'exact',minCount:1,maxCount:1},
+    {name:'門清自摸',score:8,matcher:'exact',minCount:1,maxCount:1}
+],prohibited:[
+    {name:'無字',matcher:'exact'},
+    {name:'無字花',matcher:'exact'},
+    {name:'平糊',matcher:'exact'},
+    {name:'門清',matcher:'exact'},
+    {name:'自摸',matcher:'exact'}
+]});
 add('混一色+對對糊+小三元',40,'One suit + all pungs + 2 dragon pungs + dragon pair',()=>{
     state.pungs=[mkPung(h,5),mkPung(h,6),mkPung(s,8)];
-    state.handTiles=[s(2),s(2),s(2),s(5),s(5),s(8),h(7)];
+    state.handTiles=[s(2),s(2),s(2),s(5),s(5),s(5),h(7)];
     state.winningTile=h(7);
-});
-add('清一色+一色步步高+平糊',100,'Pure suit + 3 ascending chows + all chows',()=>{
+},{required:[
+    {name:'混一色',score:40,matcher:'exact',minCount:1,maxCount:1},
+    {name:'對對糊',score:40,matcher:'exact',minCount:1,maxCount:1},
+    {name:'小三元',score:30,matcher:'exact',minCount:1,maxCount:1}
+]});
+add('清一色+一色步步高',100,'Pure suit + 3 ascending chows',()=>{
     state.chows=[mkChow(s,1,2,3),mkChow(s,2,3,4),mkChow(s,3,4,5)];
     state.handTiles=[s(5),s(6),s(7),s(5),s(6),s(7),s(8)];
     state.winningTile=s(8);
-});
+},{required:[
+    {name:'清一色',score:100,matcher:'exact',minCount:1,maxCount:1},
+    {name:'一色步步高',score:15,matcher:'exact',minCount:1,maxCount:1}
+]});
 add('字一色',150,'All honor tiles + 大四喜 combo',()=>{
     state.pungs=[mkPung(h,1),mkPung(h,2),mkPung(h,3),mkPung(h,4)];
     state.handTiles=[h(5),h(5),h(5),h(6)];
     state.winningTile=h(6);
 });
-add('坎坎糊+exclusions',200,'5 concealed pungs + self-draw: 對對糊/門清/暗刻 excluded',()=>{
+add('坎坎糊+exclusions',200,'5 concealed pungs + self-draw: lower patterns excluded',()=>{
     state.handTiles=[w(3),w(3),w(3),w(5),w(5),w(5),w(7),w(7),w(7),s(2),s(2),s(2),s(4),s(4),s(4),t(6)];
     state.winningTile=t(6);state.isSelfDraw=true;
-});
+},{required:[{name:'坎坎糊',score:200,matcher:'exact',minCount:1,maxCount:1}],prohibited:[
+    {name:'對對糊',matcher:'exact'},{name:'門清',matcher:'exact'},
+    {name:'門清自摸',matcher:'exact'},{name:'自摸',matcher:'exact'},
+    {name:'2暗刻',matcher:'exact'},{name:'3暗刻',matcher:'exact'},
+    {name:'4暗刻',matcher:'exact'},{name:'5暗刻',matcher:'exact'}
+]});
 add('天糊-excludes四子',100,'Tenhou: 四子 should NOT appear',()=>{
     state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7),mkChow(t,3,4,5),mkChow(w,6,7,8)];
     state.handTiles=[t(2),t(2),t(8),t(8)];
     state.winningTile=t(8);state.isTenhou=true;state.isDealer=false;
-});
+},{required:[{name:'天糊',score:100,matcher:'exact',minCount:1,maxCount:1}],prohibited:[
+    {name:'四子',matcher:'exact'},{name:'天聽',matcher:'exact'}
+]});
 add('斷么+平糊+門清',5,'No terminals + all chows + concealed (flower blocks 無字花大平糊)',()=>{
     state.handTiles=[w(5),w(6),w(7),s(3),s(4),s(5),s(6),s(7),s(8),s(6),s(7),s(8),t(3),t(4),t(4),t(5)];
     state.winningTile=t(4);state.flowers=[fl(1)];
-});
+},{required:[
+    {name:'斷么',score:5,matcher:'exact',minCount:1,maxCount:1},
+    {name:'平糊',score:5,matcher:'exact',minCount:1,maxCount:1},
+    {name:'門清',score:5,matcher:'exact',minCount:1,maxCount:1}
+],prohibited:[{name:'無字',matcher:'exact'},{name:'無字花',matcher:'prefix'}]});
 add('混一色+對對糊',40,'One suit + honors + all pungs',()=>{
     state.pungs=[mkPung(h,1),mkPung(h,5),mkPung(s,8)];
-    state.handTiles=[s(2),s(2),s(2),s(5),s(5),s(8),h(7)];
+    state.handTiles=[s(2),s(2),s(2),s(5),s(5),s(5),h(7)];
     state.winningTile=h(7);
-});
+},{required:[
+    {name:'混一色',score:40,matcher:'exact',minCount:1,maxCount:1},
+    {name:'對對糊',score:40,matcher:'exact',minCount:1,maxCount:1}
+]});
 add('三姊妹+對對糊',15,'3 consecutive pungs same suit + all pungs',()=>{
     state.pungs=[mkPung(w,3),mkPung(w,4),mkPung(w,5),mkPung(s,2)];
     state.handTiles=[t(7),t(7),t(7),w(8)];
     state.winningTile=w(8);
+},{required:[
+    {name:'三姊妹',score:15,matcher:'exact',minCount:1,maxCount:1},
+    {name:'對對糊',score:40,matcher:'exact',minCount:1,maxCount:1}
+]});
+
+// ---------- v2.7 amendment failure-first matrix ----------
+const NO_HONOR_PROHIBITED=[
+    {name:'無字',matcher:'exact'},
+    {name:'無字花',matcher:'prefix'}
+];
+function addNoHonorAmendmentCase(id,targetName,targetScore,seed,setup){
+    [
+        {variant:'no-flower',flowers:[],suffix:'nf'},
+        {variant:'one-flower',flowers:[1],suffix:'f1'}
+    ].forEach(({variant,flowers,suffix})=>{
+        add(targetName,targetScore,`v2.7 ${targetName}: ${variant}`,()=>{
+            setup();
+            state.flowers=flowers.map(fl);
+        },{
+            id:`${id}-${suffix}`,
+            seed:`${seed}-${suffix}`,
+            category:'v2.7-no-honor',
+            traceCandidates:true,
+            required:targetName==='純全帶X'
+                ? [{name:'純全帶',score:targetScore,matcher:'prefix',minCount:1,maxCount:1}]
+                : [{name:targetName,score:targetScore,matcher:'exact',minCount:1,maxCount:1}],
+            prohibited:NO_HONOR_PROHIBITED
+        });
+    });
+}
+function pair(fn,value){return[fn(value),fn(value)]}
+function liguPairs(specs){return specs.flatMap(([fn,value])=>pair(fn,value))}
+
+addNoHonorAmendmentCase('v27-no-honor-duanyao','斷么',5,'seed-duanyao',()=>{
+    state.pungs=[mkPung(w,2),mkPung(w,3),mkPung(s,5),mkPung(s,6),mkPung(t,7)];
+    state.handTiles=[t(8)];state.winningTile=t(8);
+});
+addNoHonorAmendmentCase('v27-no-honor-pure-terminal','純全帶么九',80,'seed-pure-terminal',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,9),mkPung(s,1),mkPung(s,9)];
+    state.chows=[mkChow(t,7,8,9)];state.handTiles=[t(1)];state.winningTile=t(1);
+});
+addNoHonorAmendmentCase('v27-no-honor-all-terminals','清么碰',200,'seed-all-terminals',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,9),mkPung(s,1),mkPung(s,9),mkPung(t,1)];
+    state.handTiles=[t(9)];state.winningTile=t(9);
+});
+addNoHonorAmendmentCase('v27-no-honor-missing-suit','缺一門',10,'seed-missing-suit',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,2),mkPung(w,5),mkPung(s,3),mkPung(s,7)];
+    state.handTiles=[s(8)];state.winningTile=s(8);
+});
+addNoHonorAmendmentCase('v27-no-honor-pure-quan-dai-x','純全帶X',80,'seed-pure-quan-dai-7',()=>{
+    state.pungs=[mkPung(w,7),mkPung(s,7)];
+    state.chows=[mkChow(w,7,8,9),mkChow(s,7,8,9)];
+    state.handTiles=[t(5),t(6),t(7),t(7)];state.winningTile=t(7);
+});
+addNoHonorAmendmentCase('v27-no-honor-less-than-five','小於五',50,'seed-less-than-five',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,2),mkPung(s,3),mkPung(t,4),mkPung(t,2)];
+    state.handTiles=[s(4)];state.winningTile=s(4);
+});
+addNoHonorAmendmentCase('v27-no-honor-missing-five','缺五',10,'seed-missing-five',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,6),mkPung(s,2),mkPung(s,7),mkPung(t,3)];
+    state.handTiles=[t(8)];state.winningTile=t(8);
 });
 
+add('小三風',10,'v2.7 Ligu with three distinct wind pairs',()=>{
+    state.handTiles=liguPairs([[h,1],[h,2],[h,3],[w,1],[w,2],[s,1],[s,2],[t,5]]);
+    state.winningTile=t(5);
+},{
+    id:'v27-ligu-small-three-winds',seed:'seed-ligu-winds-3',category:'v2.7-ligu',traceCandidates:true,
+    required:[
+        {name:'嚦咕嚦咕六/八飛',score:60,matcher:'exact',minCount:1,maxCount:1},
+        {name:'小三風',score:10,matcher:'exact',minCount:1,maxCount:1}
+    ],
+    prohibited:[{name:'小三風',score:20,matcher:'exact'}]
+});
+add('小三元',15,'v2.7 Ligu with all three dragon pairs',()=>{
+    state.handTiles=liguPairs([[h,5],[h,6],[h,7],[w,1],[w,2],[s,1],[s,2],[t,5]]);
+    state.winningTile=t(5);
+},{
+    id:'v27-ligu-small-three-dragons',seed:'seed-ligu-dragons-3',category:'v2.7-ligu',traceCandidates:true,
+    required:[
+        {name:'嚦咕嚦咕六/八飛',score:60,matcher:'exact',minCount:1,maxCount:1},
+        {name:'小三元',score:15,matcher:'exact',minCount:1,maxCount:1}
+    ],
+    prohibited:[{name:'小三元',score:30,matcher:'exact'}]
+});
+add('小四喜',40,'v2.7 Ligu with all four wind pairs',()=>{
+    state.handTiles=liguPairs([[h,1],[h,2],[h,3],[h,4],[w,1],[w,2],[s,1],[t,5]]);
+    state.winningTile=t(5);
+},{
+    id:'v27-ligu-small-four-winds',seed:'seed-ligu-winds-4',category:'v2.7-ligu',traceCandidates:true,
+    required:[
+        {name:'嚦咕嚦咕六/八飛',score:60,matcher:'exact',minCount:1,maxCount:1},
+        {name:'小四喜',score:40,matcher:'exact',minCount:1,maxCount:1}
+    ],
+    prohibited:[{name:'小四喜',score:80,matcher:'exact'}]
+});
+// ---------- Decomposition exclusivity regressions ----------
+add('5暗刻不另計對對糊',100,'Five concealed pungs supersede all-pungs and lower concealed-pung patterns',()=>{
+    state.handTiles=[
+        w(1),w(1),w(1),w(4),w(4),w(4),w(7),w(7),w(7),
+        s(2),s(2),s(2),t(5),t(5),t(5),h(7)
+    ];
+    state.winningTile=h(7);state.isSelfDraw=false;
+},{
+    id:'decomp-five-concealed-no-duidui',category:'decomposition-regression',traceCandidates:true,
+    required:[{name:'5暗刻',score:100,matcher:'exact',minCount:1,maxCount:1}],
+    prohibited:[
+        {name:'對對糊',matcher:'exact'},{name:'門清',matcher:'exact'},
+        {name:'2暗刻',matcher:'exact'},{name:'3暗刻',matcher:'exact'},{name:'4暗刻',matcher:'exact'}
+    ]
+});
+add('嚦咕嚦咕不另計對對糊',50,'Pair decomposition cannot reuse its tiles as an all-pungs hand',()=>{
+    state.handTiles=[
+        w(1),w(1),w(1),w(1),w(4),w(4),w(4),w(4),
+        s(2),s(2),s(2),s(2),t(7),t(7),h(5),h(5)
+    ];
+    state.winningTile=t(7);
+},{
+    id:'decomp-liguligu-no-duidui',category:'decomposition-regression',traceCandidates:true,expectLiguligu:true,
+    required:[{name:'嚦咕嚦咕',score:50,matcher:'exact',minCount:1,maxCount:1}],
+    prohibited:[{name:'對對糊',matcher:'exact'},{name:'四般高',matcher:'prefix'}]
+});
+add('四般高暗採單一分解',60,'11112222333344455 chooses the higher valid structural decomposition without tile reuse',()=>{
+    state.handTiles=[
+        w(1),w(1),w(1),w(1),w(2),w(2),w(2),w(2),
+        w(3),w(3),w(3),w(3),w(4),w(4),w(5),w(5)
+    ];
+    state.winningTile=w(4);
+},{
+    id:'decomp-11112222333344455',category:'decomposition-regression',traceCandidates:true,
+    required:[
+        {name:'四般高 (暗)',score:60,matcher:'exact',minCount:1,maxCount:1},
+        {name:'清一色',score:100,matcher:'exact',minCount:1,maxCount:1},
+        {name:'門清',score:5,matcher:'exact',minCount:1,maxCount:1}
+    ],
+    prohibited:[
+        {name:'對對糊',matcher:'exact'},{name:'嚦咕嚦咕',matcher:'prefix'},
+        {name:'3暗刻',matcher:'exact'},{name:'五小姊妹',matcher:'exact'}
+    ]
+});
+// TEST-DEFINITIONS-END
+
+// TEST-HARNESS-BEGIN
 // ===== Test Runner =====
 function tileStr(t){
     if(!t)return 'null';
@@ -774,67 +989,188 @@ function captureSetup(){
     if(state.concealedKongs.length)o.concealedKongs=state.concealedKongs.map(meldStr);
     if(state.flowers.length)o.flowers=state.flowers.map(tileStr);
     const flags=[];
-    if(state.isSelfDraw)flags.push('isSelfDraw');
-    if(state.isDeclaredReady)flags.push('isDeclaredReady');
-    if(state.isIppatsu)flags.push('isIppatsu');
-    if(state.isLastTileDraw)flags.push('isLastTileDraw');
-    if(state.isLastDiscard)flags.push('isLastDiscard');
-    if(state.isFlowerDraw)flags.push('isFlowerDraw');
-    if(state.isKongDraw)flags.push('isKongDraw');
-    if(state.isRobbingKong)flags.push('isRobbingKong');
-    if(state.isDoubleKongDraw)flags.push('isDoubleKongDraw');
-    if(state.isRobbingDoubleKong)flags.push('isRobbingDoubleKong');
-    if(state.isTenhou)flags.push('isTenhou');
-    if(state.isChihou)flags.push('isChihou');
-    if(state.isTenReady)flags.push('isTenReady');
-    if(state.isChiReady)flags.push('isChiReady');
-    if(state.isFaceDown)flags.push('isFaceDown');
+    ['isSelfDraw','isDeclaredReady','isIppatsu','isLastTileDraw','isLastDiscard','isFlowerDraw',
+     'isKongDraw','isRobbingKong','isDoubleKongDraw','isRobbingDoubleKong','isTenhou','isChihou',
+     'isTenReady','isChiReady','isFaceDown','isMultiWinSelfDraw'].forEach(flag=>{
+        if(state[flag])flags.push(flag);
+    });
     if(state.isMultiWin)flags.push('isMultiWin='+state.isMultiWin);
-    if(state.isMultiWinSelfDraw)flags.push('isMultiWinSelfDraw');
     if(state.visibleWinTileCount)flags.push('visibleWinTileCount='+state.visibleWinTileCount);
     if(state.seatWind!=='東')flags.push('seatWind='+state.seatWind);
     if(state.roundWind!=='東')flags.push('roundWind='+state.roundWind);
     if(state.isDealer)flags.push('isDealer');
     if(flags.length)o.flags=flags;
-    return JSON.stringify(o,null,1);
+    return o;
 }
-function runAllTests(){
+function resultMatches(result,spec){
+    const matcher=spec.matcher||'exact';
+    const nameMatches=matcher==='prefix' ? result.name.startsWith(spec.name) : result.name===spec.name;
+    const scoreMatches=!Object.prototype.hasOwnProperty.call(spec,'score')||result.score===spec.score;
+    return nameMatches&&scoreMatches;
+}
+function normalizeResults(results){
+    return results.map(({name,score})=>({name,score}));
+}
+function evaluateAssertions(test,results){
+    const violations=[];
+    test.required.forEach(spec=>{
+        const count=results.filter(result=>resultMatches(result,spec)).length;
+        const min=spec.minCount??1;
+        const max=spec.maxCount??1;
+        if(count<min)violations.push({kind:'missing-required',spec,count});
+        else if(count>max)violations.push({kind:'duplicate-target',spec,count});
+    });
+    test.prohibited.forEach(spec=>{
+        const matches=results.filter(result=>resultMatches(result,spec));
+        if(matches.length)violations.push({kind:'prohibited-result',spec,count:matches.length,matches});
+    });
+    if(test.expectLiguligu!==undefined){
+        const actualLiguligu=isLiguligu(getAllTiles());
+        if(actualLiguligu!==test.expectLiguligu){
+            violations.push({kind:'classification-differential',expectedLiguligu:test.expectLiguligu,actualLiguligu});
+        }
+    }
+    if(test.baselineResults){
+        const actualNormalized=normalizeResults(results);
+        if(JSON.stringify(actualNormalized)!==JSON.stringify(test.baselineResults)){
+            violations.push({kind:'preservation-differential',expected:test.baselineResults,actual:actualNormalized});
+        }
+    }
+    return{pass:violations.length===0,violations};
+}
+function runOracleProbes(){
+    const cases=[
+        {id:'oracle-exact-pass',expected:true,test:{required:[{name:'目標',score:5}],prohibited:[]},results:[{name:'目標',score:5}]},
+        {id:'oracle-wrong-score-rejected',expected:false,test:{required:[{name:'目標',score:5}],prohibited:[]},results:[{name:'目標',score:10}]},
+        {id:'oracle-broad-prefix-rejected',expected:false,test:{required:[{name:'純全帶',score:80}],prohibited:[]},results:[{name:'純全帶3',score:80}]},
+        {id:'oracle-missing-required-rejected',expected:false,test:{required:[{name:'目標',score:5}],prohibited:[]},results:[]},
+        {id:'oracle-prohibited-rejected',expected:false,test:{required:[{name:'目標',score:5}],prohibited:[{name:'無字'}]},results:[{name:'目標',score:5},{name:'無字',score:2}]},
+        {id:'oracle-duplicate-rejected',expected:false,test:{required:[{name:'目標',score:5,minCount:1,maxCount:1}],prohibited:[]},results:[{name:'目標',score:5},{name:'目標',score:5}]},
+        {id:'oracle-opt-in-prefix-pass',expected:true,test:{required:[{name:'純全帶',score:80,matcher:'prefix'}],prohibited:[]},results:[{name:'純全帶3',score:80}]}
+    ];
+    const details=cases.map(probe=>{
+        const actual=evaluateAssertions(probe.test,probe.results).pass;
+        return{id:probe.id,passed:actual===probe.expected,expected:probe.expected,actual};
+    });
+    return{total:details.length,passed:details.filter(item=>item.passed).length,failed:details.filter(item=>!item.passed).length,details};
+}
+function detectWithOptionalTrace(test){
+    let rawCandidates=null;
+    if(!test.traceCandidates)return{results:detectHandTypes(),rawCandidates};
+    const originalApplyExclusions=applyExclusions;
+    applyExclusions=function(candidates){
+        rawCandidates=candidates.map(result=>({...result}));
+        return originalApplyExclusions(candidates);
+    };
+    try{return{results:detectHandTypes(),rawCandidates};}
+    finally{applyExclusions=originalApplyExclusions;}
+}
+function formatResult(result){return `${result.name}(${result.score})`}
+function escapeHtml(value){
+    return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function writeCompletion(payload){
+    const completion=document.getElementById('test-completion');
+    completion.textContent=JSON.stringify(payload);
+    window.__TEST_COMPLETION__=payload;
+}
+function validateTestInventory(){
+    const ids=T.map(test=>test.id);
+    const uniqueIds=new Set(ids);
+    const missingPreFixIds=PRE_FIX_CANONICAL_IDS.filter(id=>!uniqueIds.has(id));
+    const duplicateIds=ids.filter((id,index)=>ids.indexOf(id)!==index);
+    return{
+        passed:missingPreFixIds.length===0&&duplicateIds.length===0,
+        expectedPreFixCount:PRE_FIX_CANONICAL_IDS.length,
+        registeredPreFixCount:PRE_FIX_CANONICAL_IDS.filter(id=>uniqueIds.has(id)).length,
+        missingPreFixIds,duplicateIds,
+        preFixCanonicalIds:PRE_FIX_CANONICAL_IDS
+    };
+}
+function runAllTests(executionMode='manual'){
     const tbody=document.querySelector('#results tbody');
     tbody.innerHTML='';
-    let passed=0,failed=0;
-    const sorted=[...T].sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name));
+    document.getElementById('test-completion').textContent='';
+    const oracleProbes=runOracleProbes();
+    const inventory=validateTestInventory();
+    const counts={discovered:T.length,executed:0,passed:0,failed:0,errors:0};
+    const cases=[];
+    const failures=[];
+    const executedIds=new Set();
+    const sorted=[...T].sort((a,b)=>a.score-b.score||a.id.localeCompare(b.id));
     sorted.forEach((test,i)=>{
         resetState();
-        let result,results=[],setupJson='';
+        let results=[];
+        let rawCandidates=null;
+        let setup={};
+        let verdict={pass:false,violations:[]};
+        let error=null;
         try{
+            if(executedIds.has(test.id))throw new Error(`Case executed more than once: ${test.id}`);
+            executedIds.add(test.id);
             test.setup();
-            setupJson=captureSetup();
-            results=detectHandTypes();
-            const found=results.some(r=>r.name===test.name||(r.name.startsWith(test.name)&&r.name.length>test.name.length&&!r.name.startsWith(test.name+'(')?false:r.name===test.name));
-            // More flexible: check name match (exact or starts with for parameterized names)
-            const match=results.find(r=>{
-                if(r.name===test.name && r.score===test.score) return true;
-                if(r.name.startsWith(test.name) && r.score===test.score) return true;
-                if(test.name.startsWith(r.name) && r.score===test.score) return true;
-                return false;
-            });
-            // Name-only check: verify the target pattern exists in results
-            const nameMatch=!match&&results.some(r=>r.name===test.name||r.name.startsWith(test.name)||(test.name.length>1&&r.name.startsWith(test.name)));
-            result=!!match||nameMatch;
+            setup=captureSetup();
+            ({results,rawCandidates}=detectWithOptionalTrace(test));
+            verdict=evaluateAssertions(test,results);
+            if(verdict.pass)counts.passed++;
+            else counts.failed++;
         }catch(e){
-            result=false;
-            console.error(`Test "${test.name}" error:`,e);
+            error={name:e.name||'Error',message:e.message||String(e),stack:e.stack||null};
+            counts.errors++;
+            console.error(`Test "${test.id}" error:`,e);
+        }finally{
+            counts.executed++;
         }
-        if(result) passed++; else failed++;
+        const caseResult={
+            id:test.id,name:test.name,score:test.score,category:test.category,seed:test.seed,
+            preservation:test.preservation,expectLiguligu:test.expectLiguligu,
+            baselineResults:test.baselineResults,
+            status:error?'error':verdict.pass?'passed':'failed',required:test.required,
+            prohibited:test.prohibited,violations:verdict.violations,setup,
+            actual:results,rawCandidates,error
+        };
+        cases.push(caseResult);
+        if(caseResult.status!=='passed')failures.push(caseResult);
+        const detail=caseResult.status==='passed'?'':`<span class="detail">${escapeHtml(error?error.message:`${verdict.violations.map(v=>v.kind).join(', ')}; got ${results.map(formatResult).join(', ')}`)}</span>`;
+        const resultCell=caseResult.status==='passed'?'<span class="pass">✓</span>':'<span class="fail">✗</span>';
         const tr=document.createElement('tr');
-        const resultCell=result?`<span class="pass">✓</span>`:`<span class="fail">✗</span>`;
-        const detail=!result&&results.length?`<span class="detail">Got: ${results.map(r=>r.name+'('+r.score+')').join(', ')}</span>`:'';
-        tr.innerHTML=`<td>${i+1}</td><td>${test.name}${detail}</td><td>${test.score}</td><td>${resultCell}</td><td><pre class="json-setup">${setupJson}</pre></td>`;
+        tr.innerHTML=`<td>${i+1}</td><td><code>${escapeHtml(test.id)}</code><br>${escapeHtml(test.name)}${detail}</td><td>${test.score}</td><td>${resultCell}</td><td><pre class="json-setup">${escapeHtml(JSON.stringify(setup,null,1))}</pre></td>`;
         tbody.appendChild(tr);
     });
+    const preservationCases=cases.filter(result=>result.preservation);
+    const preservation={
+        total:preservationCases.length,
+        passed:preservationCases.filter(result=>result.status==='passed').length,
+        failed:preservationCases.filter(result=>result.status==='failed').length,
+        errors:preservationCases.filter(result=>result.status==='error').length,
+        ids:preservationCases.map(result=>result.id),
+        seeds:preservationCases.map(result=>result.seed),
+        baselines:preservationCases.map(result=>({id:result.id,expected:result.baselineResults,actual:normalizeResults(result.actual)}))
+    };
+    const invariant=counts.discovered===counts.executed&&counts.executed===counts.passed+counts.failed+counts.errors;
+    const status=invariant&&inventory.passed&&counts.failed===0&&counts.errors===0&&oracleProbes.failed===0?'success':'failure';
+    const payload={
+        schemaVersion:TEST_SCHEMA_VERSION,status,executionMode,counts,invariant,
+        build:window.__TEST_BUILD_META__||null,
+        oracleProbes,inventory,preservation,
+        testIds:T.map(test=>test.id),
+        amendmentCaseIds:T.filter(test=>test.category.startsWith('v2.7')).map(test=>test.id),
+        preservationCaseIds:T.filter(test=>test.preservation).map(test=>test.id),
+        cases,failures
+    };
     document.getElementById('summary').innerHTML=
-        `<span class="pass-count">${passed}</span> passed / <span class="fail-count">${failed}</span> failed / ${T.length} total`;
+        `<span class="pass-count">${counts.passed}</span> passed / <span class="fail-count">${counts.failed}</span> failed / <span class="fail-count">${counts.errors}</span> errors / ${counts.discovered} discovered; oracle probes ${oracleProbes.passed}/${oracleProbes.total}; preservation ${preservation.passed}/${preservation.total}`;
+    writeCompletion(payload);
+    document.title=`TESTS:${status}:${counts.passed}/${counts.failed}/${counts.errors}/${counts.discovered}`;
+    return payload;
 }
+const runMode=new URLSearchParams(window.location.search).get('run');
+if(runMode==='auto'){
+    window.addEventListener('DOMContentLoaded',()=>runAllTests('auto'),{once:true});
+}else if(runMode==='manual-probe'){
+    window.addEventListener('DOMContentLoaded',()=>document.getElementById('run-btn').click(),{once:true});
+}
+// TEST-HARNESS-END
 </script>
 </body>
 </html>

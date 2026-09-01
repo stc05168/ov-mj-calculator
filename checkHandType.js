@@ -14,7 +14,9 @@ const EXCLUSION_RULES = {
     '大四喜': ['風牌'],
     '字一色': ['混么碰', '混全帶么九'],
     '五暗刻': ['對對糊', '門清', '2暗刻', '3暗刻', '4暗刻'],
+    '5暗刻': ['對對糊', '門清', '2暗刻', '3暗刻', '4暗刻'],
     '坎坎糊': ['對對糊', '門清', '門清自摸', '自摸', '2暗刻', '3暗刻', '4暗刻', '5暗刻'],
+    '四般高': ['對對糊'],
     '斷么': ['無字', '無字花'],
     '純全帶么九': ['無字', '無字花', '混全帶么九'],
     '混么碰': ['混全帶么九'],
@@ -35,38 +37,79 @@ const EXCLUSION_RULES = {
     '地聽': ['門清', '門清自摸', '自摸'],
     '十三么': ['門清', '門清自摸', '自摸'],
     '十六不搭': ['門清', '門清自摸', '自摸'],
-    '嚦咕嚦咕': ['門清', '門清自摸', '自摸'],
-    '嚦咕嚦咕六/八飛': ['門清', '門清自摸', '自摸'],
+    '嚦咕嚦咕': ['門清', '門清自摸', '自摸', '對對糊'],
+    '嚦咕嚦咕六/八飛': ['門清', '門清自摸', '自摸', '對對糊'],
 };
 
+const EXCLUSION_KEY_MATCHERS = {
+    '純全帶X': name => /^純全帶[1-9]$/.test(name)
+};
+
+function exclusionRulesFor(name) {
+    if (EXCLUSION_RULES[name]) return EXCLUSION_RULES[name];
+    for (const [key, matcher] of Object.entries(EXCLUSION_KEY_MATCHERS)) {
+        if (matcher(name)) return EXCLUSION_RULES[key];
+    }
+    // Parameterized emitted names such as 風牌(東) and 十三么（12 飛）
+    // inherit their declared base rule. The trigger itself is never removed.
+    const prefixKey = Object.keys(EXCLUSION_RULES).find(key =>
+        key !== '純全帶X' && name.startsWith(key)
+    );
+    return prefixKey ? EXCLUSION_RULES[prefixKey] : null;
+}
+
 function applyExclusions(handTypes) {
-    const detectedNames = handTypes.map(h => h.name);
     const toRemove = new Set();
 
-    for (const ht of handTypes) {
-        // Check exact match first
-        let rules = EXCLUSION_RULES[ht.name];
-        if (!rules) {
-            // Also check if any key is a prefix of the detected name (for names like '純全帶X(5)')
-            for (const key of Object.keys(EXCLUSION_RULES)) {
-                if (ht.name.startsWith(key)) {
-                    rules = EXCLUSION_RULES[key];
-                    break;
-                }
-            }
-        }
+    for (const trigger of handTypes) {
+        const rules = exclusionRulesFor(trigger.name);
         if (!rules) continue;
 
         for (const excluded of rules) {
-            for (const detected of detectedNames) {
-                if (detected === excluded || detected.startsWith(excluded)) {
-                    toRemove.add(detected);
+            for (const candidate of handTypes) {
+                // Prefix exclusions target parameterized child results, but must not
+                // self-remove a combined trigger such as 無字花 or 門清自摸.
+                if (candidate === trigger) continue;
+                if (candidate.name === excluded || candidate.name.startsWith(excluded)) {
+                    toRemove.add(candidate);
                 }
             }
         }
     }
 
-    return handTypes.filter(h => !toRemove.has(h.name));
+    return handTypes.filter(handType => !toRemove.has(handType));
+}
+
+function isPungOnlyDecompositionType(name) {
+    return name === '對對糊' ||
+        /^[2-5]暗刻$/.test(name) ||
+        name === '坎坎糊' ||
+        name.endsWith('姊妹') ||
+        name.endsWith('兄弟');
+}
+
+// 四般高與嚦咕嚦咕是互斥的完整牌組分解；同一張牌不可同時當順子、對子或刻子。
+// 若兩種分解都成立，採番數較高者（同番時採四般高），再移除只可能來自刻子分解的候選。
+function resolveStructuralDecompositionConflicts(handTypes) {
+    const fourBanGaoTypes = handTypes.filter(type => type.name.startsWith('四般高'));
+    const liguliguTypes = handTypes.filter(type => type.name.startsWith('嚦咕嚦咕'));
+    let resolved = handTypes;
+
+    if (fourBanGaoTypes.length && liguliguTypes.length) {
+        const fourBanGaoScore = Math.max(...fourBanGaoTypes.map(type => type.score));
+        const liguliguScore = Math.max(...liguliguTypes.map(type => type.score));
+        const excludedPrefix = fourBanGaoScore >= liguliguScore ? '嚦咕嚦咕' : '四般高';
+        resolved = resolved.filter(type => !type.name.startsWith(excludedPrefix));
+    }
+
+    const usesSequenceOrPairDecomposition = resolved.some(type =>
+        type.name.startsWith('四般高') || type.name.startsWith('嚦咕嚦咕')
+    );
+    if (usesSequenceOrPairDecomposition) {
+        resolved = resolved.filter(type => !isPungOnlyDecompositionType(type.name));
+    }
+
+    return resolved;
 }
 
 function checkDaJiHu(handTypes, isSelfDraw) {
@@ -189,24 +232,44 @@ function detectHandTypes() {
         handTypes.push({ name: '字一色', score: 150 });
     }
     
+    // 嚦咕嚦咕的風牌、元牌牌型按 2026-02 規則使用專屬番數。
+    // These patterns are made from pairs (not the normal pung/pair structures).
+    const isLiguliguHand = isLiguligu(allTiles);
+    const liguliguWindPairCount = isLiguliguHand
+        ? [1, 2, 3, 4].filter(value => allTiles.filter(tile =>
+            tile.type === TILE_TYPES.HONORS && tile.value === value
+        ).length === 2).length
+        : 0;
+    const liguliguDragonPairCount = isLiguliguHand
+        ? [5, 6, 7].filter(value => allTiles.filter(tile =>
+            tile.type === TILE_TYPES.HONORS && tile.value === value
+        ).length === 2).length
+        : 0;
+
     // 10. 大四喜
     let isWindsResult = isBigFourWinds(allTiles) || isSmallFourWinds(allTiles) || isBigThreeWinds(allTiles) || isSmallThreeWinds(allTiles);
-    if (isBigFourWinds(allTiles)) {
+    if (isLiguliguHand && liguliguWindPairCount === 4) {
+        handTypes.push({ name: '小四喜', score: 40 });
+    } else if (isLiguliguHand && liguliguWindPairCount === 3) {
+        handTypes.push({ name: '小三風', score: 10 });
+    } else if (isBigFourWinds(allTiles)) {
         handTypes.push({ name: '大四喜', score: 120 });
-    }else if (isSmallFourWinds(allTiles)) {
+    } else if (isSmallFourWinds(allTiles)) {
         handTypes.push({ name: '小四喜', score: 80 });
-    }else if (isBigThreeWinds(allTiles)) {
+    } else if (isBigThreeWinds(allTiles)) {
         // 8. 大三風
         handTypes.push({ name: '大三風', score: 40 });
-    }else if (isSmallThreeWinds(allTiles)) {
+    } else if (isSmallThreeWinds(allTiles)) {
         handTypes.push({ name: '小三風', score: 20 });
     }
     
     // 6. 大三元
     let isDragonsResult = isBigThreeDragons(allTiles) || isSmallThreeDragons(allTiles);
-    if (isBigThreeDragons(allTiles)) {
+    if (isLiguliguHand && liguliguDragonPairCount === 3) {
+        handTypes.push({ name: '小三元', score: 15 });
+    } else if (isBigThreeDragons(allTiles)) {
         handTypes.push({ name: '大三元', score: 60 });
-    }else if (isSmallThreeDragons(allTiles)) {
+    } else if (isSmallThreeDragons(allTiles)) {
         handTypes.push({ name: '小三元', score: 30 });
     }
     
@@ -341,7 +404,7 @@ function detectHandTypes() {
         handTypes.push({ name: '半求人', score: 15 });
     }
 
-    // 四子/七子/十子: Based on concealed tile count
+    // 四子/七子/十子: Based on concealed tile count, including the winning tile.
     const concealedCount = state.handTiles.length + (state.winningTile ? 1 : 0);
     if (concealedCount === 4) {
         handTypes.push({ name: '四子', score: 30 });
@@ -456,7 +519,7 @@ function detectHandTypes() {
         handTypes.push({ name: '三兄弟', score: 30 });
     }else if (isSmallThreeBrothers(allTiles)) {
         handTypes.push({ name: '三小兄弟', score: 15 });
-    }else if (brotherPungs.length >= 2) {
+    }else if (brotherPungs.length >= 1) {
         handTypes.push({ name: '兩兄弟', score: 5 });
     }
     
@@ -581,7 +644,8 @@ function detectHandTypes() {
         }
     }
     
-    let finalHandTypes = applyExclusions(handTypes);
+    const decompositionResolvedTypes = resolveStructuralDecompositionConflicts(handTypes);
+    let finalHandTypes = applyExclusions(decompositionResolvedTypes);
     finalHandTypes = checkDaJiHu(finalHandTypes, state.isSelfDraw);
     return sortHandTypes(finalHandTypes);
 }
@@ -2151,33 +2215,30 @@ function canFormAllChows(tiles) {
 
 // 檢查是否為對對糊
 function isDuiDuiHu(allTiles) {
-    // 對對糊需要全部是刻子（三张或四张相同的牌）和一对将牌
+    // 台灣 16 張麻將的對對糊必須是五組刻子／槓和一對將牌。
     if (state.chows.length > 0) {
         return false;
     }
-    
-    // 复制牌组以便操作
-    const tiles = [...allTiles];
+
     const counts = {};
-    
-    // 统计每种牌的数量
-    tiles.forEach(tile => {
+    allTiles.forEach(tile => {
         const key = `${tile.type}-${tile.value}`;
         counts[key] = (counts[key] || 0) + 1;
     });
-    
-    // 检查是否全部是刻子（3或4张相同的牌）和一对将牌
+
     let pairCount = 0;
-    for (const key in counts) {
-        const count = counts[key];
+    let pungOrKongCount = 0;
+    for (const count of Object.values(counts)) {
         if (count === 2) {
             pairCount++;
-        } else if (count !== 3 && count !== 4) {
+        } else if (count === 3 || count === 4) {
+            pungOrKongCount++;
+        } else {
             return false;
         }
     }
-    
-    return pairCount === 1;
+
+    return pairCount === 1 && pungOrKongCount === 5;
 }
 
 // 檢查是否為混一色
@@ -2310,30 +2371,22 @@ function getBrotherPungs() {
 
 // d2. 三小兄弟: 兩兄弟再加上另一個兄弟對子 (眼)
 function isSmallThreeBrothers(allTiles) {
-    const brotherPungs = getBrotherPungs();
-    if (brotherPungs.length < 2) return false;
-    
-    // 檢查是否有對子
-    const counts = {};
+    const brotherValues = getBrotherPungs();
+    if (brotherValues.length === 0) return false;
+
+    const countsByValueAndSuit = {};
     allTiles.forEach(tile => {
-        if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
-            const key = `${tile.type}-${tile.value}`;
-            counts[key] = (counts[key] || 0) + 1;
-        }
+        if (tile.type === TILE_TYPES.HONORS || tile.type === TILE_TYPES.FLOWERS) return;
+        if (!countsByValueAndSuit[tile.value]) countsByValueAndSuit[tile.value] = {};
+        countsByValueAndSuit[tile.value][tile.type] =
+            (countsByValueAndSuit[tile.value][tile.type] || 0) + 1;
     });
-    
-    // 尋找對子
-    for (const key in counts) {
-        if (counts[key] >= 2) {
-            const [type, value] = key.split('-');
-            // 檢查這個對子是否與已有的兄弟刻子不同
-            if (!brotherPungs.includes(value)) {
-                return true;
-            }
-        }
-    }
-    
-    return false;
+
+    return brotherValues.some(value => {
+        const suitCounts = Object.values(countsByValueAndSuit[value] || {});
+        return suitCounts.filter(count => count >= 3).length === 2 &&
+            suitCounts.filter(count => count === 2).length === 1;
+    });
 }
 
 // d3. 三兄弟: 三款不同而數子相同的刻子
@@ -4185,16 +4238,12 @@ function analyzeWaitsBeforeWin(handTiles, chows, pungs, openKongs, concealedKong
 function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
     if (tiles.length !== 17) return false;
 
-    // 检查是否能组成4组（顺子/刻子/槓）加一对
     const sortedTiles = [...tiles].sort((a, b) => {
         if (a.type !== b.type) return a.type.localeCompare(b.type);
         return a.value - b.value;
     });
-
-    // Remove specific meld tile instances from sortedTiles using index tracking
     const usedIndices = new Set();
 
-    // Remove chow tiles (specific value sequences)
     for (const chow of chows) {
         const chowValues = [...chow.tiles.map(t => t.value)].sort((a, b) => a - b);
         for (const val of chowValues) {
@@ -4206,8 +4255,6 @@ function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
             }
         }
     }
-
-    // Remove pung tiles (3 copies of same value)
     for (const pung of pungs) {
         let removed = 0;
         for (let i = 0; i < sortedTiles.length && removed < 3; i++) {
@@ -4217,8 +4264,6 @@ function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
             }
         }
     }
-
-    // Remove kong tiles (4 copies of same value)
     for (const kong of [...openKongs, ...concealedKongs]) {
         let removed = 0;
         for (let i = 0; i < sortedTiles.length && removed < 4; i++) {
@@ -4230,28 +4275,16 @@ function canWin(tiles, chows, pungs, openKongs, concealedKongs) {
     }
 
     const remainingTiles = sortedTiles.filter((_, i) => !usedIndices.has(i));
-
     const meldCount = chows.length + pungs.length + openKongs.length + concealedKongs.length;
-
-    // 计算还需要的手牌组合数
-    const neededMelds = 5 - meldCount; // 5个组合加一对
+    const neededMelds = 5 - meldCount;
     const neededTilesForMelds = neededMelds * 3;
-
-    // 检查剩余牌是否能组成需要的组合数加一对
     if (remainingTiles.length !== neededTilesForMelds + 2) return false;
 
-    // 尝试找出将牌
     for (let i = 0; i < remainingTiles.length - 1; i++) {
         if (remainingTiles[i].type === remainingTiles[i + 1].type &&
             remainingTiles[i].value === remainingTiles[i + 1].value) {
-            // 找到一对将牌
-            const pair = [remainingTiles[i], remainingTiles[i + 1]];
-            const restTiles = remainingTiles.filter((t, index) => index !== i && index !== i + 1);
-
-            // 检查剩余牌是否能组成需要的顺子或刻子
-            if (canFormMelds(restTiles, neededMelds)) {
-                return true;
-            }
+            const restTiles = remainingTiles.filter((_, index) => index !== i && index !== i + 1);
+            if (canFormMelds(restTiles, neededMelds)) return true;
         }
     }
 

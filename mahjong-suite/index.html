@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b2b26">
+  <meta name="description" content="免登入使用的台灣麻將計番與整場勝負記錄工具；登入後可保存到 Java DB">
+  <title>One Victoria 麻將助手</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="suite-header">
+    <div class="suite-brand">
+      <small>ONE VICTORIA</small>
+      <h1>麻將計番・整場記錄</h1>
+      <p>免登入直接使用；登入後可保存牌局及勝負紀錄</p>
+    </div>
+    <div class="suite-header-actions">
+      <div class="suite-session" id="suite-session-summary" aria-live="polite">訪客模式 · 關閉即清除</div>
+      <a class="suite-login" id="suite-login" href="../session-scorekeeper-online/index.html">
+        <span>登入／建立戶口</span>
+        <small>保存牌局到雲端 DB</small>
+      </a>
+      <span class="suite-account-badge" id="suite-account-badge" hidden>戶口模式 · 可保存到 DB</span>
+    </div>
+  </header>
+
+  <nav class="suite-nav" aria-label="整合功能">
+    <button class="is-active" type="button" data-suite-view="scorekeeper" aria-pressed="true">
+      <span class="step">1</span><span><strong>直接記分</strong><small>不用計番，直接輸入本局番數</small></span>
+    </button>
+    <button type="button" data-suite-view="calculator" aria-pressed="false">
+      <span class="step">2</span><span><strong>牌型計番（可選）</strong><small>不確定番數時才使用</small></span>
+    </button>
+  </nav>
+
+  <main class="suite-workspace">
+    <section class="suite-panel is-active" data-suite-panel="scorekeeper" aria-label="整場記分器">
+      <div class="panel-head"><div><strong>直接記錄本局</strong><span>選結果與玩家後直接輸入牌型番數；莊／連／拉由整場規則自動計算</span></div><a href="../session-scorekeeper/index.html" target="_blank" rel="noopener">獨立開啟</a></div>
+      <iframe id="suite-scorekeeper" data-src="../session-scorekeeper/index.html?embedded=1&amp;storage=memory" title="台灣麻將整場記分器"></iframe>
+    </section>
+    <section class="suite-panel" data-suite-panel="calculator" aria-label="單手計番器" hidden>
+      <div class="panel-head"><div><strong>牌型計番（可選）</strong><span>完成 17 張牌及糊牌條件後，可把牌型番帶回本局</span></div><a href="../mj.html" target="_blank" rel="noopener">獨立開啟</a></div>
+      <iframe id="suite-calculator" data-src="../mj.html?embedded=1" title="台灣麻將單手計番器"></iframe>
+    </section>
+  </main>
+
+  <aside class="transfer-tray" id="suite-transfer" aria-live="polite" aria-label="計番結果帶入" hidden>
+    <div class="transfer-status">
+      <span class="status-dot"></span>
+      <div><small id="suite-result-label">計番器連線中</small><strong id="suite-result-title">完成牌型後可帶入本局</strong></div>
+    </div>
+    <div class="transfer-numbers" id="suite-result-numbers" hidden>
+      <div><small>牌型番</small><strong id="suite-hand-tai">0</strong></div>
+      <div><small>計番器莊番</small><strong id="suite-dealer-tai">0</strong></div>
+      <div><small>顯示合計</small><strong id="suite-total-tai">0</strong></div>
+    </div>
+    <div class="transfer-types" id="suite-hand-types" hidden></div>
+    <button id="suite-apply" type="button" disabled>帶入本局番數</button>
+    <p class="transfer-help">只帶入牌型番；整場記分器會按目前莊家、連莊與拉莊另算加番，避免重複。</p>
+  </aside>
+
+  <div class="suite-toast" id="suite-toast" role="status" hidden></div>
+  <script src="../app-config.js" defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>

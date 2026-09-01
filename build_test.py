@@ -1,163 +1,133 @@
 #!/usr/bin/env python3
-"""Create a self-contained test runner HTML that runs synchronously."""
+"""Build the canonical browser suite as deterministic self-contained HTML."""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
 import re
+import sys
+import tempfile
+import time
+from pathlib import Path
 
-# Read files
-with open('mjConst.js', 'r', encoding='utf-8') as f:
-    mjconst = f.read()
+ROOT = Path(__file__).resolve().parent
+OUTPUT = ROOT / "test_standalone.html"
+SCHEMA_VERSION = "mahjong-test-result/v1"
+MARKERS = (
+    "// TEST-DEFINITIONS-BEGIN",
+    "// TEST-DEFINITIONS-END",
+    "// TEST-HARNESS-BEGIN",
+    "// TEST-HARNESS-END",
+)
 
-with open('checkHandType.js', 'r', encoding='utf-8') as f:
-    checkhandtype = f.read()
 
-with open('test.html', 'r', encoding='utf-8') as f:
-    test_html = f.read()
+class BuildError(RuntimeError):
+    """Raised when canonical extraction or generation is ambiguous."""
 
-# Extract the script block that contains test definitions
-scripts = re.findall(r'<script>(.*?)</script>', test_html, re.DOTALL)
 
-test_script = None
-for s in scripts:
-    if "function add(" in s and "function runAllTests" in s:
-        test_script = s
-        break
+def read_utf8(name: str) -> str:
+    path = ROOT / name
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise BuildError(f"Cannot read {name}: {exc}") from exc
 
-if not test_script:
-    print("Could not find test script block!")
-    exit(1)
 
-# Extract everything from "// ===== Test Definitions" to "// ===== Test Runner"
-test_defs_match = re.search(r'(// ={5,} Test Definitions.*?)(?=// ={5,} Test Runner)', test_script, re.DOTALL)
-if not test_defs_match:
-    print("Could not find test definitions section!")
-    exit(1)
+def source_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-test_defs = test_defs_match.group(1)
 
-# Remove duplicate const T=[] and function add declarations from test defs
-test_defs = re.sub(r'^const T=\[\];\s*\n', '', test_defs, flags=re.MULTILINE)
-test_defs = re.sub(r'^function add\(name,score,desc,setup\)\{T\.push.*?\}\s*\n', '', test_defs, flags=re.MULTILINE)
+def require_unique(text: str, token: str, source_name: str) -> None:
+    count = text.count(token)
+    if count != 1:
+        raise BuildError(f"Expected exactly one {token!r} in {source_name}; found {count}")
 
-# Build the HTML file
-parts = []
-parts.append('''<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Test Runner</title></head>
-<body>
-<pre id="output">Running...</pre>
-<script>
-window.onerror = function(msg, url, line, col, error) {
-  var el = document.getElementById('output');
-  el.textContent += '\\nERROR: ' + msg + ' line:' + line + (error ? '\\n' + error.stack : '');
-};
-</script>
-<script>
-''')
-parts.append(mjconst)
-parts.append('''
-</script>
-<script>
-const state = {
-    handTiles:[], flowers:[], chows:[], pungs:[], openKongs:[], concealedKongs:[],
-    winningTile:null, seatWind:'\u6771', roundWind:'\u6771', isDealer:false, dealerCount:0,
-    isSelfDraw:false, isDeclaredReady:false, isIppatsu:false, isLastTileDraw:false,
-    isLastDiscard:false, isFlowerDraw:false, isKongDraw:false, isRobbingKong:false,
-    isDoubleKongDraw:false, isRobbingDoubleKong:false, isTenhou:false, isChihou:false,
-    isTenReady:false, isChiReady:false, isFaceDown:false, isMultiWin:0,
-    isMultiWinSelfDraw:false, visibleWinTileCount:0, history:[]
-};
-function getAllTiles(){
-    const t=[...state.handTiles];
-    state.chows.forEach(c=>t.push(...c.tiles));
-    state.pungs.forEach(p=>t.push(...p.tiles));
-    state.openKongs.forEach(k=>t.push(...k.tiles));
-    state.concealedKongs.forEach(k=>t.push(...k.tiles));
-    if(state.winningTile) t.push(state.winningTile);
-    return t;
-}
-</script>
-<script>
-''')
-parts.append(checkhandtype)
-parts.append('''
-</script>
-<script>
-function mt(type,value){return{type,value,display:type+'-'+value}}
-function w(v){return mt(TILE_TYPES.CHARACTERS,v)}
-function s(v){return mt(TILE_TYPES.BAMBOOS,v)}
-function t(v){return mt(TILE_TYPES.DOTS,v)}
-function h(v){return mt(TILE_TYPES.HONORS,v)}
-function fl(v){return{type:TILE_TYPES.FLOWERS,value:v,display:'flower-'+v}}
-function mkPung(fn,v){return{tiles:[fn(v),fn(v),fn(v)],type:fn(v).type,value:v}}
-function mkChow(fn,a,b,c){return{tiles:[fn(a),fn(b),fn(c)],type:fn(a).type,value:a}}
-function mkKong(fn,v){return{tiles:[fn(v),fn(v),fn(v),fn(v)],type:fn(v).type,value:v}}
-function resetState(){
-    state.handTiles=[];state.flowers=[];state.chows=[];state.pungs=[];
-    state.openKongs=[];state.concealedKongs=[];state.winningTile=null;
-    state.seatWind='\u6771';state.roundWind='\u6771';state.isDealer=false;state.dealerCount=0;
-    state.isSelfDraw=false;state.isDeclaredReady=false;state.isIppatsu=false;
-    state.isLastTileDraw=false;state.isLastDiscard=false;state.isFlowerDraw=false;
-    state.isKongDraw=false;state.isRobbingKong=false;state.isDoubleKongDraw=false;
-    state.isRobbingDoubleKong=false;state.isTenhou=false;state.isChihou=false;
-    state.isTenReady=false;state.isChiReady=false;state.isFaceDown=false;
-    state.isMultiWin=0;state.isMultiWinSelfDraw=false;state.visibleWinTileCount=0;
-}
-function baseHand(){
-    return{ht:[w(2),w(3),w(4),w(6),w(7),w(8),s(2),s(3),s(4),s(6),s(7),s(8),t(2),t(3),t(4),t(5)],wt:t(5)};
-}
-function applyBase(b){
-    state.handTiles=[...b.ht];state.winningTile=b.wt?{...b.wt}:null;
-}
-const T=[];
-function add(name,score,desc,setup){T.push({name,score,desc,setup})}
 
-// Test definitions extracted from test.html
-''')
-parts.append(test_defs)
-parts.append('''
+def inline_script(html: str, src: str, javascript: str, prefix: str = "") -> str:
+    pattern = re.compile(rf'<script\s+src=["\']{re.escape(src)}["\']\s*>\s*</script>', re.IGNORECASE)
+    matches = pattern.findall(html)
+    if len(matches) != 1:
+        raise BuildError(f"Expected exactly one external script tag for {src}; found {len(matches)}")
+    safe_javascript = javascript.replace("</script", "<\\/script")
+    replacement = f"<script>\n{prefix}{safe_javascript}\n</script>"
+    return pattern.sub(lambda _: replacement, html, count=1)
 
-// Run tests synchronously
-try {
-let passed=0, failed=0;
-const lines = [];
-document.getElementById('output').textContent = 'Tests defined: ' + T.length + ' tests';
-const sorted=[...T].sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name));
-sorted.forEach((test,i)=>{
-    resetState();
-    let results=[];
-    try{
-        test.setup();
-        results=detectHandTypes();
-        const match=results.find(r=>{
-            if(r.name===test.name && r.score===test.score) return true;
-            if(r.name.startsWith(test.name) && r.score===test.score) return true;
-            if(test.name.startsWith(r.name) && r.score===test.score) return true;
-            return false;
-        });
-        if(match) { passed++; }
-        else {
-            failed++;
-            lines.push('FAIL #'+(i+1)+': "'+test.name+'" expected score='+test.score);
-            lines.push('  Got: '+results.map(r=>r.name+'('+r.score+')').join(', '));
-        }
-    }catch(e){
-        failed++;
-        lines.push('ERROR #'+(i+1)+': "'+test.name+'" - '+e.message);
+
+def build() -> dict[str, object]:
+    test_html = read_utf8("test.html")
+    mjconst = read_utf8("mjConst.js")
+    checkhandtype = read_utf8("checkHandType.js")
+
+    for marker in MARKERS:
+        require_unique(test_html, marker, "test.html")
+    positions = [test_html.index(marker) for marker in MARKERS]
+    if positions != sorted(positions):
+        raise BuildError("Canonical test markers are out of order")
+
+    definitions = test_html[positions[0] : positions[1]]
+    harness = test_html[positions[2] : positions[3]]
+    if definitions.count("add(") < 1 or "function add(" not in definitions:
+        raise BuildError("Canonical test definition section is empty or malformed")
+    for required in ("function evaluateAssertions(", "function runAllTests(", "writeCompletion(payload)"):
+        if required not in harness:
+            raise BuildError(f"Canonical harness is missing {required}")
+
+    completion_pattern = re.compile(
+        r'<script\s+id=["\']test-completion["\']\s+type=["\']application/json["\']\s*>\s*</script>',
+        re.IGNORECASE,
+    )
+    if len(completion_pattern.findall(test_html)) != 1:
+        raise BuildError("Canonical completion element must exist exactly once and be empty")
+    if re.search(r"window\.__TEST_BUILD_META__\s*=", test_html):
+        raise BuildError("Canonical test.html must not contain generated build metadata assignment")
+
+    hashes = {
+        "test.html": source_hash(test_html),
+        "mjConst.js": source_hash(mjconst),
+        "checkHandType.js": source_hash(checkhandtype),
     }
-});
-lines.push('');
-lines.push(passed+' passed / '+failed+' failed / '+T.length+' total');
-document.getElementById('output').textContent = lines.join('\\n');
-document.title = 'DONE:' + passed + '/' + failed + '/' + T.length;
-} catch(e) {
-  document.getElementById('output').textContent += '\\nRUN ERROR: ' + e.message + '\\n' + e.stack;
-}
-</script>
-</body></html>
-''')
+    build_meta = {"schemaVersion": SCHEMA_VERSION, "sourceHashes": hashes}
+    prefix = f"window.__TEST_BUILD_META__={json.dumps(build_meta, ensure_ascii=False, separators=(',', ':'))};\n"
 
-output = ''.join(parts)
+    output = inline_script(test_html, "mjConst.js", mjconst, prefix=prefix)
+    output = inline_script(output, "checkHandType.js", checkhandtype)
+    output = output.replace("\r\n", "\n").replace("\r", "\n")
+    if not output.endswith("\n"):
+        output += "\n"
 
-with open('test_standalone.html', 'w', encoding='utf-8') as f:
-    f.write(output)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", newline="\n", dir=ROOT, prefix="test_standalone-", suffix=".tmp", delete=False
+    ) as handle:
+        handle.write(output)
+        temporary = Path(handle.name)
+    try:
+        for attempt in range(10):
+            try:
+                os.replace(temporary, OUTPUT)
+                break
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.1 * (attempt + 1))
+    finally:
+        temporary.unlink(missing_ok=True)
+    return {
+        "output": OUTPUT.name,
+        "bytes": len(output.encode("utf-8")),
+        "sourceHashes": hashes,
+    }
 
-print(f"Created test_standalone.html ({len(output)} bytes)")
-print(f"Test definitions: {len(test_defs)} chars")
+
+def main() -> int:
+    try:
+        result = build()
+    except BuildError as exc:
+        print(f"build_test.py: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

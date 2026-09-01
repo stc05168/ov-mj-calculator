@@ -1,0 +1,626 @@
+{
+  "schemaVersion": "ov-mj-scorekeeper-runner/v1",
+  "timestamp": "2026-09-01T10:18:41.150653+00:00",
+  "status": "failure",
+  "invocation": {
+    "browser": "all",
+    "nodeRequired": false,
+    "completionTransport": "same-origin-callback"
+  },
+  "runs": [
+    {
+      "browser": "chrome",
+      "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "version": "unknown",
+      "status": "failure",
+      "durationSeconds": 5.961,
+      "returncode": 1,
+      "message": "37 passed, 10 failed, 0 errors, 47 discovered",
+      "payload": {
+        "schemaVersion": "ov-mj-scorekeeper-tests/v1",
+        "status": "failure",
+        "counts": {
+          "discovered": 47,
+          "executed": 47,
+          "passed": 37,
+          "failed": 10,
+          "errors": 0
+        },
+        "invariant": true,
+        "browserAppState": "ready",
+        "results": [
+          {
+            "id": "startup-001",
+            "name": "正式頁面完成啟動並產生四張玩家卡",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "rule-001",
+            "name": "預設莊家基本加一台",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "settle-001",
+            "name": "閒家胡閒家：底30台10、5台收80",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":0,\"p2\":80,\"p3\":-80,\"p4\":0}, got {\"p1\":0,\"p2\":10,\"p3\":-10,\"p4\":0}"
+          },
+          {
+            "id": "settle-002",
+            "name": "莊家放槍時套用莊家加台",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":-90,\"p2\":90,\"p3\":0,\"p4\":0}, got {\"p1\":-11,\"p2\":11,\"p3\":0,\"p4\":0}"
+          },
+          {
+            "id": "dealer-001",
+            "name": "莊家胡牌後成為連一拉一",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "dealer-002",
+            "name": "連一拉一的下一局套用加三台",
+            "status": "failed",
+            "message": "values differ: expected 110, got 13"
+          },
+          {
+            "id": "dealer-003",
+            "name": "莊家下莊後按東南西北順序輪莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "pull-001",
+            "name": "手動斷拉只歸零拉莊並保留連莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "pull-002",
+            "name": "本局後斷拉在續莊時拉數歸零",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "selfdraw-001",
+            "name": "閒家自摸：莊家付90、兩閒家各80",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":-90,\"p2\":250,\"p3\":-80,\"p4\":-80}, got {\"p1\":-11,\"p2\":31,\"p3\":-10,\"p4\":-10}"
+          },
+          {
+            "id": "selfdraw-002",
+            "name": "莊家自摸：三家各付90並續莊",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":270,\"p2\":-90,\"p3\":-90,\"p4\":-90}, got {\"p1\":33,\"p2\":-11,\"p3\":-11,\"p4\":-11}"
+          },
+          {
+            "id": "selfdraw-003",
+            "name": "包自摸由包牌者支付三家義務總額",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":0,\"p2\":250,\"p3\":-250,\"p4\":0}, got {\"p1\":0,\"p2\":31,\"p3\":-31,\"p4\":0}"
+          },
+          {
+            "id": "multi-001",
+            "name": "一炮雙響分別計算兩位贏家且保持零和",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":-180,\"p2\":90,\"p3\":90,\"p4\":0}, got {\"p1\":-22,\"p2\":11,\"p3\":11,\"p4\":0}"
+          },
+          {
+            "id": "draw-001",
+            "name": "預設流局續莊並加連加拉",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "draw-002",
+            "name": "可設定流局續莊但不加拉",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "draw-003",
+            "name": "可設定流局直接下莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "override-001",
+            "name": "閒家胡牌可強制莊家續莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "override-002",
+            "name": "莊家胡牌可強制下莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "adjust-001",
+            "name": "賞罰調整為直接零和轉帳",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "config-001",
+            "name": "自訂底台與莊家公式可正確套用",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "config-002",
+            "name": "台值倍率不會重複乘到底",
+            "status": "failed",
+            "message": "values differ: expected 150, got 17"
+          },
+          {
+            "id": "initial-001",
+            "name": "起始分數與每局變動分開累計",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":1000,\"p2\":1080,\"p3\":920,\"p4\":1000}, got {\"p1\":1000,\"p2\":1010,\"p3\":990,\"p4\":1000}"
+          },
+          {
+            "id": "recompute-001",
+            "name": "編輯早期結果後會重算後續莊家狀態",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "stats-001",
+            "name": "胡牌、自摸、放槍統計正確",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "chart-001",
+            "name": "每筆紀錄都有一個衍生走勢點",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-001",
+            "name": "JSON 正規化可完整往返",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-002",
+            "name": "拒絕不支援的 schema",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-003",
+            "name": "拒絕非四人資料",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-004",
+            "name": "拒絕贏家與放槍者相同",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-005",
+            "name": "拒絕不明紀錄類型",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "settlement-001",
+            "name": "精簡找數建議可完整清償且無自我轉帳",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "export-001",
+            "name": "TXT 匯出包含規則、紀錄、結算與找數",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "filter-001",
+            "name": "歷史篩選正確分類胡牌、流局、賞罰與斷拉",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-006",
+            "name": "拒絕重複的紀錄 ID",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "scale-001",
+            "name": "一百筆賞罰仍保持零和及完整圖表",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-001",
+            "name": "UI 提交一局後更新帳本、分數與圖表",
+            "status": "failed",
+            "message": "values differ: expected 60, got 8"
+          },
+          {
+            "id": "ui-002",
+            "name": "UI 復原與重做會恢復完整牌局",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-003",
+            "name": "訪客牌局嚴格只存記憶體並忽略舊 localStorage",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "guest-controls-001",
+            "name": "訪客保存匯入匯出分享控制不可見且登入連結使用集中設定",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-004",
+            "name": "四個主要分頁可切換且保持單一顯示",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-005",
+            "name": "底台預設按鈕會更新設定與公式示例",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-006",
+            "name": "歷史篩選會隱藏不符合類型的紀錄",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "scorekeeper-draft-001",
+            "name": "正式 host 帶入草稿但不提交或改動牌局",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "calculator-bridge-001",
+            "name": "計番橋接提供不可變且拆分莊番的結果",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "unified-shell-001",
+            "name": "統一入口只把牌型番帶入本局草稿",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "unified-shell-002",
+            "name": "統一入口訪客與戶口模式使用集中導航設定",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "online-auth-001",
+            "name": "登入驗證後才建立工作區並支援版本化保存載入、登出及 401 卸載",
+            "status": "passed",
+            "message": ""
+          }
+        ]
+      },
+      "stderr": "\nDevTools listening on ws://127.0.0.1:59352/devtools/browser/428d12b8-d714-4bee-b203-05c089c82014\n"
+    },
+    {
+      "browser": "edge",
+      "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "version": "在現有的瀏覽器工作階段中開啟。",
+      "status": "failure",
+      "durationSeconds": 6.031,
+      "returncode": 1,
+      "message": "37 passed, 10 failed, 0 errors, 47 discovered",
+      "payload": {
+        "schemaVersion": "ov-mj-scorekeeper-tests/v1",
+        "status": "failure",
+        "counts": {
+          "discovered": 47,
+          "executed": 47,
+          "passed": 37,
+          "failed": 10,
+          "errors": 0
+        },
+        "invariant": true,
+        "browserAppState": "ready",
+        "results": [
+          {
+            "id": "startup-001",
+            "name": "正式頁面完成啟動並產生四張玩家卡",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "rule-001",
+            "name": "預設莊家基本加一台",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "settle-001",
+            "name": "閒家胡閒家：底30台10、5台收80",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":0,\"p2\":80,\"p3\":-80,\"p4\":0}, got {\"p1\":0,\"p2\":10,\"p3\":-10,\"p4\":0}"
+          },
+          {
+            "id": "settle-002",
+            "name": "莊家放槍時套用莊家加台",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":-90,\"p2\":90,\"p3\":0,\"p4\":0}, got {\"p1\":-11,\"p2\":11,\"p3\":0,\"p4\":0}"
+          },
+          {
+            "id": "dealer-001",
+            "name": "莊家胡牌後成為連一拉一",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "dealer-002",
+            "name": "連一拉一的下一局套用加三台",
+            "status": "failed",
+            "message": "values differ: expected 110, got 13"
+          },
+          {
+            "id": "dealer-003",
+            "name": "莊家下莊後按東南西北順序輪莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "pull-001",
+            "name": "手動斷拉只歸零拉莊並保留連莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "pull-002",
+            "name": "本局後斷拉在續莊時拉數歸零",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "selfdraw-001",
+            "name": "閒家自摸：莊家付90、兩閒家各80",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":-90,\"p2\":250,\"p3\":-80,\"p4\":-80}, got {\"p1\":-11,\"p2\":31,\"p3\":-10,\"p4\":-10}"
+          },
+          {
+            "id": "selfdraw-002",
+            "name": "莊家自摸：三家各付90並續莊",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":270,\"p2\":-90,\"p3\":-90,\"p4\":-90}, got {\"p1\":33,\"p2\":-11,\"p3\":-11,\"p4\":-11}"
+          },
+          {
+            "id": "selfdraw-003",
+            "name": "包自摸由包牌者支付三家義務總額",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":0,\"p2\":250,\"p3\":-250,\"p4\":0}, got {\"p1\":0,\"p2\":31,\"p3\":-31,\"p4\":0}"
+          },
+          {
+            "id": "multi-001",
+            "name": "一炮雙響分別計算兩位贏家且保持零和",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":-180,\"p2\":90,\"p3\":90,\"p4\":0}, got {\"p1\":-22,\"p2\":11,\"p3\":11,\"p4\":0}"
+          },
+          {
+            "id": "draw-001",
+            "name": "預設流局續莊並加連加拉",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "draw-002",
+            "name": "可設定流局續莊但不加拉",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "draw-003",
+            "name": "可設定流局直接下莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "override-001",
+            "name": "閒家胡牌可強制莊家續莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "override-002",
+            "name": "莊家胡牌可強制下莊",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "adjust-001",
+            "name": "賞罰調整為直接零和轉帳",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "config-001",
+            "name": "自訂底台與莊家公式可正確套用",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "config-002",
+            "name": "台值倍率不會重複乘到底",
+            "status": "failed",
+            "message": "values differ: expected 150, got 17"
+          },
+          {
+            "id": "initial-001",
+            "name": "起始分數與每局變動分開累計",
+            "status": "failed",
+            "message": "objects differ: expected {\"p1\":1000,\"p2\":1080,\"p3\":920,\"p4\":1000}, got {\"p1\":1000,\"p2\":1010,\"p3\":990,\"p4\":1000}"
+          },
+          {
+            "id": "recompute-001",
+            "name": "編輯早期結果後會重算後續莊家狀態",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "stats-001",
+            "name": "胡牌、自摸、放槍統計正確",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "chart-001",
+            "name": "每筆紀錄都有一個衍生走勢點",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-001",
+            "name": "JSON 正規化可完整往返",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-002",
+            "name": "拒絕不支援的 schema",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-003",
+            "name": "拒絕非四人資料",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-004",
+            "name": "拒絕贏家與放槍者相同",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-005",
+            "name": "拒絕不明紀錄類型",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "settlement-001",
+            "name": "精簡找數建議可完整清償且無自我轉帳",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "export-001",
+            "name": "TXT 匯出包含規則、紀錄、結算與找數",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "filter-001",
+            "name": "歷史篩選正確分類胡牌、流局、賞罰與斷拉",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "schema-006",
+            "name": "拒絕重複的紀錄 ID",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "scale-001",
+            "name": "一百筆賞罰仍保持零和及完整圖表",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-001",
+            "name": "UI 提交一局後更新帳本、分數與圖表",
+            "status": "failed",
+            "message": "values differ: expected 60, got 8"
+          },
+          {
+            "id": "ui-002",
+            "name": "UI 復原與重做會恢復完整牌局",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-003",
+            "name": "訪客牌局嚴格只存記憶體並忽略舊 localStorage",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "guest-controls-001",
+            "name": "訪客保存匯入匯出分享控制不可見且登入連結使用集中設定",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-004",
+            "name": "四個主要分頁可切換且保持單一顯示",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-005",
+            "name": "底台預設按鈕會更新設定與公式示例",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "ui-006",
+            "name": "歷史篩選會隱藏不符合類型的紀錄",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "scorekeeper-draft-001",
+            "name": "正式 host 帶入草稿但不提交或改動牌局",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "calculator-bridge-001",
+            "name": "計番橋接提供不可變且拆分莊番的結果",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "unified-shell-001",
+            "name": "統一入口只把牌型番帶入本局草稿",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "unified-shell-002",
+            "name": "統一入口訪客與戶口模式使用集中導航設定",
+            "status": "passed",
+            "message": ""
+          },
+          {
+            "id": "online-auth-001",
+            "name": "登入驗證後才建立工作區並支援版本化保存載入、登出及 401 卸載",
+            "status": "passed",
+            "message": ""
+          }
+        ]
+      },
+      "stderr": "\nDevTools listening on ws://127.0.0.1:59400/devtools/browser/955a34fc-b35a-46fb-9d87-f932498a08e5\n[17556:24024:0901/181834.876:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.017:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.167:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.301:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.434:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.484:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.556:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n[17556:24024:0901/181835.650:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n"
+    }
+  ]
+}
