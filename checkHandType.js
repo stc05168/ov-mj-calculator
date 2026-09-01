@@ -1203,9 +1203,9 @@ function detectQuanDaiXHandTypes(allTiles) {
         if (numbers.length === 1) {
             results.push({ name: `混全帶${numbers[0]}`, score: 30 });
         } else if (numbers.length === 2) {
-            results.push({ name: `混全帶${numbers.join('')}`, score: 20 });
+            results.push({ name: `混全帶${numbers.join('')}`, score: 50 });
         } else if (numbers.length === 3) {
-            results.push({ name: `混全帶${numbers.join('')}`, score: 10 });
+            results.push({ name: `混全帶${numbers.join('')}`, score: 60 });
         }
     }
 
