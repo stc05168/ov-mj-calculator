@@ -7,7 +7,12 @@
     document.documentElement.dataset.workspaceDirty = 'false';
 
     const $ = (selector) => document.querySelector(selector);
-    const SEATS = ['東', '南', '西', '北'];
+    const PLAYER_TARGETS = [
+        { id: 'p1', label: '我（記分者）' },
+        { id: 'p2', label: '玩家 2' },
+        { id: 'p3', label: '玩家 3' },
+        { id: 'p4', label: '玩家 4' }
+    ];
     const publicConfig = window.OVMJ_APP_CONFIG || {};
     const appFrame = $('#scorekeeper');
     const workspace = $('#account-workspace');
@@ -525,18 +530,18 @@
 
             const controls = document.createElement('div');
             controls.className = 'player-actions';
-            const seat = document.createElement('select');
-            seat.className = 'seat-select';
-            seat.setAttribute('aria-label', `選擇「${item.name}」要套用的座位`);
-            SEATS.forEach((value) => seat.append(new Option(value, value)));
+            const target = document.createElement('select');
+            target.className = 'seat-select';
+            target.setAttribute('aria-label', `選擇「${item.name}」要套用的玩家欄位`);
+            PLAYER_TARGETS.forEach(({ id, label }) => target.append(new Option(label, id)));
 
             const apply = document.createElement('button');
             apply.type = 'button';
             apply.className = 'mini profile-apply';
             apply.textContent = '套用';
             apply.disabled = isWorkspaceBusy();
-            apply.setAttribute('aria-label', `將「${item.name}」套用到所選座位`);
-            apply.addEventListener('click', () => applyPlayerProfile(item, seat.value));
+            apply.setAttribute('aria-label', `將「${item.name}」套用到所選玩家欄位`);
+            apply.addEventListener('click', () => applyPlayerProfile(item, target.value));
 
             const remove = document.createElement('button');
             remove.type = 'button';
@@ -555,23 +560,24 @@
                     if (!error.cancelled && error.status !== 401) message(error.message, true);
                 }
             });
-            controls.append(seat, apply, remove);
+            controls.append(target, apply, remove);
             row.append(name, controls);
             root.append(row);
         });
     }
 
-    async function applyPlayerProfile(item, seat) {
+    async function applyPlayerProfile(item, playerId) {
         if (isWorkspaceBusy()) return;
         const epoch = captureWorkspaceEpoch();
         try {
             const host = embeddedHost();
             await awaitInWorkspaceEpoch(host.ready, epoch);
             if (typeof host.applyPlayerName !== 'function') throw new Error('目前工作區不支援套用常用玩家，請重新載入頁面。');
-            host.applyPlayerName(seat, item.name);
+            host.applyPlayerName(playerId, item.name);
             requireCurrentWorkspaceEpoch(epoch);
             renderWorkspaceStatus();
-            message(`已把「${item.name}」複製到${seat}家；固定座位顏色不會改變。`);
+            const targetLabel = PLAYER_TARGETS.find((target) => target.id === playerId)?.label || playerId;
+            message(`已把「${item.name}」複製到「${targetLabel}」；調位只會改變快速帳顯示位置。`);
         } catch (error) {
             if (!error.cancelled) message(error.message, true);
         }

@@ -41,6 +41,12 @@ const EXCLUSION_RULES = {
     '嚦咕嚦咕六/八飛': ['門清', '門清自摸', '自摸', '對對糊'],
 };
 
+function isNumberedSuit(type) {
+    return type === TILE_TYPES.CHARACTERS ||
+        type === TILE_TYPES.BAMBOOS ||
+        type === TILE_TYPES.DOTS;
+}
+
 const EXCLUSION_KEY_MATCHERS = {
     '純全帶X': name => /^純全帶[1-9]$/.test(name)
 };
@@ -158,9 +164,10 @@ function detectHandTypes() {
         } else {
             // 分析和牌前的听牌情况
             const waits = analyzeWaitsBeforeWinForShiSanYao(state.handTiles);
+            const flyCount = Math.min(waits.length, 13);
             
             if (waits.length > 10) {
-                handTypes.push({ name: `十三么（${waits.length} 飛）`, score: 150 });
+                handTypes.push({ name: `十三么（${flyCount} 飛）`, score: 150 });
             } else {
                 handTypes.push({ name: '十三么', score: 140 });
             }
@@ -651,106 +658,8 @@ function detectHandTypes() {
 }
 
 function isValidShiSanYao(allTiles) {
-    if (allTiles.length !== 17) return false;
-    
-    // 检查基础13张牌是否齐全
-    const requiredTiles = [
-        { type: TILE_TYPES.CHARACTERS, value: 1 }, // 1万
-        { type: TILE_TYPES.CHARACTERS, value: 9 }, // 9万
-        { type: TILE_TYPES.DOTS, value: 1 },       // 1筒
-        { type: TILE_TYPES.DOTS, value: 9 },       // 9筒
-        { type: TILE_TYPES.BAMBOOS, value: 1 },    // 1索
-        { type: TILE_TYPES.BAMBOOS, value: 9 },    // 9索
-        { type: TILE_TYPES.HONORS, value: 1 },     // 东
-        { type: TILE_TYPES.HONORS, value: 2 },     // 南
-        { type: TILE_TYPES.HONORS, value: 3 },     // 西
-        { type: TILE_TYPES.HONORS, value: 4 },     // 北
-        { type: TILE_TYPES.HONORS, value: 5 },     // 中
-        { type: TILE_TYPES.HONORS, value: 6 },     // 发
-        { type: TILE_TYPES.HONORS, value: 7 }      // 白
-    ];
-    
-    // 统计每种牌的数量
-    const tileCounts = {};
-    allTiles.forEach(tile => {
-        const key = `${tile.type}-${tile.value}`;
-        tileCounts[key] = (tileCounts[key] || 0) + 1;
-    });
-    
-    // 检查基础13张牌是否齐全（每种至少一张）
-    for (const reqTile of requiredTiles) {
-        const key = `${reqTile.type}-${reqTile.value}`;
-        if (!tileCounts[key] || tileCounts[key] < 1) {
-            return false; // 缺少必要牌
-        }
-    }
-    
-    // 检查是否有且仅有一对将眼
-    let pairCount = 0;
-    for (const reqTile of requiredTiles) {
-        const key = `${reqTile.type}-${reqTile.value}`;
-        if (tileCounts[key] == 2) {
-            pairCount++;
-        }
-    }
-    
-    // 十三么必须有一对将眼
-    if (pairCount !== 1) return false;
-    
-    // 检查额外牌是否形成顺子或刻子
-    const extraTiles = allTiles.filter(tile => {
-        return !requiredTiles.some(reqTile => 
-            reqTile.type === tile.type && reqTile.value === tile.value
-        );
-    });
-    
-    // 如果没有额外牌，检查是否有四张相同的牌
-    if (extraTiles.length === 0) {
-        // 检查是否有四张相同的牌（四归一）
-        for (const key in tileCounts) {
-            if (tileCounts[key] === 4) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    // 额外牌必须是3张，且能形成顺子或刻子
-    if (extraTiles.length !== 3) return false;
-    
-    // 检查是否形成刻子
-    const firstTile = extraTiles[0];
-    const isPung = extraTiles.every(tile => 
-        tile.type === firstTile.type && tile.value === firstTile.value
-    );
-    
-    // 检查是否形成顺子
-    const values = extraTiles.map(tile => tile.value).sort((a, b) => a - b);
-    const isChow = values[1] === values[0] + 1 && values[2] === values[1] + 1;
-    
-    return isPung || isChow;
-}
+    if (!Array.isArray(allTiles) || allTiles.length !== 17) return false;
 
-function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
-    const waits = [];
-    
-    // 检查手牌是否接近和牌（16张牌）
-    if (handTiles.length !== 16) return waits;
-    
-    // 尝试每种可能的和牌
-    const allPossibleTiles = [];
-    
-    // 添加所有可能的牌（19万19筒19索东南西北中发白）
-    for (const type of [TILE_TYPES.CHARACTERS, TILE_TYPES.DOTS, TILE_TYPES.BAMBOOS]) {
-        allPossibleTiles.push({ type, value: 1 });
-        allPossibleTiles.push({ type, value: 9 });
-    }
-    
-    for (let value = 1; value <= 7; value++) {
-        allPossibleTiles.push({ type: TILE_TYPES.HONORS, value });
-    }
-    
-    // 检查额外牌型可能需要的牌
     const requiredTiles = [
         { type: TILE_TYPES.CHARACTERS, value: 1 },
         { type: TILE_TYPES.CHARACTERS, value: 9 },
@@ -766,66 +675,85 @@ function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
         { type: TILE_TYPES.HONORS, value: 6 },
         { type: TILE_TYPES.HONORS, value: 7 }
     ];
-    
-    // 找出额外牌
-    const extraTiles = handTiles.filter(tile => {
-        return !requiredTiles.some(reqTile => 
-            reqTile.type === tile.type && reqTile.value === tile.value
-        );
+    const tileCounts = new Map();
+    const tileIdentities = new Map();
+
+    for (const tile of allTiles) {
+        if (!tile || typeof tile !== 'object') return false;
+
+        const isLegalNumberedTile = isNumberedSuit(tile.type) &&
+            Number.isInteger(tile.value) && tile.value >= 1 && tile.value <= 9;
+        const isLegalHonorTile = tile.type === TILE_TYPES.HONORS &&
+            Number.isInteger(tile.value) && tile.value >= 1 && tile.value <= 7;
+        if (!isLegalNumberedTile && !isLegalHonorTile) return false;
+
+        const key = `${tile.type}-${tile.value}`;
+        const count = (tileCounts.get(key) || 0) + 1;
+        if (count > 4) return false;
+        tileCounts.set(key, count);
+        tileIdentities.set(key, { type: tile.type, value: tile.value });
+    }
+
+    for (const requiredTile of requiredTiles) {
+        const key = `${requiredTile.type}-${requiredTile.value}`;
+        if ((tileCounts.get(key) || 0) < 1) return false;
+    }
+
+    const eyeCandidates = requiredTiles.filter(requiredTile => {
+        const key = `${requiredTile.type}-${requiredTile.value}`;
+        return (tileCounts.get(key) || 0) >= 2;
     });
-    
-    // 如果额外牌是顺子的一部分，添加顺子可能需要的牌
-    if (extraTiles.length > 0) {
-        const firstTile = extraTiles[0];
-        
-        // 检查是否可能形成顺子
-        if (extraTiles.every(tile => tile.type === firstTile.type)) {
-            const values = extraTiles.map(tile => tile.value).sort((a, b) => a - b);
-            
-            // 检查是否是不完整的顺子
-            if (values.length === 2) {
-                const diff = values[1] - values[0];
-                // 中洞（如35听4）
-                if (diff === 2) {
-                    allPossibleTiles.push({ type: firstTile.type, value: values[0] + 1 });
-                }
-                // 边张（如12听3，89听7）
-                else if (diff === 1) {
-                    if (values[0] > 1) {
-                        allPossibleTiles.push({ type: firstTile.type, value: values[0] - 1 });
-                    }
-                    if (values[1] < 9) {
-                        allPossibleTiles.push({ type: firstTile.type, value: values[1] + 1 });
-                    }
-                }else if (diff === 0) {
-                    // Two identical extra tiles - pung already complete or forming pair
-                    // Don't add extra candidates; the main loop will check all 34 tiles
-                }
-            }
-            // 检查是否是三张牌但需要形成顺子或刻子
-            else if (values.length === 3) {
-                // 已经是完整的顺子或刻子，不需要额外牌
+
+    for (const eyeCandidate of eyeCandidates) {
+        const remainingCounts = new Map(tileCounts);
+
+        for (const requiredTile of requiredTiles) {
+            const key = `${requiredTile.type}-${requiredTile.value}`;
+            remainingCounts.set(key, remainingCounts.get(key) - 1);
+        }
+
+        const eyeKey = `${eyeCandidate.type}-${eyeCandidate.value}`;
+        remainingCounts.set(eyeKey, remainingCounts.get(eyeKey) - 1);
+
+        const remainingTiles = [];
+        for (const [key, count] of remainingCounts) {
+            const identity = tileIdentities.get(key);
+            for (let i = 0; i < count; i++) {
+                remainingTiles.push({ type: identity.type, value: identity.value });
             }
         }
-    }
-    
-    // 检查每张可能的牌是否能使手牌和牌
-    for (const tile of allPossibleTiles) {
-        // Skip tiles where all 4 copies are already in hand (impossible to draw)
-        const tileKey = `${tile.type}-${tile.value}`;
-        const countInHand = handTiles.filter(t => t.type === tile.type && t.value === tile.value).length;
-        if (countInHand >= 4) continue;
 
-        const testHand = [...handTiles, tile];
-        if (isValidShiSanYao(testHand)) {
-            // 检查这张牌是否已经在waits中
-            const alreadyExists = waits.some(w => 
-                w.type === tile.type && w.value === tile.value
-            );
-            
-            if (!alreadyExists) {
-                waits.push(tile);
-            }
+        if (remainingTiles.length === 3 && canFormMeld(remainingTiles)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function analyzeWaitsBeforeWinForShiSanYao(handTiles) {
+    if (!Array.isArray(handTiles) || handTiles.length !== 16) return [];
+
+    const waits = [];
+    const seenCandidates = new Set();
+    const handCounts = new Map();
+
+    for (const tile of handTiles) {
+        const key = `${tile.type}-${tile.value}`;
+        handCounts.set(key, (handCounts.get(key) || 0) + 1);
+    }
+
+    for (const candidate of ALL_TILES) {
+        if (!isNumberedSuit(candidate.type) && candidate.type !== TILE_TYPES.HONORS) continue;
+
+        const tile = { type: candidate.type, value: candidate.value };
+        const key = `${tile.type}-${tile.value}`;
+        if (seenCandidates.has(key)) continue;
+        seenCandidates.add(key);
+
+        if ((handCounts.get(key) || 0) >= 4) continue;
+        if (isValidShiSanYao([...handTiles, tile])) {
+            waits.push(tile);
         }
     }
 
@@ -1690,10 +1618,20 @@ function getAllChows(allTiles) {
     
     // 添加玩家標記的順子（明順）
     state.chows.forEach(chow => {
+        if (!Array.isArray(chow.tiles) || chow.tiles.length !== 3) return;
+
+        const sortedTiles = [...chow.tiles].sort((a, b) => a.value - b.value);
+        const type = sortedTiles[0].type;
+        const isValidChow = isNumberedSuit(type) &&
+            sortedTiles.every(tile => tile.type === type) &&
+            sortedTiles[0].value + 1 === sortedTiles[1].value &&
+            sortedTiles[1].value + 1 === sortedTiles[2].value;
+        if (!isValidChow) return;
+
         chows.push({
-            type: chow.type,
-            values: chow.tiles.map(tile => tile.value).sort((a, b) => a - b),
-            startValue: Math.min(...chow.tiles.map(tile => tile.value)),
+            type,
+            values: sortedTiles.map(tile => tile.value),
+            startValue: sortedTiles[0].value,
             isExposed: true
         });
     });
@@ -1711,7 +1649,7 @@ function getAllChows(allTiles) {
 
 function findChowsInHand(allTiles) {
     const chows = [];
-    const tiles = [...allTiles].filter(tile => tile.type !== TILE_TYPES.HONORS);
+    const tiles = [...allTiles].filter(tile => isNumberedSuit(tile.type));
 
     // 按花色和數值排序
     tiles.sort((a, b) => {
@@ -1957,7 +1895,7 @@ function detectBubugao(allChows) {
 // 新增姊妹牌型檢測函數
 function detectSisterHandTypes(allTiles) {
     // 獲取所有刻子（包括碰、明槓、暗槓和手牌中的刻子）
-    const allPungs = getAllPungs(allTiles);
+    const allPungs = getAllPungs(allTiles).filter(pung => isNumberedSuit(pung.type));
     
     // 按花色分組刻子
     const pungsBySuit = {};
@@ -2086,6 +2024,8 @@ function findConsecutiveSequences(values) {
 
 // 檢查是否有與刻子序列相連的眼（對子）
 function checkConnectedPair(allTiles, suit, sequence) {
+    if (!isNumberedSuit(suit)) return false;
+
     const minValue = sequence[0];
     const maxValue = sequence[sequence.length - 1];
     
@@ -2299,18 +2239,13 @@ function isNoFlowers() {
 // a. 缺一門: 只有筒索萬其中2款
 function isMissingOneSuit(allTiles) {
     const suits = new Set();
-    
+
     for (const tile of allTiles) {
-        if (tile.type !== TILE_TYPES.FLOWERS) {
-            suits.add(tile.type);
-        }
-        
-        // 如果有超過2種數牌，則不是缺一門
-        if (suits.size > 2) {
-            return false;
-        }
+        if (tile.type === TILE_TYPES.HONORS) return false;
+        if (tile.type === TILE_TYPES.FLOWERS) continue;
+        if (isNumberedSuit(tile.type)) suits.add(tile.type);
     }
-    
+
     return suits.size === 2;
 }
 
@@ -2345,7 +2280,7 @@ function getBrotherPungs() {
     
     // 統計每種數字的每個花色數量
     allTiles.forEach(tile => {
-        if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
+        if (isNumberedSuit(tile.type)) {
             const val = tile.value;
             if (!counts[val]) counts[val] = {};
             const suit = tile.type;
@@ -2376,7 +2311,7 @@ function isSmallThreeBrothers(allTiles) {
 
     const countsByValueAndSuit = {};
     allTiles.forEach(tile => {
-        if (tile.type === TILE_TYPES.HONORS || tile.type === TILE_TYPES.FLOWERS) return;
+        if (!isNumberedSuit(tile.type)) return;
         if (!countsByValueAndSuit[tile.value]) countsByValueAndSuit[tile.value] = {};
         countsByValueAndSuit[tile.value][tile.type] =
             (countsByValueAndSuit[tile.value][tile.type] || 0) + 1;
@@ -2395,7 +2330,7 @@ function isThreeBrothers(allTiles) {
     
     // 統計每種數字的每個花色數量
     allTiles.forEach(tile => {
-        if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
+        if (isNumberedSuit(tile.type)) {
             const val = tile.value;
             if (!counts[val]) counts[val] = {};
             const suit = tile.type;
@@ -2421,25 +2356,26 @@ function isThreeBrothers(allTiles) {
 
 // e. 小雜兄弟: 兩款不同而數子相連的刻子再加上第三款色不同相連對子(眼)
 function isSmallMixedBrothers(allTiles) {
-    const allPungs = [...state.pungs, ...state.openKongs, ...state.concealedKongs];
-    const sequentialPungs = [];
+    const allPungs = [...state.pungs, ...state.openKongs, ...state.concealedKongs]
+        .filter(pung => isNumberedSuit(pung.type));
+    const sequentialPungPairs = [];
     
     // 找出數值相連的不同花色刻子
     for (let i = 0; i < allPungs.length; i++) {
         for (let j = i + 1; j < allPungs.length; j++) {
             if (allPungs[i].type !== allPungs[j].type && 
                 Math.abs(allPungs[i].value - allPungs[j].value) <= 1) {
-                sequentialPungs.push(allPungs[i], allPungs[j]);
+                sequentialPungPairs.push([allPungs[i], allPungs[j]]);
             }
         }
     }
     
-    if (sequentialPungs.length < 2) return false;
+    if (sequentialPungPairs.length === 0) return false;
     
     // 檢查是否有相連的對子（第三款色）
     const counts = {};
     allTiles.forEach(tile => {
-        if (tile.type !== TILE_TYPES.HONORS && tile.type !== TILE_TYPES.FLOWERS) {
+        if (isNumberedSuit(tile.type)) {
             const key = `${tile.type}-${tile.value}`;
             counts[key] = (counts[key] || 0) + 1;
         }
@@ -2447,12 +2383,15 @@ function isSmallMixedBrothers(allTiles) {
     
     // 尋找與刻子相連的對子（不同花色）
     for (const key in counts) {
-        if (counts[key] >= 2) {
+        if (counts[key] === 2) {
             const [type, value] = key.split('-');
             const numValue = parseInt(value);
             
-            for (const pung of sequentialPungs) {
-                if (pung.type !== type && Math.abs(pung.value - numValue) <= 1) {
+            for (const [firstPung, secondPung] of sequentialPungPairs) {
+                const isThirdSuit = type !== firstPung.type && type !== secondPung.type;
+                const isConnected = Math.abs(firstPung.value - numValue) <= 1 ||
+                    Math.abs(secondPung.value - numValue) <= 1;
+                if (isThirdSuit && isConnected) {
                     return true;
                 }
             }
@@ -2464,7 +2403,8 @@ function isSmallMixedBrothers(allTiles) {
 
 // e2. 大雜兄弟: 三款不同而數子相連的刻子
 function isBigMixedBrothers(allTiles) {
-    const allPungs = [...state.pungs, ...state.openKongs, ...state.concealedKongs];
+    const allPungs = [...state.pungs, ...state.openKongs, ...state.concealedKongs]
+        .filter(pung => isNumberedSuit(pung.type));
     
     // 找出三款不同花色且數值相連的刻子
     for (let i = 0; i < allPungs.length; i++) {
@@ -3303,121 +3243,31 @@ function hasDragonPung(allTiles) {
 
 // 新增：檢查十三么
 function isShiSanYao(allTiles) {
-    // 十六张牌十三么需要17張牌（包括糊牌）
-    // 包含所有么九牌各一張，再加任意顺子或刻子
-    const totalTiles = allTiles.length;
-    if (totalTiles !== 17) {
-        return false;
-    }
-    
-    // 十三么的基本牌型：一九萬、一九筒、一九索、東南西北中發白
-    const requiredTiles = [
-        { type: TILE_TYPES.CHARACTERS, value: 1 }, // 1萬
-        { type: TILE_TYPES.CHARACTERS, value: 9 }, // 9萬
-        { type: TILE_TYPES.DOTS, value: 1 },       // 1筒
-        { type: TILE_TYPES.DOTS, value: 9 },       // 9筒
-        { type: TILE_TYPES.BAMBOOS, value: 1 },    // 1索
-        { type: TILE_TYPES.BAMBOOS, value: 9 },    // 9索
-        { type: TILE_TYPES.HONORS, value: 1 },     // 東
-        { type: TILE_TYPES.HONORS, value: 2 },     // 南
-        { type: TILE_TYPES.HONORS, value: 3 },     // 西
-        { type: TILE_TYPES.HONORS, value: 4 },     // 北
-        { type: TILE_TYPES.HONORS, value: 5 },     // 中
-        { type: TILE_TYPES.HONORS, value: 6 },     // 發
-        { type: TILE_TYPES.HONORS, value: 7 }      // 白
-    ];
-    
-    const tileCounts = {};
-    allTiles.forEach(tile => {
-        const key = `${tile.type}-${tile.value}`;
-        tileCounts[key] = (tileCounts[key] || 0) + 1;
-    });
-    
-    // 檢查是否包含所有么九牌各至少一張
-    for (const reqTile of requiredTiles) {
-        const key = `${reqTile.type}-${reqTile.value}`;
-        const count = tileCounts[key] || 0;
-        if (count < 1) {
-            return false; // 缺少必要牌
-        }
-    }
-    
-    // 檢查是否有將眼（其中一張牌有兩張）
-    let pairFound = false;
-    let pairTile = null;
-    for (const reqTile of requiredTiles) {
-        const key = `${reqTile.type}-${reqTile.value}`;
-        const count = tileCounts[key] || 0;
-        if (count == 2) {
-            pairFound = true;
-            pairTile = reqTile;
-            break;
-        }
-    }
-
-    if (!pairFound) {
-        return false; // 沒有將眼
-    }
-    
-    // 先統計每種牌需要排除的數量
-    const excludeCounts = {};
-    requiredTiles.forEach(reqTile => {
-        const key = `${reqTile.type}-${reqTile.value}`;
-        excludeCounts[key] = 1; // 每種牌保留一張
-    });
-    
-    // 將眼的牌多保留一張（總共保留兩張）
-    if (pairTile) {
-        const pairKey = `${pairTile.type}-${pairTile.value}`;
-        excludeCounts[pairKey] = 2;
-    }
-    
-    // 收集額外的牌（3張牌）
-    const extraTiles = [];
-    const usedCounts = {};
-    
-    allTiles.forEach(tile => {
-        const key = `${tile.type}-${tile.value}`;
-        usedCounts[key] = (usedCounts[key] || 0) + 1;
-        
-        // 如果這個牌型需要排除的數量還沒達到，就跳過
-        if (excludeCounts[key] && usedCounts[key] <= excludeCounts[key]) {
-            return;
-        }
-        
-        // 否則加入額外牌
-        extraTiles.push(tile);
-    });
-    
-    // 額外的牌必須能組成順子或刻子
-    if (extraTiles.length !== 3) {
-        return false;
-    }
-    
-    // 檢查是否能組成順子或刻子
-    return canFormMeld(extraTiles);
+    return isValidShiSanYao(allTiles);
 }
 
 // 檢查是否能組成順子或刻子
 function canFormMeld(tiles) {
-    if (tiles.length !== 3) return false;
-    
-    // 檢查是否為刻子（三張相同）
-    if (tiles.every(tile => 
+    if (!Array.isArray(tiles) || tiles.length !== 3) return false;
+
+    const hasOnlyLegalTiles = tiles.every(tile => {
+        if (!tile || typeof tile !== 'object' || !Number.isInteger(tile.value)) return false;
+        if (isNumberedSuit(tile.type)) return tile.value >= 1 && tile.value <= 9;
+        return tile.type === TILE_TYPES.HONORS && tile.value >= 1 && tile.value <= 7;
+    });
+    if (!hasOnlyLegalTiles) return false;
+
+    if (tiles.every(tile =>
         tile.type === tiles[0].type && tile.value === tiles[0].value
     )) {
         return true;
     }
-    
-    // 檢查是否為順子（三張連續）
+
     const sortedTiles = [...tiles].sort((a, b) => a.value - b.value);
-    
-    const isChow = sortedTiles[0].value + 1 === sortedTiles[1].value && 
-                  sortedTiles[1].value + 1 === sortedTiles[2].value &&
-                  sortedTiles[0].type === sortedTiles[1].type && 
-                  sortedTiles[1].type === sortedTiles[2].type;
-    
-    return isChow;
+    return isNumberedSuit(sortedTiles[0].type) &&
+        sortedTiles.every(tile => tile.type === sortedTiles[0].type) &&
+        sortedTiles[0].value + 1 === sortedTiles[1].value &&
+        sortedTiles[1].value + 1 === sortedTiles[2].value;
 }
 
 function canFormMelds(tiles, neededMelds) {

@@ -24,6 +24,9 @@ class ApiIntegrationTest {
     private String sessionPayload(String id) {
         return "{\"title\":\"Friday Game\",\"payload\":{\"schemaVersion\":\"ov-mj-session/v1\",\"id\":\"" + id + "\",\"title\":\"Friday Game\",\"createdAt\":\"2026-01-01T00:00:00Z\",\"updatedAt\":\"2026-01-01T00:00:00Z\",\"initialDealerId\":\"p1\",\"players\":[{\"id\":\"p1\",\"name\":\"A\",\"initialScore\":0},{\"id\":\"p2\",\"name\":\"B\",\"initialScore\":0},{\"id\":\"p3\",\"name\":\"C\",\"initialScore\":0},{\"id\":\"p4\",\"name\":\"D\",\"initialScore\":0}],\"config\":{\"baseAmount\":30,\"taiValue\":10,\"currency\":\"$\",\"dealerBaseTai\":1,\"streakTai\":1,\"pullTai\":1,\"drawContinues\":true,\"drawAddsPull\":true},\"entries\":[]}}";
     }
+    private String sessionPayloadWithPhysicalSeats(String id, String mapping) {
+        return sessionPayload(id).replace("\"initialDealerId\":\"p1\",", "\"initialDealerId\":\"p1\",\"physicalSeats\":" + mapping + ",");
+    }
 
     @Test void healthIsPublicAndProtectedRoutesRequireToken() throws Exception {
         mvc.perform(get("/api/health")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ok"));
@@ -64,5 +67,44 @@ class ApiIntegrationTest {
             .andExpect(status().isBadRequest());
         mvc.perform(delete("/api/sessions/{id}", id).queryParam("expectedVersion", "0").header("Authorization", "Bearer " + owner)).andExpect(status().isConflict());
         mvc.perform(delete("/api/sessions/{id}", id).queryParam("expectedVersion", "1").header("Authorization", "Bearer " + owner)).andExpect(status().isNoContent());
+    }
+
+    @Test void physicalSeatsAreOptionalValidatedAndRoundTrip() throws Exception {
+        String token = register("physical-seats@example.com");
+
+        String legacyId = "legacy-seatless";
+        mvc.perform(put("/api/sessions/{id}", legacyId).header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content(sessionPayload(legacyId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.payload.physicalSeats").doesNotExist());
+
+        String mappedId = "mapped-seats";
+        String validMapping = "{\"me\":\"p1\",\"upper\":\"p2\",\"opposite\":\"p4\",\"lower\":\"p3\"}";
+        mvc.perform(put("/api/sessions/{id}", mappedId).header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content(sessionPayloadWithPhysicalSeats(mappedId, validMapping)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.payload.physicalSeats.me").value("p1"))
+            .andExpect(jsonPath("$.payload.physicalSeats.upper").value("p2"))
+            .andExpect(jsonPath("$.payload.physicalSeats.opposite").value("p4"))
+            .andExpect(jsonPath("$.payload.physicalSeats.lower").value("p3"));
+        mvc.perform(get("/api/sessions/{id}", mappedId).header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.payload.physicalSeats.upper").value("p2"))
+            .andExpect(jsonPath("$.payload.physicalSeats.lower").value("p3"));
+
+        String[] invalidMappings = {
+            "{\"me\":\"p1\",\"upper\":\"p2\",\"opposite\":\"p3\"}",
+            "{\"me\":\"p1\",\"upper\":\"p2\",\"opposite\":\"p2\",\"lower\":\"p4\"}",
+            "{\"me\":\"p1\",\"upper\":\"p2\",\"opposite\":\"p3\",\"lower\":\"unknown\"}",
+            "{\"me\":\"p2\",\"upper\":\"p1\",\"opposite\":\"p3\",\"lower\":\"p4\"}",
+            "{\"me\":\"p1\",\"upper\":\"p2\",\"opposite\":\"p3\",\"lower\":\"p4\",\"extra\":\"p1\"}"
+        };
+        for (int index = 0; index < invalidMappings.length; index++) {
+            String invalidId = "invalid-seats-" + index;
+            mvc.perform(put("/api/sessions/{id}", invalidId).header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(sessionPayloadWithPhysicalSeats(invalidId, invalidMappings[index])))
+                .andExpect(status().isBadRequest());
+        }
     }
 }

@@ -137,6 +137,25 @@ public class ApiController {
             if (playerName.isBlank() || playerName.length() > 20) throw ApiProblem.badRequest("玩家名稱無效");
             requireInteger(player, "initialScore", -99999999, 99999999);
         }
+        JsonNode physicalSeats = payload.get("physicalSeats");
+        if (physicalSeats != null) {
+            Set<String> requiredSeatKeys = Set.of("me", "upper", "opposite", "lower");
+            if (!physicalSeats.isObject() || physicalSeats.size() != requiredSeatKeys.size()
+                || !requiredSeatKeys.stream().allMatch(physicalSeats::has)) {
+                throw ApiProblem.badRequest("physicalSeats 必須完整包含 me、upper、opposite、lower");
+            }
+            Set<String> mappedPlayerIds = new HashSet<>();
+            for (String key : requiredSeatKeys) {
+                JsonNode mappedPlayer = physicalSeats.path(key);
+                String mappedPlayerId = mappedPlayer.isTextual() ? mappedPlayer.asText() : "";
+                if (!playerIds.contains(mappedPlayerId) || !mappedPlayerIds.add(mappedPlayerId)) {
+                    throw ApiProblem.badRequest("physicalSeats 必須是四位玩家的不重複排列");
+                }
+            }
+            if (!physicalSeats.path("me").asText("").equals(playerNodes.get(0).path("id").asText(""))) {
+                throw ApiProblem.badRequest("physicalSeats.me 必須是第一位玩家");
+            }
+        }
         if (!playerIds.contains(payload.path("initialDealerId").asText())) throw ApiProblem.badRequest("起始莊家無效");
         JsonNode config = payload.path("config");
         if (!config.isObject()) throw ApiProblem.badRequest("config 必須是物件");

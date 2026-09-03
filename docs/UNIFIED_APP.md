@@ -13,7 +13,7 @@ python -m http.server 8000
 ```text
 訪客：http://127.0.0.1:8000/index.html
 訪客：http://127.0.0.1:8000/mahjong-suite/index.html
-登入：http://127.0.0.1:8000/session-scorekeeper-online/index.htmlindex.html
+登入：http://127.0.0.1:8000/session-scorekeeper-online/index.html
 API： http://127.0.0.1:8080/api
 ```
 
@@ -30,28 +30,29 @@ API： http://127.0.0.1:8080/api
 
 ### 2.1 三家快速帳（預設）
 
-1. 開啟 `/index.html` 或 `/mahjong-suite/index.html`；預設顯示三欄快速帳，頁面會標示「此頁暫存」。東家 `p1` 是「我」；左欄北家 `p4` 是上家、中欄西家 `p3` 是對家、右欄南家 `p2` 是下家。
-2. 名稱可直接點選修改。每欄輸入番數後按「我食」或「被食」，大字番數、逐鋪倍率與預計結算會立即更新。
-3. 同一方向、同一段內，較早各鋪按每個後續輸入再乘 `1.5`：
+1. 開啟 `/index.html` 或 `/mahjong-suite/index.html`；預設顯示三欄快速帳，頁面會標示「此頁暫存」。第一位玩家 `p1` 固定為「我（記分者）」；舊 payload 預設左欄 `p4` 上家、中欄 `p3` 對家、右欄 `p2` 下家。
+2. 名稱可直接修改。每欄輸入番數後按「我食」或「被食」，大字番數、逐鋪倍率與預計結算會立即更新。
+3. 同一方向內，較早各鋪按每個後續輸入再乘 `1.5`：
 
 ```text
-multiplier(i) = 1.5 ^（同段內其後輸入鋪數）
+multiplier(i) = 1.5 ^（其後輸入鋪數）
 10、20、8 番 = 10 × 2.25 + 20 × 1.5 + 8 = 60.5 番
 ```
 
-4. 快速帳輸入的番數已包含底，不會再另加 `baseAmount`。每個 segment 先整段計算 signed 加權番數：正常連拉對完整番數 `ceil(abs(fan))`；按「斷拉」或方向反轉自動斷拉時，先將完整 segment 番數除以 2，再以 `floor(abs(fan) ÷ 2)` 向下取整，最後恢復方向、乘每番值並把各段相加。除 2 與取整都不是逐筆進行。例如每番 1、三鋪 10 番為 `10×2.25 + 10×1.5 + 10 = 47.5`；正常結算 `ceil(47.5)×1 = 48`，斷拉結算 `floor(47.5÷2)×1 = 23`。
-5. 欄內「斷拉」會令目前 segment 按「整段除以 2 後向下取整」結算，且下一筆由 `×1` 開始；它不會建立全桌 `breakPull`。若未結算便由我食轉成被食或相反，系統會先以同一斷拉規則自動結算舊方向，再留下新方向第一筆。
-6. 按欄內「結算」後才會產生零和 `adjustment` entry。pending 欄清空後，頁面上方四家「目前總分」仍由 canonical 歷史持續累計；頁首「復原」可回復最近一次快速輸入、斷拉或結算，方向反轉造成的自動結算也可整體復原。
+4. 快速帳輸入的番數已包含底，不另加 `baseAmount`。整欄 signed 番數以 `sign(fan) × ceil(abs(fan))` 向外取整，再乘每番值。例如每番 1、三鋪 10 番為 `47.5`，結算為 `48`。
+5. 未結算時反轉我食／被食，系統會先用同一正常 `ceil` 規則結算舊方向，再留下新方向第一筆。新 UI 不再提供斷拉，也不會折半或向下取整。
+6. 玩家執位後按「調整座位」；可拖曳、點選兩張卡或使用鍵盤交換上家／對家／下家。確認只修改 `physicalSeats`，pending 跟 player ID 移動，分數、莊家、玩家順序及歷史不變；取消不 dirty。每 4 局提示一次但不會自動打開 dialog。
+7. 按欄內「結算」後才產生零和 `adjustment` entry。pending 清空後，目前總分仍由 canonical 歷史累計；頁首「復原」可回復快速輸入、結算或方向反轉造成的整體變更。
 
 未結算列是 UI memory adapter，不屬於 `ov-mj-session/v1`，不會被登入版 DB 儲存、匯出或 `getSession()` 帶走。重新整理、換牌局或關頁前必須先結算。快速帳以 `adjustment` 保存，因此不會改變胡牌／自摸統計、莊家、連莊或全桌拉莊；需要這些牌局語意時使用進階表單。
 
 ### 2.2 進階記一局
 
-展開「進階記一局」後可處理胡牌、自摸、一炮多響、流局、賞罰、包自摸、倍率、莊家覆寫與全桌斷拉。直接輸入牌型番，確認付款預覽及莊家處理後提交；提交後頁面會 replay 歷史並更新餘額、莊家、統計、圖表與找數建議。
+展開「進階記一局」後可處理胡牌、自摸、一炮多響、流局、賞罰、包自摸、倍率與莊家覆寫。直接輸入牌型番，確認付款預覽及莊家處理後提交；提交後頁面會 replay 歷史並更新餘額、莊家、統計、圖表與找數建議。
 
 - 莊家食糊會自動增加連莊及拉莊。
-- 閒家食糊（莊家被食）會輪到下一席並清除連／拉。
-- 「立即斷拉」把目前全桌拉莊歸零但保留連莊；「本局後斷拉」只在提交後仍續莊時把拉莊歸零。
+- 閒家食糊（莊家被食）會依穩定玩家順序輪到下一位並清除連／拉。
+- 現行 UI 不建立新斷拉紀錄；舊 payload 的 `breakPull`／`breakPullAfter` 仍可正規化及 replay。
 
 ### 2.3 不確定番數：選用牌型計番
 
@@ -111,7 +112,7 @@ multiplier(i) = 1.5 ^（同段內其後輸入鋪數）
 - **刪除**：送出清單列 ID 與該列 `expectedVersion`；版本過期時 API 回傳 409，避免覆蓋他處較新的修改。若刪除的是目前開啟記錄，前端會立即換成乾淨、隨機新 ID、尚未保存的工作區，避免下一次保存悄悄重建被刪除的 ID。
 - **匯出 JSON**：由伺服器輸出可保存的完整資料。
 - **匯出 TXT**：由伺服器輸出可閱讀標頭及完整資料。
-- **常用玩家**：可建立、刪除自己的 profile。每列可選東／南／西／北並按「套用」，透過 production host 的正常 session mutation 把名稱複製進目前牌局，因此會變成未儲存變更。牌局玩家名稱上限為 20 字，較長 profile 會明確要求改用較短名稱，不會靜默截斷。profile 與牌局沒有 live DB foreign-key 關聯，刪除 profile 不會改回牌局名稱，profile 顏色也不會取代四個固定座位顏色。
+- **常用玩家**：可建立、刪除自己的 profile。每列可選「我（記分者）」或玩家 2／3／4並按「套用」，以穩定 player ID 經 production host 複製姓名，因此會變成未儲存變更。之後 `physicalSeats` 調位只改顯示關係，不會把姓名換到另一身份。牌局玩家名稱上限 20 字；profile 與牌局沒有 live DB foreign-key 關聯，刪除 profile 不會改回牌局名稱，profile 顏色也不會覆蓋玩家顏色。
 
 共用內層記分器仍然不寫 `localStorage`。DB 儲存／載入／匯出只由已驗證的外層戶口版完成。
 
@@ -237,13 +238,13 @@ window.OVMJSessionHost = {
   hasStorageConflict(),
   markSaved(),
   createSession(title, { clearHistory }),
-  applyPlayerName(seat, name),
+  applyPlayerName(playerId, name),
   fillRoundDraft(value),
   replaceSession(value)
 };
 ```
 
-現行記分器是記憶體模式，`hasStorageConflict()` 保留作相容介面且永遠為 false。dirty 是 O(1) boolean：初始空白工作區 clean；已提交 mutation、新建、undo、redo 及 replacement 會 dirty；外層確認 PUT／GET payload 綁定後以 `markSaved()` 清除。`createSession()` 使用新的隨機 ID，並可選擇清除歷史；`applyPlayerName()` 只經正常 mutation 複製名稱。`fillRoundDraft()` 仍只更新表單與預覽，不提交 entry、不推 history，也不改 dirty；`replaceSession()` 驗證後只安裝到目前頁面記憶體。
+現行記分器是記憶體模式，`hasStorageConflict()` 保留作相容介面且永遠為 false。dirty 是 O(1) boolean：初始空白工作區 clean；已提交 mutation、新建、undo、redo 及 replacement 會 dirty；外層確認 PUT／GET payload 綁定後以 `markSaved()` 清除。`createSession()` 使用新的隨機 ID，並可選擇清除歷史；`applyPlayerName()` 以穩定 `p1…p4` ID 複製姓名。`physicalSeats` 是獨立 display mapping，調位不重排 `players`。`fillRoundDraft()` 仍只更新表單與預覽，不提交 entry、不推 history，也不改 dirty；`replaceSession()` 驗證後只安裝到目前頁面記憶體。
 
 ### 整合與登入 lifecycle
 
@@ -316,5 +317,5 @@ Java 17 MockMvc/H2
 - **收到 401 後工作區消失**：安全 lifecycle 的正常行為；HTTP 401 不會等待未儲存確認，請重新登入。
 - **顯示「未綁定 DB 版本」而不能保存**：該 ID 已存在於清單，但目前記憶體 payload 不是由 GET／成功 PUT 綁定；請先按該列「載入」，不要以清單版本猜測覆寫。
 - **顯示「新增未儲存」但沒有 dirty**：表示目前是乾淨的新 ID，尚未建立 DB 記錄；需要保存時仍要明確按 DB 儲存。
-- **套用常用玩家後 DB profile 沒有改變**：這是正確行為；套用只把名稱複製到所選座位，然後目前牌局會變成未儲存。
+- **套用常用玩家後 DB profile 沒有改變**：這是正確行為；套用只把名稱複製到穩定玩家 ID。要改左右顯示請另用「調整座位」，目前牌局則會成為未儲存。
 - **iframe 一直載入**：確認所有前端檔案同來源且相對路徑沒有遺漏。

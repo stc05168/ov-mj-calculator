@@ -7,6 +7,16 @@ const MAX_ENTRIES = 5000;
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 const PLAYER_COLORS = ['#b9463f', '#236b5e', '#315fa8', '#8a4d91'];
 const SEATS = ['東', '南', '西', '北'];
+const DEFAULT_PLAYER_NAMES = ['我', '玩家 2', '玩家 3', '玩家 4'];
+const PLAYER_SETTING_LABELS = ['我（記分者）', '玩家 2', '玩家 3', '玩家 4'];
+const PHYSICAL_SEAT_KEYS = ['me', 'upper', 'opposite', 'lower'];
+const MOVABLE_PHYSICAL_SEATS = ['upper', 'opposite', 'lower'];
+const PHYSICAL_SEAT_LABELS = {
+    me: '我（記分者）',
+    upper: '上家（左）',
+    opposite: '對家',
+    lower: '下家（右）'
+};
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 if (!Element.prototype.replaceChildren) {
@@ -39,13 +49,23 @@ const refs = {
     quickGrid: $('#tms-quick-ledger-grid'),
     quickRule: $('#tms-quick-rule'),
     quickUndo: $('#tms-quick-undo'),
+    adjustSeats: $('#tms-adjust-seats'),
+    seatCue: $('#tms-seat-cue'),
+    seatCueText: $('#tms-seat-cue-text'),
+    seatCueDismiss: $('#tms-seat-cue-dismiss'),
+    seatDialog: $('#tms-seat-dialog'),
+    seatGrid: $('#tms-seat-grid'),
+    seatSummary: $('#tms-seat-summary'),
+    seatPendingWarning: $('#tms-seat-pending-warning'),
+    seatLive: $('#tms-seat-live'),
+    seatCancel: $('#tms-seat-cancel'),
+    seatConfirm: $('#tms-seat-confirm'),
     advancedEntry: $('#tms-advanced-entry'),
     dealerName: $('#tms-dealer-name'),
     dealerBonus: $('#tms-dealer-bonus'),
     streak: $('#tms-streak-count'),
     pull: $('#tms-pull-count'),
     bonus: $('#tms-bonus-count'),
-    breakPull: $('#tms-break-pull'),
     form: $('#tms-round-form'),
     formTitle: $('#tms-form-title'),
     cancelEdit: $('#tms-cancel-edit'),
@@ -64,8 +84,6 @@ const refs = {
     baoPlayer: $('#tms-bao-player'),
     dealerActionField: $('#tms-dealer-action-field'),
     dealerAction: $('#tms-dealer-action'),
-    breakAfterField: $('#tms-break-after-field'),
-    breakAfter: $('#tms-break-after'),
     adjustPayerField: $('#tms-adjust-payer-field'),
     adjustPayer: $('#tms-adjust-payer'),
     adjustReceiverField: $('#tms-adjust-receiver-field'),
@@ -113,6 +131,13 @@ let redoStack = [];
 let toastTimer = null;
 let externalStorageConflict = false;
 let sessionDirty = false;
+let seatDialogDraft = null;
+let seatDialogTrigger = null;
+let selectedSeatRelation = null;
+let seatPointerDrag = null;
+let suppressSeatClick = false;
+let visibleSeatCueKey = '';
+const dismissedSeatMilestones = new Map();
 const quickLedgers = new Map();
 const quickUndoStack = [];
 
@@ -121,7 +146,7 @@ function createDefaultSession() {
     const players = SEATS.map((seat, index) => ({
         id: `p${index + 1}`,
         seat,
-        name: `${seat}家`,
+        name: DEFAULT_PLAYER_NAMES[index],
         color: PLAYER_COLORS[index],
         initialScore: 0
     }));
@@ -133,6 +158,7 @@ function createDefaultSession() {
         createdAt: now,
         updatedAt: now,
         players,
+        physicalSeats: defaultPhysicalSeats(players),
         initialDealerId: players[0].id,
         config: {
             baseAmount: 5,
@@ -146,6 +172,43 @@ function createDefaultSession() {
         },
         entries: []
     };
+}
+
+function defaultPhysicalSeats(players) {
+    return {
+        me: players[0].id,
+        upper: players[3].id,
+        opposite: players[2].id,
+        lower: players[1].id
+    };
+}
+
+function isValidPhysicalSeats(mapping, players) {
+    if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) return false;
+    const keys = Object.keys(mapping);
+    if (keys.length !== PHYSICAL_SEAT_KEYS.length
+        || !PHYSICAL_SEAT_KEYS.every((key) => Object.prototype.hasOwnProperty.call(mapping, key))) return false;
+    const playerIds = players.map((player) => player.id);
+    const values = PHYSICAL_SEAT_KEYS.map((key) => mapping[key]);
+    return mapping.me === players[0].id
+        && new Set(values).size === players.length
+        && values.every((id) => playerIds.includes(id));
+}
+
+function normalizePhysicalSeats(value, players) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('玩家位置格式無效。');
+    }
+    const keys = Object.keys(value);
+    if (keys.length !== PHYSICAL_SEAT_KEYS.length
+        || !PHYSICAL_SEAT_KEYS.every((key) => Object.prototype.hasOwnProperty.call(value, key))) {
+        throw new Error('玩家位置必須完整包含我、上家、對家與下家。');
+    }
+    const mapping = Object.fromEntries(PHYSICAL_SEAT_KEYS.map((key) => [key, String(value[key])]));
+    if (!isValidPhysicalSeats(mapping, players)) {
+        throw new Error('玩家位置必須包含四位不重複玩家，且記分者必須是第一位玩家。');
+    }
+    return mapping;
 }
 
 function normalizeSession(raw) {
@@ -167,12 +230,15 @@ function normalizeSession(raw) {
         return {
             id,
             seat: SEATS[index],
-            name: String(player.name || `${SEATS[index]}家`).slice(0, 20),
+            name: String(player.name || DEFAULT_PLAYER_NAMES[index]).slice(0, 20),
             color: PLAYER_COLORS[index],
             initialScore: boundedInt(player.initialScore, -99999999, 99999999, 0)
         };
     });
 
+    const physicalSeats = Object.prototype.hasOwnProperty.call(raw, 'physicalSeats')
+        ? normalizePhysicalSeats(raw.physicalSeats, players)
+        : defaultPhysicalSeats(players);
     const initialDealerId = ids.has(String(raw.initialDealerId))
         ? String(raw.initialDealerId)
         : players[0].id;
@@ -201,6 +267,7 @@ function normalizeSession(raw) {
         createdAt: validDate(raw.createdAt) ? raw.createdAt : new Date().toISOString(),
         updatedAt: validDate(raw.updatedAt) ? raw.updatedAt : new Date().toISOString(),
         players,
+        physicalSeats,
         initialDealerId,
         config,
         entries
@@ -397,7 +464,7 @@ function deriveSession(source) {
 
             const amountText = `底 ${source.config.baseAmount}／番 ${source.config.taiValue}／${input.tai} 番${input.multiplier > 1 ? ` ×${input.multiplier}` : ''}`;
             const dealerText = `莊家加 ${bonusTai} 番`;
-            explanation = `${amountText}；${dealerText}${input.breakPullAfter ? '；本局後斷拉' : ''}`;
+            explanation = `${amountText}；${dealerText}`;
         }
 
         if (input.type === 'adjustment') {
@@ -408,8 +475,8 @@ function deriveSession(source) {
 
         if (input.type === 'breakPull') {
             dealerState = { ...before, pull: 0 };
-            summary = '手動斷拉';
-            explanation = `${playerName(source, before.playerId)} 保持莊家，拉莊 ${before.pull} → 0`;
+            summary = '斷拉（舊紀錄）';
+            explanation = `${playerName(source, before.playerId)} 的舊紀錄：拉莊 ${before.pull} → 0，莊家與連莊不變`;
         }
 
         const deltaSum = Object.values(deltas).reduce((sum, value) => sum + value, 0);
@@ -499,12 +566,13 @@ function buildTextExport(source, result) {
             .filter((player) => entry.deltas[player.id])
             .map((player) => `${player.name} ${entry.deltas[player.id] > 0 ? '+' : ''}${entry.deltas[player.id]}`)
             .join('；');
-        lines.push(`${index + 1}. ${entry.summary}｜${entry.explanation}${changes ? `｜${changes}` : ''}${entry.input.note ? `｜備註：${entry.input.note}` : ''}`);
+        const note = entry.input.type !== 'breakPull' && entry.input.note ? `｜備註：${entry.input.note}` : '';
+        lines.push(`${index + 1}. ${entry.summary}｜${entry.explanation}${changes ? `｜${changes}` : ''}${note}`);
     });
     lines.push('', '最終結算');
     source.players.forEach((player) => {
         const net = result.totals[player.id] - player.initialScore;
-        lines.push(`${player.seat}家 ${player.name}：${result.totals[player.id]}（淨變動 ${net > 0 ? '+' : ''}${net}）`);
+        lines.push(`${player.name}：${result.totals[player.id]}（淨變動 ${net > 0 ? '+' : ''}${net}）`);
     });
     lines.push('', '精簡找數建議');
     const plan = settlementPlan(source, result);
@@ -557,6 +625,7 @@ function renderAll() {
     refs.roundLabel.textContent = `已完成 ${derived.handCount} 局 · 共 ${session.entries.length} 筆紀錄`;
     renderScoreboard();
     renderQuickLedger();
+    renderSeatCue();
     renderDealer();
     renderPlayerOptions();
     renderPreview();
@@ -569,76 +638,47 @@ function renderAll() {
 }
 
 const QUICK_RELATIONS = [
-    { playerIndex: 3, label: '上家' },
-    { playerIndex: 2, label: '對家' },
-    { playerIndex: 1, label: '下家' }
+    { key: 'upper', label: '上家' },
+    { key: 'opposite', label: '對家' },
+    { key: 'lower', label: '下家' }
 ];
 
 function quickLedgerFor(playerId) {
-    if (!quickLedgers.has(playerId)) quickLedgers.set(playerId, { items: [], breakNext: false });
+    if (!quickLedgers.has(playerId)) quickLedgers.set(playerId, { items: [] });
     return quickLedgers.get(playerId);
 }
 
 function quickWeightedItems(ledger) {
     return ledger.items.map((item, index, items) => {
-        const segment = Number(item.segment) || 0;
-        const laterInSegment = items.slice(index + 1).filter((next) => (Number(next.segment) || 0) === segment).length;
-        const multiplier = 1.5 ** laterInSegment;
-        return { ...item, segment, multiplier, weightedFan: item.fan * multiplier };
+        const multiplier = 1.5 ** (items.length - index - 1);
+        return { ...item, multiplier, weightedFan: item.fan * multiplier };
     });
 }
 
-function quickRoundFan(fan, broken) {
-    const adjustedFan = broken ? fan / 2 : fan;
-    const magnitude = broken ? Math.floor(Math.abs(adjustedFan)) : Math.ceil(Math.abs(adjustedFan));
-    return magnitude ? Math.sign(adjustedFan) * magnitude : 0;
+function quickRoundFan(fan) {
+    const magnitude = Math.ceil(Math.abs(fan));
+    return magnitude ? Math.sign(fan) * magnitude : 0;
 }
 
-function quickLedgerTotals(ledger, { breakLast = false } = {}) {
+function quickLedgerTotals(ledger) {
     const weightedItems = quickWeightedItems(ledger);
-    const grouped = new Map();
-    weightedItems.forEach((item) => {
-        if (!grouped.has(item.segment)) grouped.set(item.segment, []);
-        grouped.get(item.segment).push(item);
-    });
-    const maxSegment = grouped.size ? Math.max(...grouped.keys()) : -1;
-    const segmentTotals = [...grouped.entries()].map(([segment, items]) => {
-        const fan = items.reduce((sum, item) => sum + item.direction * item.weightedFan, 0);
-        const broken = segment < maxSegment || (segment === maxSegment && (ledger.breakNext || breakLast));
-        const adjustedFan = broken ? fan / 2 : fan;
-        const roundedFan = quickRoundFan(fan, broken);
-        const rawAmount = adjustedFan * session.config.taiValue;
-        return {
-            segment,
-            fan,
-            adjustedFan,
-            roundedFan,
-            rawAmount,
-            amount: roundedFan * session.config.taiValue,
-            broken
-        };
-    });
+    const fan = weightedItems.reduce((sum, item) => sum + item.direction * item.weightedFan, 0);
+    const roundedFan = quickRoundFan(fan);
     return {
-        fan: segmentTotals.reduce((sum, segment) => sum + segment.fan, 0),
-        rawAmount: segmentTotals.reduce((sum, segment) => sum + segment.rawAmount, 0),
-        amount: segmentTotals.reduce((sum, segment) => sum + segment.amount, 0),
-        weightedItems,
-        segmentTotals
+        fan,
+        rawAmount: fan * session.config.taiValue,
+        amount: roundedFan * session.config.taiValue,
+        roundedFan,
+        weightedItems
     };
 }
 
 function quickBreakdown(ledger, totals = quickLedgerTotals(ledger)) {
-    return totals.segmentTotals.map((segmentTotal) => {
-        const items = totals.weightedItems
-            .filter((item) => item.segment === segmentTotal.segment)
-            .map((item) => `${item.direction > 0 ? '+' : '−'}${item.fan}×${Number(item.multiplier.toFixed(4))}`)
-            .join('、');
-        const fan = Number(segmentTotal.fan.toFixed(3));
-        const calculation = segmentTotal.broken
-            ? `${fan}÷2→${segmentTotal.roundedFan}`
-            : `${fan}→${segmentTotal.roundedFan}`;
-        return `${items}（${segmentTotal.broken ? '斷拉↓' : '連拉↑'}${calculation}）`;
-    }).join('｜');
+    const items = totals.weightedItems
+        .map((item) => `${item.direction > 0 ? '+' : '−'}${item.fan}×${Number(item.multiplier.toFixed(4))}`)
+        .join('、');
+    const fan = Number(totals.fan.toFixed(3));
+    return `${items}（整欄 ${fan}→${totals.roundedFan}）`;
 }
 
 function cloneQuickLedgers() {
@@ -677,8 +717,9 @@ function renderQuickLedger() {
     refs.quickRule.textContent = `拉番 × 每番 ${session.config.taiValue}・不另加底`;
     refs.quickUndo.disabled = quickUndoStack.length === 0;
     refs.quickGrid.replaceChildren();
-    QUICK_RELATIONS.forEach(({ playerIndex, label }) => {
-        const player = session.players[playerIndex];
+    QUICK_RELATIONS.forEach(({ key, label }) => {
+        const playerId = session.physicalSeats[key];
+        const player = session.players.find((item) => item.id === playerId);
         const ledger = quickLedgerFor(player.id);
         const totals = quickLedgerTotals(ledger);
         const column = element('article', 'tms-quick-column');
@@ -731,23 +772,22 @@ function renderQuickLedger() {
         column.append(list);
 
         const subtotal = element('div', 'tms-quick-subtotal');
-        const rounding = totals.segmentTotals.map((segment) => segment.broken ? '斷拉÷2↓' : '連拉↑').join('／') || '—';
-        subtotal.append(element('span', '', '拉番小計'), element('strong', '', `${totals.fan > 0 ? '+' : ''}${totals.fan}番`));
+        const displayedFan = Number(totals.fan.toFixed(3));
+        const rounding = ledger.items.length ? `${totals.roundedFan} 番（整欄向上取整）` : '—';
+        subtotal.append(element('span', '', '拉番小計'), element('strong', '', `${displayedFan > 0 ? '+' : ''}${displayedFan}番`));
         subtotal.append(element('span', '', '番數處理'), element('strong', '', rounding));
         subtotal.append(element('span', '', '結算分數'), element('strong', '', formatMoney(totals.amount, true)));
         column.append(subtotal);
 
         const actions = element('div', 'tms-quick-actions');
-        [['break', '斷拉'], ['settle', '結算']].forEach(([action, text]) => {
-            const button = element('button', action === 'settle' ? 'is-settle' : '', text);
-            button.type = 'button';
-            button.dataset.quickAction = action;
-            button.dataset.playerId = player.id;
-            button.disabled = !ledger.items.length || (action === 'break' && ledger.breakNext);
-            actions.append(button);
-        });
+        const settle = element('button', 'is-settle', '結算');
+        settle.type = 'button';
+        settle.dataset.quickAction = 'settle';
+        settle.dataset.playerId = player.id;
+        settle.disabled = !ledger.items.length;
+        settle.setAttribute('aria-label', `與${player.name}結算快速帳`);
+        actions.append(settle);
         column.append(actions);
-        if (ledger.breakNext) column.append(element('small', 'tms-quick-break-note', '已斷拉：本段先 ÷2↓；下一筆由 ×1 開始'));
         refs.quickGrid.append(column);
     });
 }
@@ -766,9 +806,7 @@ function addQuickFan(playerId, direction) {
         previous = null;
     }
 
-    const segment = previous ? (ledger.breakNext ? (Number(previous.segment) || 0) + 1 : Number(previous.segment) || 0) : 0;
-    ledger.items.push({ fan, direction, segment });
-    ledger.breakNext = false;
+    ledger.items.push({ fan, direction });
     renderQuickLedger();
     const nextInput = $(`[data-quick-fan="${playerId}"]`, refs.quickGrid);
     nextInput?.focus();
@@ -779,15 +817,15 @@ function settleQuickLedger(playerId, { capture = true, reason = 'explicit' } = {
     if (!ledger.items.length) return showToast('此欄尚未輸入番數。', true);
     if (capture) pushQuickUndo();
     const automatic = reason === 'direction-reversal';
-    const totals = quickLedgerTotals(ledger, { breakLast: automatic });
+    const totals = quickLedgerTotals(ledger);
     if (!totals.amount) {
         quickLedgers.delete(playerId);
         renderQuickLedger();
         return showToast(totals.fan
-            ? '此欄折半／取整後為 0，已清除，毋須寫入紀錄。'
+            ? '此欄整體取整後為 0，已清除，毋須寫入紀錄。'
             : '此欄正負結果互相抵銷，已清除，毋須寫入紀錄。');
     }
-    const me = session.players[0];
+    const me = session.players.find((player) => player.id === session.physicalSeats.me);
     const opponent = session.players.find((player) => player.id === playerId);
     const note = `快速帳 ${quickBreakdown(ledger, totals)}；拉番${Number(totals.fan.toFixed(3))}；每番${session.config.taiValue}（不另加底）`.slice(0, 120);
     quickLedgers.delete(playerId);
@@ -799,7 +837,7 @@ function settleQuickLedger(playerId, { capture = true, reason = 'explicit' } = {
             amount: Math.abs(totals.amount)
         });
     }, automatic
-        ? `方向反轉，已自動把斷拉段番數除 2 後向下取整，先與${opponent.name}結算 ${formatMoney(Math.abs(totals.amount))}。`
+        ? `方向反轉，已按整欄向上取整規則先與${opponent.name}結算 ${formatMoney(Math.abs(totals.amount))}。`
         : `已與${opponent.name}結算 ${formatMoney(Math.abs(totals.amount))}。`,
     { preserveQuickUndo: true });
 }
@@ -812,8 +850,244 @@ function renameQuickPlayer(playerId, value) {
     pushQuickUndo();
     mutateSession((draft) => {
         draft.players.find((item) => item.id === playerId).name = name.slice(0, 20);
-    }, `已更新${player.seat}家名稱。`, { preserveQuickUndo: true });
+    }, `已更新${name.slice(0, 20)}的名稱。`, { preserveQuickUndo: true });
     renderSettings();
+}
+
+function dismissedMilestonesForSession(sessionId) {
+    if (!dismissedSeatMilestones.has(sessionId)) dismissedSeatMilestones.set(sessionId, new Set());
+    return dismissedSeatMilestones.get(sessionId);
+}
+
+function currentSeatMilestone() {
+    return Math.floor(derived.handCount / 4) * 4;
+}
+
+function dismissCurrentSeatCue() {
+    const milestone = currentSeatMilestone();
+    if (milestone >= 4) dismissedMilestonesForSession(session.id).add(milestone);
+    visibleSeatCueKey = '';
+    if (refs.seatCue) refs.seatCue.hidden = true;
+}
+
+function resetSeatCueDismissals(sessionId = session.id) {
+    dismissedSeatMilestones.delete(sessionId);
+    visibleSeatCueKey = '';
+}
+
+function renderSeatCue() {
+    if (!refs.seatCue || !refs.seatCueText) return;
+    const milestone = currentSeatMilestone();
+    const dismissed = milestone >= 4 && dismissedMilestonesForSession(session.id).has(milestone);
+    if (milestone < 4 || dismissed) {
+        refs.seatCue.hidden = true;
+        visibleSeatCueKey = '';
+        return;
+    }
+    const cueKey = `${session.id}:${milestone}`;
+    if (visibleSeatCueKey !== cueKey) {
+        refs.seatCueText.textContent = `已完成 ${milestone} 局，玩家有換位嗎？`;
+        visibleSeatCueKey = cueKey;
+    }
+    refs.seatCue.hidden = false;
+}
+
+function hasPendingQuickRows() {
+    return [...quickLedgers.values()].some((ledger) => ledger.items.length > 0);
+}
+
+function seatPlayer(relation) {
+    const playerId = seatDialogDraft?.[relation];
+    return session.players.find((player) => player.id === playerId);
+}
+
+function announceSeat(message) {
+    if (!refs.seatLive) return;
+    refs.seatLive.textContent = '';
+    requestAnimationFrame(() => {
+        if (refs.seatDialog.open) refs.seatLive.textContent = message;
+    });
+}
+
+function renderSeatDialog(focusRelation = '') {
+    if (!seatDialogDraft || !refs.seatGrid) return;
+    refs.seatGrid.replaceChildren();
+    PHYSICAL_SEAT_KEYS.forEach((relation) => {
+        const player = seatPlayer(relation);
+        const fixed = relation === 'me';
+        const card = document.createElement(fixed ? 'div' : 'button');
+        card.className = 'tms-seat-slot';
+        card.dataset.seatRelation = relation;
+        card.classList.toggle('is-fixed', fixed);
+        card.classList.toggle('is-selected', selectedSeatRelation === relation);
+        card.classList.toggle('is-drop-target', seatPointerDrag?.moved && seatPointerDrag.target === relation && seatPointerDrag.source !== relation);
+        if (fixed) {
+            card.setAttribute('role', 'group');
+            card.setAttribute('aria-label', `${PHYSICAL_SEAT_LABELS[relation]}：${player.name}，位置固定`);
+        } else {
+            card.type = 'button';
+            card.draggable = false;
+            card.setAttribute('aria-pressed', String(selectedSeatRelation === relation));
+            card.setAttribute('aria-label', `${PHYSICAL_SEAT_LABELS[relation]}：${player.name}。按 Enter 或空白鍵選取或交換`);
+        }
+        card.append(
+            element('span', 'tms-seat-slot__label', PHYSICAL_SEAT_LABELS[relation]),
+            element('strong', 'tms-seat-slot__player', player.name)
+        );
+        refs.seatGrid.append(card);
+    });
+
+    refs.seatSummary.textContent = `上家：${seatPlayer('upper').name} · 對家：${seatPlayer('opposite').name} · 下家：${seatPlayer('lower').name}`;
+    refs.seatPendingWarning.hidden = !hasPendingQuickRows();
+    const changed = PHYSICAL_SEAT_KEYS.some((key) => seatDialogDraft[key] !== session.physicalSeats[key]);
+    refs.seatConfirm.disabled = !changed || !isValidPhysicalSeats(seatDialogDraft, session.players);
+
+    if (focusRelation) {
+        requestAnimationFrame(() => {
+            refs.seatGrid.querySelector(`[data-seat-relation="${focusRelation}"]`)?.focus();
+        });
+    }
+}
+
+function openSeatDialog(trigger) {
+    seatDialogDraft = clone(session.physicalSeats);
+    seatDialogTrigger = trigger || refs.adjustSeats;
+    selectedSeatRelation = null;
+    seatPointerDrag = null;
+    renderSeatDialog();
+    if (typeof refs.seatDialog.showModal === 'function') refs.seatDialog.showModal();
+    else refs.seatDialog.setAttribute('open', '');
+    requestAnimationFrame(() => refs.seatGrid.querySelector('[data-seat-relation="upper"]')?.focus());
+}
+
+function restoreSeatDialogFocus() {
+    const trigger = seatDialogTrigger;
+    seatDialogDraft = null;
+    seatDialogTrigger = null;
+    selectedSeatRelation = null;
+    seatPointerDrag = null;
+    const target = trigger?.isConnected && !trigger.closest('[hidden]') ? trigger : refs.adjustSeats;
+    requestAnimationFrame(() => target?.focus());
+}
+
+function closeSeatDialog(returnValue = 'cancel') {
+    if (!refs.seatDialog.open) return;
+    if (typeof refs.seatDialog.close === 'function') refs.seatDialog.close(returnValue);
+    else {
+        refs.seatDialog.removeAttribute('open');
+        restoreSeatDialogFocus();
+    }
+}
+
+function swapSeatDraft(firstRelation, secondRelation) {
+    const firstId = seatDialogDraft[firstRelation];
+    seatDialogDraft[firstRelation] = seatDialogDraft[secondRelation];
+    seatDialogDraft[secondRelation] = firstId;
+}
+
+function pickOrSwapSeat(relation) {
+    if (!MOVABLE_PHYSICAL_SEATS.includes(relation)) return;
+    if (!selectedSeatRelation) {
+        selectedSeatRelation = relation;
+        const playerNameText = seatPlayer(relation).name;
+        renderSeatDialog(relation);
+        announceSeat(`已選擇${playerNameText}，請選擇另一個位置交換。`);
+        return;
+    }
+    if (selectedSeatRelation === relation) {
+        selectedSeatRelation = null;
+        renderSeatDialog(relation);
+        announceSeat('已取消選取。');
+        return;
+    }
+    const firstRelation = selectedSeatRelation;
+    const firstName = seatPlayer(firstRelation).name;
+    const secondName = seatPlayer(relation).name;
+    swapSeatDraft(firstRelation, relation);
+    selectedSeatRelation = null;
+    renderSeatDialog(relation);
+    announceSeat(`已交換${firstName}與${secondName}的位置。`);
+}
+
+function confirmSeatDialog() {
+    if (!seatDialogDraft || !isValidPhysicalSeats(seatDialogDraft, session.players)) return;
+    if (PHYSICAL_SEAT_KEYS.every((key) => seatDialogDraft[key] === session.physicalSeats[key])) return;
+    const nextPhysicalSeats = Object.fromEntries(PHYSICAL_SEAT_KEYS.map((key) => [key, seatDialogDraft[key]]));
+    dismissCurrentSeatCue();
+    mutateSession((draft) => {
+        draft.physicalSeats = nextPhysicalSeats;
+    });
+    closeSeatDialog('confirm');
+    showToast('已更新快速帳玩家位置；分數、莊家與紀錄維持不變。');
+}
+
+function updateSeatDragVisual() {
+    $$('[data-seat-relation]', refs.seatGrid).forEach((card) => {
+        const relation = card.dataset.seatRelation;
+        card.classList.toggle('is-selected', selectedSeatRelation === relation || (seatPointerDrag?.moved && seatPointerDrag.source === relation));
+        card.classList.toggle('is-drop-target', Boolean(seatPointerDrag?.moved && seatPointerDrag.target === relation && seatPointerDrag.source !== relation));
+    });
+}
+
+function beginSeatPointer(event) {
+    const card = event.target.closest('button[data-seat-relation]');
+    if (!card || !MOVABLE_PHYSICAL_SEATS.includes(card.dataset.seatRelation)) return;
+    seatPointerDrag = {
+        pointerId: event.pointerId,
+        source: card.dataset.seatRelation,
+        target: card.dataset.seatRelation,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false
+    };
+    try { card.setPointerCapture(event.pointerId); } catch (_error) { /* Pointer capture may be unavailable in older hosts. */ }
+}
+
+function seatDropRelationAt(clientX, clientY) {
+    const target = document.elementFromPoint(clientX, clientY)?.closest('button[data-seat-relation]');
+    return target && refs.seatGrid.contains(target) && MOVABLE_PHYSICAL_SEATS.includes(target.dataset.seatRelation)
+        ? target.dataset.seatRelation
+        : null;
+}
+
+function moveSeatPointer(event) {
+    if (!seatPointerDrag || event.pointerId !== seatPointerDrag.pointerId) return;
+    if (Math.hypot(event.clientX - seatPointerDrag.startX, event.clientY - seatPointerDrag.startY) > 8) {
+        seatPointerDrag.moved = true;
+    }
+    if (!seatPointerDrag.moved) return;
+    event.preventDefault();
+    seatPointerDrag.target = seatDropRelationAt(event.clientX, event.clientY);
+    updateSeatDragVisual();
+}
+
+function endSeatPointer(event) {
+    if (!seatPointerDrag || event.pointerId !== seatPointerDrag.pointerId) return;
+    const drag = seatPointerDrag;
+    const finalTarget = drag.moved ? seatDropRelationAt(event.clientX, event.clientY) : null;
+    const sourceCard = refs.seatGrid.querySelector(`[data-seat-relation="${drag.source}"]`);
+    try {
+        if (sourceCard?.hasPointerCapture(event.pointerId)) sourceCard.releasePointerCapture(event.pointerId);
+    } catch (_error) { /* The pointer may already be released. */ }
+    seatPointerDrag = null;
+    updateSeatDragVisual();
+    if (!drag.moved) return;
+    event.preventDefault();
+    suppressSeatClick = true;
+    setTimeout(() => { suppressSeatClick = false; }, 0);
+    if (!finalTarget || drag.source === finalTarget) return;
+    const firstName = seatPlayer(drag.source).name;
+    const secondName = seatPlayer(finalTarget).name;
+    swapSeatDraft(drag.source, finalTarget);
+    selectedSeatRelation = null;
+    renderSeatDialog(finalTarget);
+    announceSeat(`已將${firstName}與${secondName}交換位置。`);
+}
+
+function cancelSeatPointer(event) {
+    if (!seatPointerDrag || event.pointerId !== seatPointerDrag.pointerId) return;
+    seatPointerDrag = null;
+    updateSeatDragVisual();
 }
 
 function renderScoreboard() {
@@ -827,7 +1101,7 @@ function renderScoreboard() {
 
         const top = element('div', 'tms-player-score__top');
         const identity = element('div', 'tms-player-score__top');
-        identity.append(element('span', 'tms-player-score__seat', player.seat), element('span', 'tms-player-score__name', player.name));
+        identity.append(element('span', 'tms-player-score__name', player.name));
         top.append(identity);
         if (player.id === derived.dealerState.playerId) top.append(element('span', 'tms-badge', '莊'));
 
@@ -845,12 +1119,11 @@ function renderScoreboard() {
 function renderDealer() {
     const state = derived.dealerState;
     const bonus = dealerBonusTai(state, session.config);
-    refs.dealerName.textContent = `${playerName(session, state.playerId)} · ${session.players.find((player) => player.id === state.playerId)?.seat}風`;
+    refs.dealerName.textContent = playerName(session, state.playerId);
     refs.dealerBonus.textContent = `莊家 +${bonus} 番`;
     refs.streak.textContent = state.streak;
     refs.pull.textContent = state.pull;
     refs.bonus.textContent = bonus;
-    refs.breakPull.disabled = state.pull === 0;
 }
 
 function renderPlayerOptions() {
@@ -858,13 +1131,13 @@ function renderPlayerOptions() {
     selects.forEach((select) => {
         const current = select.value;
         select.replaceChildren();
-        session.players.forEach((player) => select.append(new Option(`${player.seat} · ${player.name}`, player.id)));
+        session.players.forEach((player) => select.append(new Option(player.name, player.id)));
         if (session.players.some((player) => player.id === current)) select.value = current;
     });
 
     const baoCurrent = refs.baoPlayer.value;
     refs.baoPlayer.replaceChildren(new Option('不使用', ''));
-    session.players.forEach((player) => refs.baoPlayer.append(new Option(`${player.seat} · ${player.name}`, player.id)));
+    session.players.forEach((player) => refs.baoPlayer.append(new Option(player.name, player.id)));
     if (session.players.some((player) => player.id === baoCurrent)) refs.baoPlayer.value = baoCurrent;
 
     refs.multiWinners.replaceChildren();
@@ -874,7 +1147,7 @@ function renderPlayerOptions() {
         input.type = 'checkbox';
         input.value = player.id;
         input.name = 'multiWinner';
-        label.append(input, document.createTextNode(`${player.seat} · ${player.name}`));
+        label.append(input, document.createTextNode(player.name));
         refs.multiWinners.append(label);
     });
 }
@@ -898,7 +1171,6 @@ function setOutcome(nextOutcome) {
     refs.multiplierField.hidden = isAdjustment || isDraw;
     refs.baoField.hidden = !isSelfDraw;
     refs.dealerActionField.hidden = isAdjustment;
-    refs.breakAfterField.hidden = isAdjustment;
     refs.adjustPayerField.hidden = !isAdjustment;
     refs.adjustReceiverField.hidden = !isAdjustment;
     refs.adjustAmountField.hidden = !isAdjustment;
@@ -937,7 +1209,8 @@ function readFormInput({ validate = true } = {}) {
         multiplier: boundedInt(refs.multiplier.value, 1, 3, 1),
         baoPlayerId: outcome === 'selfDraw' ? refs.baoPlayer.value : '',
         dealerAction: refs.dealerAction.value,
-        breakPullAfter: refs.breakAfter.checked
+        breakPullAfter: Boolean(editingEntryId
+            && session.entries.find((entry) => entry.id === editingEntryId)?.breakPullAfter)
     };
     if (validate) validateHandInput(input, new Set(session.players.map((player) => player.id)));
     return input;
@@ -1043,7 +1316,6 @@ function editEntry(id) {
         refs.multiplier.value = input.multiplier;
         refs.baoPlayer.value = input.baoPlayerId || '';
         refs.dealerAction.value = input.dealerAction;
-        refs.breakAfter.checked = input.breakPullAfter;
     }
     renderPreview();
     refs.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1056,13 +1328,6 @@ function cancelEdit() {
     refs.cancelEdit.hidden = true;
 }
 
-function addBreakPull() {
-    if (derived.dealerState.pull === 0) return showToast('目前拉莊已經是 0。');
-    mutateSession((draft) => {
-        draft.entries.push({ id: uid(), type: 'breakPull', createdAt: new Date().toISOString(), note: '手動斷拉' });
-    }, '已斷拉；莊家與連莊次數保持不變。');
-}
-
 function renderHistory() {
     refs.history.replaceChildren();
     const filter = refs.historyFilter?.value || 'all';
@@ -1071,7 +1336,7 @@ function renderHistory() {
     refs.historyEmpty.textContent = derived.entries.length ? '沒有符合此篩選的紀錄。' : '尚未記錄牌局。';
     [...visibleEntries].reverse().forEach((entry) => {
         const item = element('article', 'tms-history-item');
-        const numberText = entry.handNumber ? `#${entry.handNumber}` : entry.input.type === 'breakPull' ? '斷' : '調';
+        const numberText = entry.handNumber ? `#${entry.handNumber}` : entry.input.type === 'breakPull' ? '舊' : '調';
         item.append(element('div', 'tms-history-item__number', numberText));
         const body = element('div');
         const head = element('div', 'tms-history-item__head');
@@ -1080,7 +1345,9 @@ function renderHistory() {
         heading.append(element('p', '', entry.explanation));
         head.append(heading, element('span', 'tms-badge', dealerLabel(entry.dealerBefore)));
         body.append(head);
-        if (entry.input.note && entry.input.note !== entry.explanation) body.append(element('p', '', `備註：${entry.input.note}`));
+        if (entry.input.type !== 'breakPull' && entry.input.note && entry.input.note !== entry.explanation) {
+            body.append(element('p', '', `備註：${entry.input.note}`));
+        }
 
         const deltas = element('div', 'tms-history-item__deltas');
         session.players.forEach((player) => {
@@ -1201,7 +1468,7 @@ function renderSettlements() {
     sorted.forEach((player, index) => {
         const row = element('div', 'tms-settlement-row');
         const net = derived.totals[player.id] - player.initialScore;
-        row.append(element('span', '', `${index + 1}. ${player.seat} · ${player.name}`), element('strong', '', formatMoney(net, true)));
+        row.append(element('span', '', `${index + 1}. ${player.name}`), element('strong', '', formatMoney(net, true)));
         refs.settlementList.append(row);
     });
     const plan = settlementPlan(session, derived);
@@ -1220,30 +1487,17 @@ function renderSettlements() {
 function renderSettings() {
     refs.sessionTitle.value = session.title;
     refs.playerSettings.replaceChildren();
-    session.players.forEach((player) => {
-        const row = element('div', 'tms-player-setting');
-        row.style.setProperty('--player-color', player.color);
-        row.append(element('div', 'tms-player-setting__seat', player.seat));
-        const nameLabel = element('label', 'tms-field');
-        nameLabel.append(element('span', '', '名稱'));
+    session.players.forEach((player, index) => {
+        const nameLabel = element('label', 'tms-field tms-player-setting');
+        nameLabel.append(element('span', '', PLAYER_SETTING_LABELS[index]));
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
         nameInput.maxLength = 20;
         nameInput.value = player.name;
         nameInput.dataset.playerName = player.id;
+        nameInput.autocomplete = 'off';
         nameLabel.append(nameInput);
-        const scoreLabel = element('label', 'tms-field');
-        scoreLabel.append(element('span', '', '起始分數'));
-        const scoreInput = document.createElement('input');
-        scoreInput.type = 'number';
-        scoreInput.min = '-99999999';
-        scoreInput.max = '99999999';
-        scoreInput.step = '1';
-        scoreInput.value = player.initialScore;
-        scoreInput.dataset.playerScore = player.id;
-        scoreLabel.append(scoreInput);
-        row.append(nameLabel, scoreLabel);
-        refs.playerSettings.append(row);
+        refs.playerSettings.append(nameLabel);
     });
     renderPlayerOptions();
     refs.initialDealer.value = session.initialDealerId;
@@ -1277,8 +1531,6 @@ function saveSettings(event) {
             draft.title = refs.sessionTitle.value.trim() || '今晚牌局';
             draft.players.forEach((player) => {
                 player.name = names[player.id].slice(0, 20);
-                const scoreInput = $(`[data-player-score="${player.id}"]`, refs.playerSettings);
-                player.initialScore = boundedInt(scoreInput.value, -99999999, 99999999, 0);
             });
             draft.initialDealerId = refs.initialDealer.value;
             draft.config = {
@@ -1353,6 +1605,7 @@ async function importJson(file) {
         undoStack.push(clone(session));
         redoStack = [];
         session = imported;
+        resetSeatCueDismissals(session.id);
         derived = deriveSession(session);
         saveSession();
         cancelEdit();
@@ -1394,7 +1647,7 @@ async function shareImage() {
             ctx.fillRect(x, y, 9, 130);
             ctx.fillStyle = '#fffdf7';
             ctx.font = '700 28px "Microsoft JhengHei", sans-serif';
-            ctx.fillText(`${player.seat} · ${player.name}`, x + 35, y + 43);
+            ctx.fillText(player.name, x + 35, y + 43);
             ctx.font = '800 43px "Microsoft JhengHei", sans-serif';
             ctx.fillText(formatMoney(derived.totals[player.id], true), x + 35, y + 98);
         });
@@ -1441,6 +1694,7 @@ function createHostedSession(title, options = {}) {
     quickUndoStack.length = 0;
     session = createDefaultSession();
     session.title = normalizedTitle;
+    resetSeatCueDismissals(session.id);
     derived = deriveSession(session);
     saveSession();
     cancelEdit();
@@ -1466,6 +1720,7 @@ function newSession() {
 function resetSessionEntries() {
     if (!confirm('確定清除整場紀錄？玩家與規則設定會保留。')) return;
     mutateSession((draft) => { draft.entries = []; }, '整場紀錄已清除。');
+    resetSeatCueDismissals();
     cancelEdit();
     resetRoundForm();
 }
@@ -1538,28 +1793,62 @@ function wireEvents() {
     refs.form.addEventListener('submit', submitRound);
     refs.settingsForm.addEventListener('submit', saveSettings);
     refs.cancelEdit.addEventListener('click', () => { cancelEdit(); resetRoundForm(); });
-    refs.breakPull.addEventListener('click', addBreakPull);
     refs.undo.addEventListener('click', undo);
     refs.redo.addEventListener('click', redo);
     refs.quickUndo.addEventListener('click', undoQuickAction);
+    $$('[data-open-seat-dialog]').forEach((button) => {
+        button.addEventListener('click', () => openSeatDialog(button));
+    });
+    refs.seatCueDismiss.addEventListener('click', dismissCurrentSeatCue);
+    refs.seatCancel.addEventListener('click', () => closeSeatDialog('cancel'));
+    refs.seatConfirm.addEventListener('click', confirmSeatDialog);
+    refs.seatDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeSeatDialog('cancel');
+    });
+    refs.seatDialog.addEventListener('close', restoreSeatDialogFocus);
+    refs.seatGrid.addEventListener('pointerdown', beginSeatPointer);
+    refs.seatGrid.addEventListener('pointermove', moveSeatPointer);
+    refs.seatGrid.addEventListener('pointerup', endSeatPointer);
+    refs.seatGrid.addEventListener('pointercancel', cancelSeatPointer);
+    refs.seatGrid.addEventListener('click', (event) => {
+        const card = event.target.closest('button[data-seat-relation]');
+        if (!card) return;
+        if (suppressSeatClick) {
+            event.preventDefault();
+            return;
+        }
+        pickOrSwapSeat(card.dataset.seatRelation);
+    });
+    refs.seatGrid.addEventListener('keydown', (event) => {
+        const card = event.target.closest('button[data-seat-relation]');
+        if (!card) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeSeatDialog('cancel');
+            return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            pickOrSwapSeat(card.dataset.seatRelation);
+            return;
+        }
+        const offset = ['ArrowLeft', 'ArrowUp'].includes(event.key)
+            ? -1
+            : ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : 0;
+        if (!offset) return;
+        event.preventDefault();
+        const cards = $$('button[data-seat-relation]', refs.seatGrid);
+        const currentIndex = cards.indexOf(card);
+        cards[(currentIndex + offset + cards.length) % cards.length]?.focus();
+    });
 
     refs.quickGrid.addEventListener('click', (event) => {
         const button = event.target.closest('[data-quick-action]');
         if (!button) return;
         const playerId = button.dataset.playerId;
-        const ledger = quickLedgerFor(playerId);
         if (button.dataset.quickAction === 'add-win') addQuickFan(playerId, 1);
         if (button.dataset.quickAction === 'add-lose') addQuickFan(playerId, -1);
-        if (button.dataset.quickAction === 'break') {
-            pushQuickUndo();
-            ledger.breakNext = true;
-            renderQuickLedger();
-        }
-        if (button.dataset.quickAction === 'undo') {
-            ledger.items.pop();
-            ledger.breakNext = false;
-            renderQuickLedger();
-        }
         if (button.dataset.quickAction === 'settle') settleQuickLedger(playerId);
     });
     refs.quickGrid.addEventListener('change', (event) => {
@@ -1595,7 +1884,7 @@ function wireEvents() {
         if (tab) switchView(tab.dataset.tab);
     });
 
-    [refs.winner, refs.discarder, refs.tai, refs.multiplier, refs.baoPlayer, refs.dealerAction, refs.breakAfter,
+    [refs.winner, refs.discarder, refs.tai, refs.multiplier, refs.baoPlayer, refs.dealerAction,
         refs.adjustPayer, refs.adjustReceiver, refs.adjustAmount, refs.note, refs.multiWinners]
         .forEach((control) => {
             control.addEventListener('input', renderPreview);
@@ -1640,18 +1929,23 @@ const fillRoundDraft = ({ tai = 0, note = '', isSelfDraw = false } = {}) => {
     return applied;
 };
 
-const applyHostedPlayerName = (seat, name) => {
-    const normalizedSeat = String(seat ?? '').trim();
+const applyHostedPlayerName = (playerId, name) => {
+    const target = String(playerId ?? '').trim();
     const normalizedName = String(name ?? '').trim();
-    if (!SEATS.includes(normalizedSeat)) throw new Error('請選擇東、南、西或北其中一個座位。');
+    let player = session.players.find((item) => item.id === target);
+    if (!player && SEATS.includes(target)) {
+        player = session.players.find((item) => item.seat === target);
+    }
+    if (!player) throw new Error('找不到指定玩家。');
     if (!normalizedName) throw new Error('玩家名稱不可空白。');
     if (normalizedName.length > 20) throw new Error('牌局玩家名稱最多 20 個字；請使用較短的常用玩家名稱。');
+    const targetId = player.id;
 
     mutateSession((draft) => {
-        const player = draft.players.find((item) => item.seat === normalizedSeat);
-        if (!player) throw new Error('找不到指定座位。');
-        player.name = normalizedName;
-    }, `已將 ${normalizedName} 套用到${normalizedSeat}家。`);
+        const targetPlayer = draft.players.find((item) => item.id === targetId);
+        if (!targetPlayer) throw new Error('找不到指定玩家。');
+        targetPlayer.name = normalizedName;
+    }, `已更新 ${normalizedName} 的名稱。`);
     if (activeView === 'settings') renderSettings();
     return getHostedSessionStatus();
 };
@@ -1666,6 +1960,7 @@ const replaceHostedSession = (payload) => {
     quickLedgers.clear();
     quickUndoStack.length = 0;
     session = normalized;
+    resetSeatCueDismissals(session.id);
     derived = nextDerived;
     setSessionDirty(true);
     cancelEdit();

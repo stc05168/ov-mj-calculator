@@ -229,7 +229,7 @@
             hasStorageConflict: () => scorekeeperHost().hasStorageConflict(),
             markSaved: () => scorekeeperHost().markSaved(),
             createSession: (title, options) => scorekeeperHost().createSession(title, options),
-            applyPlayerName: (seat, name) => scorekeeperHost().applyPlayerName(seat, name),
+            applyPlayerName: (playerId, name) => scorekeeperHost().applyPlayerName(playerId, name),
             fillRoundDraft: (value) => scorekeeperHost().fillRoundDraft(value),
             replaceSession: (value) => scorekeeperHost().replaceSession(value)
         });

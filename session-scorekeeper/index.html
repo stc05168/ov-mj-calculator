@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#123c35">
-    <meta name="description" content="台灣麻將整場記分、連莊拉莊、斷拉、歷史與走勢圖工具">
+    <meta name="description" content="台灣麻將整場記分、連莊拉莊、歷史與走勢圖工具">
     <title>台牌整場記分</title>
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -53,15 +53,23 @@
                         <div>
                             <p class="tms-kicker">三家快速帳</p>
                             <h2 id="tms-quick-ledger-title">上家・對家・下家</h2>
-                            <p class="tms-round-label">以東家「我」為本位；連續同方向每次在上一級再 ×1.5（×1、×1.5、×2.25…）</p>
+                            <p class="tms-round-label">以「我（記分者）」為本位；連續同方向每次在上一級再 ×1.5（×1、×1.5、×2.25…）</p>
                         </div>
                         <div class="tms-quick-heading-actions">
+                            <button class="tms-text-button" id="tms-adjust-seats" type="button" data-open-seat-dialog>調整座位</button>
                             <span class="tms-badge" id="tms-quick-rule">拉番 × 每番 1・不另加底</span>
                             <button class="tms-text-button" id="tms-quick-undo" type="button" disabled>↶ 復原</button>
                         </div>
                     </div>
+                    <aside class="tms-seat-cue" id="tms-seat-cue" role="status" aria-live="polite" hidden>
+                        <p id="tms-seat-cue-text">已完成 4 局，玩家有換位嗎？</p>
+                        <div class="tms-seat-cue__actions">
+                            <button class="tms-button tms-button--secondary" type="button" data-open-seat-dialog>調整座位</button>
+                            <button class="tms-text-button" id="tms-seat-cue-dismiss" type="button">座位不變</button>
+                        </div>
+                    </aside>
                     <div class="tms-quick-ledger-grid" id="tms-quick-ledger-grid" aria-live="polite"></div>
-                    <p class="tms-help">每欄未結算資料只保留在目前畫面。輸入番數已包含底，不另加底；正常連拉將同一 segment 的加權番數整段向上取整。按「斷拉」或方向反轉自動斷拉時，先把該段加權番數整段除以 2，再向下取整（不是逐筆除 2／逐筆取整），最後乘每番值。按「結算」後才會寫入牌局紀錄及目前總分。</p>
+                    <p class="tms-help">每欄未結算資料只保留在目前畫面。輸入番數已包含底，不另加底；連續同方向會將整欄加權番數依正負方向向外取整，再乘每番值。方向反轉時會先按相同規則自動結算原方向，再開始新方向。按「結算」後才會寫入牌局紀錄及目前總分。</p>
                 </section>
 
                 <details class="tms-advanced-entry" id="tms-advanced-entry">
@@ -71,7 +79,7 @@
                         <div class="tms-section-heading">
                             <div>
                                 <p class="tms-kicker">莊家狀態</p>
-                                <h2 id="tms-dealer-name">東家</h2>
+                                <h2 id="tms-dealer-name">我</h2>
                             </div>
                             <span class="tms-badge" id="tms-dealer-bonus">莊家 +1 番</span>
                         </div>
@@ -80,8 +88,6 @@
                             <div><span>拉莊</span><strong id="tms-pull-count">0</strong></div>
                             <div><span>本局加番</span><strong id="tms-bonus-count">1</strong></div>
                         </div>
-                        <button class="tms-button tms-button--warning tms-button--full" id="tms-break-pull" type="button">立即斷拉</button>
-                        <p class="tms-help">斷拉只把拉莊次數歸零；連莊與莊家不會改變。</p>
                     </article>
 
                     <form class="tms-card tms-round-form" id="tms-round-form">
@@ -164,21 +170,13 @@
                                 <span>下局莊家</span>
                                 <select id="tms-dealer-action">
                                     <option value="auto">自動（依胡牌／流局規則決定）</option>
-                                    <option value="continue">強制續莊（可配合本局後斷拉）</option>
+                                    <option value="continue">強制續莊</option>
                                     <option value="rotate">強制下莊（連莊／拉莊清零）</option>
                                 </select>
                             </label>
 
-                            <label class="tms-toggle tms-field--wide" id="tms-break-after-field">
-                                <input id="tms-break-after" type="checkbox">
-                                <span>
-                                    <strong>本局後斷拉</strong>
-                                    <small>若下局仍由同一位坐莊，保留連莊但把拉莊歸零；被食而自動下莊時，連／拉本來就會清零。</small>
-                                </span>
-                            </label>
-
                             <div class="tms-auto-rule-note tms-field--wide">
-                                <strong>自動連拉：</strong>莊家食糊會自動連莊及拉莊各加 1。<strong>莊家被食：</strong>預設換下一家並清除連／拉；如牌桌只斷拉但仍續莊，請選「強制續莊」並勾選「本局後斷拉」。<strong>流局：</strong>依設定中的「流局續莊」與「流局也加拉」決定。
+                                <strong>自動連拉：</strong>莊家食糊會自動連莊及拉莊各加 1。<strong>莊家被食：</strong>預設換下一位玩家並清除連／拉；如牌桌仍由同一位玩家續莊，請選「強制續莊」。<strong>流局：</strong>依設定中的「流局續莊」與「流局也加拉」決定。
                             </div>
 
                             <label class="tms-field" id="tms-adjust-payer-field" hidden>
@@ -273,7 +271,6 @@
                                 <option value="win">胡牌／自摸／多響</option>
                                 <option value="draw">流局</option>
                                 <option value="adjustment">賞罰</option>
-                                <option value="breakPull">斷拉</option>
                             </select>
                             <button class="tms-text-button" id="tms-undo" type="button">復原</button>
                             <button class="tms-text-button" id="tms-redo" type="button">重做</button>
@@ -383,6 +380,24 @@
             <button id="tms-tab-settings" type="button" data-tab="settings" aria-controls="tms-view-settings" aria-selected="false"><span>設定</span></button>
         </nav>
     </div>
+
+    <dialog class="tms-seat-dialog" id="tms-seat-dialog" aria-labelledby="tms-seat-dialog-title" aria-describedby="tms-seat-dialog-instruction">
+        <div class="tms-seat-dialog__surface">
+            <header class="tms-seat-dialog__header">
+                <p class="tms-kicker">三家快速帳</p>
+                <h2 id="tms-seat-dialog-title">調整玩家位置</h2>
+                <p id="tms-seat-dialog-instruction">拖曳玩家卡片，或先點選一位玩家再點另一個位置交換。這只會調整快速帳的位置；分數、莊家與歷史紀錄都不會改變。</p>
+            </header>
+            <div class="tms-seat-grid" id="tms-seat-grid" aria-label="玩家位置配置"></div>
+            <p class="tms-seat-pending-warning" id="tms-seat-pending-warning" role="status" hidden>尚有未結算的快速帳；資料會跟隨玩家移動，不會自動結算或清除。</p>
+            <p class="tms-seat-summary" id="tms-seat-summary">上家：玩家 4 · 對家：玩家 3 · 下家：玩家 2</p>
+            <div class="tms-seat-dialog__actions">
+                <button class="tms-button tms-button--secondary" id="tms-seat-cancel" type="button">取消</button>
+                <button class="tms-button tms-button--primary" id="tms-seat-confirm" type="button" disabled>確認位置</button>
+            </div>
+            <p class="tms-visually-hidden" id="tms-seat-live" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
+    </dialog>
 
     <div class="tms-toast" id="tms-toast" role="status" aria-live="polite" hidden></div>
     <script>

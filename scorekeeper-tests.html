@@ -112,6 +112,26 @@
     function sumDeltas(deltas) {
         return Object.keys(deltas).reduce(function (sum, id) { return sum + deltas[id]; }, 0);
     }
+    function resetLiveSession(value) {
+        var host = frame.contentWindow.OVMJSessionHost;
+        host.replaceSession(value || defaultSession());
+        host.markSaved();
+        return host;
+    }
+    function addQuick(playerId, fan, action) {
+        var doc = frame.contentDocument;
+        var input = doc.querySelector('[data-quick-fan="' + playerId + '"]');
+        input.value = String(fan);
+        doc.querySelector('[data-quick-action="' + (action || 'add-win') + '"][data-player-id="' + playerId + '"]').click();
+    }
+    function openSeatDialog() {
+        var doc = frame.contentDocument;
+        doc.getElementById('tms-adjust-seats').click();
+        return doc.getElementById('tms-seat-dialog');
+    }
+    function seatCard(relation) {
+        return frame.contentDocument.querySelector('[data-seat-relation="' + relation + '"]');
+    }
 
     function loadApp() {
         return new Promise(function (resolve, reject) {
@@ -166,14 +186,14 @@
         equal(api.dealerBonusTai({ playerId: 'p1', streak: 0, pull: 0 }, session.config), 1);
     });
 
-    test('settle-001', '閒家胡閒家：底30台10、5台收80', function () {
+    test('settle-001', '閒家胡閒家：預設底5番1、5番收10', function () {
         var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p3' })]);
-        deepEqual(result.entries[0].deltas, { p1: 0, p2: 80, p3: -80, p4: 0 });
+        deepEqual(result.entries[0].deltas, { p1: 0, p2: 10, p3: -10, p4: 0 });
     });
 
-    test('settle-002', '莊家放槍時套用莊家加台', function () {
+    test('settle-002', '莊家放槍時套用莊家加番', function () {
         var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p1' })]);
-        deepEqual(result.entries[0].deltas, { p1: -90, p2: 90, p3: 0, p4: 0 });
+        deepEqual(result.entries[0].deltas, { p1: -11, p2: 11, p3: 0, p4: 0 });
     });
 
     test('dealer-001', '莊家胡牌後成為連一拉一', function () {
@@ -182,54 +202,55 @@
         equal(api.dealerBonusTai(result.dealerState, defaultSession().config), 3);
     });
 
-    test('dealer-002', '連一拉一的下一局套用加三台', function () {
+    test('dealer-002', '連一拉一的下一局套用加三番', function () {
         var result = deriveWith([
             hand('discard', { winnerIds: ['p1'], discarderId: 'p2', tai: 5 }),
             hand('discard', { winnerIds: ['p1'], discarderId: 'p3', tai: 5 })
         ]);
-        equal(result.entries[1].transfers[0].amount, 110);
+        equal(result.entries[1].transfers[0].amount, 13);
         deepEqual(result.dealerState, { playerId: 'p1', streak: 2, pull: 2 });
     });
 
-    test('dealer-003', '莊家下莊後按東南西北順序輪莊', function () {
+    test('dealer-003', '莊家下莊後按穩定玩家順序輪莊', function () {
         var result = deriveWith([hand('discard', { winnerIds: ['p3'], discarderId: 'p4' })]);
         deepEqual(result.dealerState, { playerId: 'p2', streak: 0, pull: 0 });
     });
 
-    test('pull-001', '手動斷拉只歸零拉莊並保留連莊', function () {
+    test('pull-001', '舊立即斷拉紀錄仍可重播並只歸零拉莊', function () {
         var result = deriveWith([
             hand('discard', { winnerIds: ['p1'], discarderId: 'p2' }),
             breakPull()
         ]);
         deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 0 });
         equal(api.dealerBonusTai(result.dealerState, defaultSession().config), 2);
+        equal(result.entries[1].summary, '斷拉（舊紀錄）');
     });
 
-    test('pull-002', '本局後斷拉在續莊時拉數歸零', function () {
+    test('pull-002', '舊本局後斷拉欄位在續莊時仍可重播', function () {
         var result = deriveWith([hand('discard', { winnerIds: ['p1'], discarderId: 'p2', breakPullAfter: true })]);
         deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 0 });
     });
 
-    test('selfdraw-001', '閒家自摸：莊家付90、兩閒家各80', function () {
+    test('selfdraw-001', '閒家自摸：莊家付11、兩閒家各10', function () {
         var result = deriveWith([hand('selfDraw', { winnerIds: ['p2'] })]);
-        deepEqual(result.entries[0].deltas, { p1: -90, p2: 250, p3: -80, p4: -80 });
+        deepEqual(result.entries[0].deltas, { p1: -11, p2: 31, p3: -10, p4: -10 });
     });
 
-    test('selfdraw-002', '莊家自摸：三家各付90並續莊', function () {
+    test('selfdraw-002', '莊家自摸：三家各付11並續莊', function () {
         var result = deriveWith([hand('selfDraw', { winnerIds: ['p1'] })]);
-        deepEqual(result.entries[0].deltas, { p1: 270, p2: -90, p3: -90, p4: -90 });
+        deepEqual(result.entries[0].deltas, { p1: 33, p2: -11, p3: -11, p4: -11 });
         deepEqual(result.dealerState, { playerId: 'p1', streak: 1, pull: 1 });
     });
 
     test('selfdraw-003', '包自摸由包牌者支付三家義務總額', function () {
         var result = deriveWith([hand('selfDraw', { winnerIds: ['p2'], baoPlayerId: 'p3' })]);
-        deepEqual(result.entries[0].deltas, { p1: 0, p2: 250, p3: -250, p4: 0 });
+        deepEqual(result.entries[0].deltas, { p1: 0, p2: 31, p3: -31, p4: 0 });
         equal(result.entries[0].transfers.length, 1);
     });
 
     test('multi-001', '一炮雙響分別計算兩位贏家且保持零和', function () {
         var result = deriveWith([hand('multiWin', { winnerIds: ['p2', 'p3'], discarderId: 'p1' })]);
-        deepEqual(result.entries[0].deltas, { p1: -180, p2: 90, p3: 90, p4: 0 });
+        deepEqual(result.entries[0].deltas, { p1: -22, p2: 11, p3: 11, p4: 0 });
         equal(sumDeltas(result.entries[0].deltas), 0);
     });
 
@@ -276,16 +297,16 @@
         equal(result.entries[0].transfers[0].amount, 50);
     });
 
-    test('config-002', '台值倍率不會重複乘到底', function () {
+    test('config-002', '番值倍率不會重複乘到底', function () {
         var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p1', tai: 5, multiplier: 2 })]);
-        equal(result.entries[0].transfers[0].amount, 150);
+        equal(result.entries[0].transfers[0].amount, 17);
     });
 
     test('initial-001', '起始分數與每局變動分開累計', function () {
         var result = deriveWith([hand('discard', { winnerIds: ['p2'], discarderId: 'p3' })], function (session) {
             session.players.forEach(function (player) { player.initialScore = 1000; });
         });
-        deepEqual(result.totals, { p1: 1000, p2: 1080, p3: 920, p4: 1000 });
+        deepEqual(result.totals, { p1: 1000, p2: 1010, p3: 990, p4: 1000 });
     });
 
     test('recompute-001', '編輯早期結果後會重算後續莊家狀態', function () {
@@ -363,12 +384,12 @@
         session.title = '測試晚局';
         session.entries = [adjustment('p1', 'p2', 100)];
         var text = api.buildTextExport(session);
-        ['測試晚局', '牌局紀錄', '最終結算', '精簡找數建議', '東家 → 南家：100'].forEach(function (value) {
+        ['測試晚局', '牌局紀錄', '最終結算', '精簡找數建議', '我 → 玩家 2：100'].forEach(function (value) {
             assert(text.indexOf(value) >= 0, 'missing text: ' + value);
         });
     });
 
-    test('filter-001', '歷史篩選正確分類胡牌、流局、賞罰與斷拉', function () {
+    test('filter-001', '歷史篩選正確分類胡牌、流局、賞罰與舊斷拉紀錄', function () {
         var result = deriveWith([
             hand('discard', { winnerIds: ['p2'], discarderId: 'p3' }),
             hand('draw', { tai: 0 }),
@@ -390,6 +411,40 @@
         expectThrow(function () { api.normalizeSession(session); }, '紀錄 ID');
     });
 
+    test('seat-schema-001', '新牌局及舊 payload 使用穩定的預設實體位置', function () {
+        var current = defaultSession();
+        deepEqual(current.physicalSeats, { me: 'p1', upper: 'p4', opposite: 'p3', lower: 'p2' });
+        var legacy = JSON.parse(JSON.stringify(current));
+        delete legacy.physicalSeats;
+        deepEqual(api.normalizeSession(legacy).physicalSeats, { me: 'p1', upper: 'p4', opposite: 'p3', lower: 'p2' });
+    });
+
+    test('seat-schema-002', '拒絕缺漏、重複、不明、額外或移動記分者的位置 mapping', function () {
+        var invalidMappings = [
+            { me: 'p1', upper: 'p4', opposite: 'p3' },
+            { me: 'p1', upper: 'p4', opposite: 'p4', lower: 'p2' },
+            { me: 'p1', upper: 'p4', opposite: 'p3', lower: 'unknown' },
+            { me: 'p2', upper: 'p4', opposite: 'p3', lower: 'p1' },
+            { me: 'p1', upper: 'p4', opposite: 'p3', lower: 'p2', extra: 'p1' }
+        ];
+        invalidMappings.forEach(function (mapping) {
+            var session = defaultSession();
+            session.physicalSeats = mapping;
+            expectThrow(function () { api.normalizeSession(session); }, '玩家位置');
+        });
+    });
+
+    test('seat-schema-003', '自訂位置可往返且不改變玩家順序或莊家輪轉', function () {
+        var baseline = defaultSession();
+        baseline.entries = [hand('discard', { winnerIds: ['p3'], discarderId: 'p4' })];
+        var mapped = JSON.parse(JSON.stringify(baseline));
+        mapped.physicalSeats = { me: 'p1', upper: 'p2', opposite: 'p4', lower: 'p3' };
+        var normalized = api.normalizeSession(JSON.parse(JSON.stringify(mapped)));
+        deepEqual(normalized.physicalSeats, mapped.physicalSeats);
+        deepEqual(normalized.players.map(function (player) { return player.id; }), ['p1', 'p2', 'p3', 'p4']);
+        deepEqual(api.deriveSession(normalized).dealerState, api.deriveSession(baseline).dealerState);
+    });
+
     test('scale-001', '一百筆賞罰仍保持零和及完整圖表', function () {
         var entries = [];
         for (var i = 0; i < 100; i += 1) entries.push(adjustment(i % 2 ? 'p1' : 'p3', i % 2 ? 'p2' : 'p4', i + 1));
@@ -408,7 +463,7 @@
         await delay(50);
         var live = api.getSession();
         equal(live.entries.length, 1);
-        equal(api.deriveSession(live).totals.p1, 60);
+        equal(api.deriveSession(live).totals.p1, 8);
         equal(doc.querySelectorAll('.tms-history-item').length, 1);
         assert(doc.getElementById('tms-score-chart').childNodes.length > 0, 'chart was not rendered');
     });
@@ -479,6 +534,191 @@
         filter.value = 'win';
         filter.dispatchEvent(new frame.contentWindow.Event('change', { bubbles: true }));
         equal(doc.querySelectorAll('.tms-history-item').length, 1);
+    });
+
+    test('controls-001', '新牌局沒有任何斷拉控制且玩家設定只顯示姓名', function () {
+        var doc = frame.contentDocument;
+        var actionableText = Array.prototype.map.call(
+            doc.querySelectorAll('button, option, label, summary'),
+            function (node) { return node.textContent.trim(); }
+        ).join('|');
+        assert(actionableText.indexOf('斷拉') < 0, 'visible break-pull control remains');
+        assert(!doc.querySelector('[data-quick-action="break"]'), 'quick break action remains');
+        assert(!doc.querySelector('#tms-history-filter option[value="breakPull"]'), 'legacy break filter is exposed');
+        doc.querySelector('[data-tab="settings"]').click();
+        var playerSettingsText = doc.getElementById('tms-player-settings').textContent;
+        ['東家', '南家', '西家', '北家'].forEach(function (wind) {
+            assert(playerSettingsText.indexOf(wind) < 0, 'wind identity remains: ' + wind);
+        });
+        deepEqual(Array.prototype.map.call(doc.getElementById('tms-initial-dealer').options, function (option) {
+            return option.textContent;
+        }), ['我', '玩家 2', '玩家 3', '玩家 4']);
+    });
+
+    test('quick-001', '快速帳整欄 47.5 番一律向外取整為 48', function () {
+        var host = resetLiveSession();
+        addQuick('p2', 10, 'add-win');
+        addQuick('p2', 10, 'add-win');
+        addQuick('p2', 10, 'add-win');
+        var column = frame.contentDocument.querySelector('[data-quick-player="p2"]');
+        assert(column.querySelector('.tms-quick-subtotal').textContent.indexOf('47.5') >= 0, 'weighted fan missing');
+        assert(column.querySelector('.tms-quick-subtotal').textContent.indexOf('48 番') >= 0, 'ceil result missing');
+        column.querySelector('[data-quick-action="settle"]').click();
+        var live = host.getSession();
+        equal(live.entries.length, 1);
+        equal(live.entries[0].type, 'adjustment');
+        equal(live.entries[0].amount, 48);
+        assert(live.entries[0].note.indexOf('47.5→48') >= 0, 'normal rounding was not recorded');
+    });
+
+    test('quick-002', '方向反轉先按正常 ceil 結算，不再折半或斷拉', function () {
+        var host = resetLiveSession();
+        addQuick('p2', 10, 'add-win');
+        addQuick('p2', 10, 'add-win');
+        addQuick('p2', 10, 'add-win');
+        addQuick('p2', 1, 'add-lose');
+        var live = host.getSession();
+        equal(live.entries.length, 1, 'direction reversal must settle the old direction once');
+        equal(live.entries[0].amount, 48, 'direction reversal used obsolete half/floor behavior');
+        equal(live.entries[0].payerId, 'p2');
+        equal(live.entries[0].receiverId, 'p1');
+        var columnText = frame.contentDocument.querySelector('[data-quick-player="p2"] .tms-quick-lines').textContent;
+        assert(columnText.indexOf('− 1') >= 0, 'new opposite-direction row was not retained');
+        assert(live.entries[0].note.indexOf('÷2') < 0, 'obsolete break formula leaked into history');
+    });
+
+    test('seat-ui-001', '點選交換只提交 physicalSeats，pending 跟玩家移動並可 undo/redo', async function () {
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        var host = resetLiveSession();
+        addQuick('p2', 3, 'add-win');
+        var before = host.getSession();
+        var trigger = doc.getElementById('tms-adjust-seats');
+        trigger.focus();
+        var dialog = openSeatDialog();
+        await delay(30);
+        assert(dialog.open, 'seat dialog did not open');
+        assert(!doc.getElementById('tms-seat-pending-warning').hidden, 'pending warning missing');
+        assert(seatCard('me').tagName === 'DIV', 'scorekeeper seat must be fixed');
+        seatCard('upper').click();
+        seatCard('lower').click();
+        await delay(30);
+        assert(!doc.getElementById('tms-seat-confirm').disabled, 'changed draft cannot be confirmed');
+        assert(doc.getElementById('tms-seat-live').textContent.indexOf('已交換') >= 0, 'tap swap was not announced');
+        doc.getElementById('tms-seat-confirm').click();
+        await delay(30);
+
+        var after = host.getSession();
+        deepEqual(after.physicalSeats, { me: 'p1', upper: 'p2', opposite: 'p3', lower: 'p4' });
+        deepEqual(after.players, before.players, 'seat confirmation changed player ownership/order');
+        deepEqual(after.entries, before.entries, 'seat confirmation changed history');
+        equal(after.initialDealerId, before.initialDealerId, 'seat confirmation changed dealer');
+        deepEqual(Array.prototype.map.call(doc.querySelectorAll('[data-quick-player]'), function (column) {
+            return column.dataset.quickPlayer;
+        }), ['p2', 'p3', 'p4']);
+        assert(doc.querySelector('[data-quick-player="p2"] .tms-quick-lines').textContent.indexOf('+ 3') >= 0,
+            'pending quick row did not follow p2');
+        equal(doc.activeElement, trigger, 'focus did not return to seat trigger');
+
+        doc.getElementById('tms-undo').click();
+        await delay(20);
+        deepEqual(host.getSession().physicalSeats, { me: 'p1', upper: 'p4', opposite: 'p3', lower: 'p2' });
+        doc.getElementById('tms-redo').click();
+        await delay(20);
+        deepEqual(host.getSession().physicalSeats, { me: 'p1', upper: 'p2', opposite: 'p3', lower: 'p4' });
+    });
+
+    test('seat-ui-002', '鍵盤可選取交換、方向鍵移焦，Escape 取消且不 dirty', async function () {
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        var host = resetLiveSession();
+        var trigger = doc.getElementById('tms-adjust-seats');
+        trigger.focus();
+        openSeatDialog();
+        await delay(30);
+        equal(doc.activeElement.dataset.seatRelation, 'upper', 'dialog initial focus');
+        doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        equal(doc.activeElement.dataset.seatRelation, 'opposite', 'arrow navigation');
+        doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        await delay(30);
+        doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        equal(doc.activeElement.dataset.seatRelation, 'lower', 'second arrow navigation');
+        doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+        await delay(30);
+        assert(doc.getElementById('tms-seat-live').textContent.indexOf('已交換') >= 0, 'keyboard swap was not announced');
+        doc.activeElement.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await delay(30);
+        assert(!doc.getElementById('tms-seat-dialog').open, 'Escape did not close dialog');
+        deepEqual(host.getSession().physicalSeats, { me: 'p1', upper: 'p4', opposite: 'p3', lower: 'p2' });
+        equal(host.getSessionStatus().dirty, false, 'cancelled draft dirtied session');
+        equal(doc.activeElement, trigger, 'cancel did not restore focus');
+    });
+
+    test('seat-ui-003', '真實 Pointer Events 拖曳可在 360／390px dialog 交換位置', async function () {
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        var host = resetLiveSession();
+        var previousStyle = frame.getAttribute('style');
+        try {
+            frame.style.width = '360px';
+            frame.style.height = '844px';
+            openSeatDialog();
+            await delay(40);
+            var surface = doc.querySelector('.tms-seat-dialog__surface').getBoundingClientRect();
+            assert(surface.left >= -1 && surface.right <= doc.documentElement.clientWidth + 1, '360px dialog overflow');
+
+            frame.style.width = '390px';
+            await delay(20);
+            surface = doc.querySelector('.tms-seat-dialog__surface').getBoundingClientRect();
+            assert(surface.left >= -1 && surface.right <= doc.documentElement.clientWidth + 1, '390px dialog overflow');
+            var source = seatCard('upper');
+            var target = seatCard('lower');
+            var sourceRect = source.getBoundingClientRect();
+            var targetRect = target.getBoundingClientRect();
+            var pointerId = 41;
+            source.dispatchEvent(new win.PointerEvent('pointerdown', {
+                bubbles: true, pointerId: pointerId, isPrimary: true, buttons: 1,
+                clientX: sourceRect.left + sourceRect.width / 2,
+                clientY: sourceRect.top + sourceRect.height / 2
+            }));
+            target.dispatchEvent(new win.PointerEvent('pointermove', {
+                bubbles: true, pointerId: pointerId, isPrimary: true, buttons: 1,
+                clientX: targetRect.left + targetRect.width / 2,
+                clientY: targetRect.top + targetRect.height / 2
+            }));
+            target.dispatchEvent(new win.PointerEvent('pointerup', {
+                bubbles: true, pointerId: pointerId, isPrimary: true, buttons: 0,
+                clientX: targetRect.left + targetRect.width / 2,
+                clientY: targetRect.top + targetRect.height / 2
+            }));
+            await delay(30);
+            assert(!doc.getElementById('tms-seat-confirm').disabled, 'pointer drag did not update draft');
+            doc.getElementById('tms-seat-confirm').click();
+            await delay(30);
+            deepEqual(host.getSession().physicalSeats, { me: 'p1', upper: 'p2', opposite: 'p3', lower: 'p4' });
+        } finally {
+            if (doc.getElementById('tms-seat-dialog').open) doc.getElementById('tms-seat-cancel').click();
+            if (previousStyle === null) frame.removeAttribute('style');
+            else frame.setAttribute('style', previousStyle);
+        }
+    });
+
+    test('seat-cue-001', '每完成四局顯示非阻塞調位提示並可略過', async function () {
+        var doc = frame.contentDocument;
+        var threeHands = defaultSession();
+        threeHands.entries = [hand('draw', { tai: 0 }), hand('draw', { tai: 0 }), hand('draw', { tai: 0 })];
+        resetLiveSession(threeHands);
+        assert(doc.getElementById('tms-seat-cue').hidden, 'cue appeared before four hands');
+
+        var fourHands = defaultSession();
+        fourHands.entries = [hand('draw', { tai: 0 }), hand('draw', { tai: 0 }), hand('draw', { tai: 0 }), hand('draw', { tai: 0 })];
+        var host = resetLiveSession(fourHands);
+        assert(!doc.getElementById('tms-seat-cue').hidden, 'four-hand cue missing');
+        assert(!doc.getElementById('tms-seat-dialog').open, 'cue opened a blocking dialog automatically');
+        assert(doc.getElementById('tms-seat-cue-text').textContent.indexOf('已完成 4 局') >= 0, 'cue milestone text');
+        doc.getElementById('tms-seat-cue-dismiss').click();
+        assert(doc.getElementById('tms-seat-cue').hidden, 'cue dismiss failed');
+        equal(host.getSessionStatus().dirty, false, 'dismissing cue dirtied session');
     });
 
     test('scorekeeper-draft-001', '正式 host 帶入草稿但不提交或改動牌局', async function () {
@@ -578,12 +818,14 @@
         var calls = [];
         var savedRequest = null;
         var replacedSession = null;
+        var appliedProfile = null;
         var forceUnauthorizedPlayer = false;
         var sessionSummary = {
             id: 'cloud-1', title: '雲端測試局', version: 7, updatedAt: '2026-01-01T00:00:00.000Z'
         };
         var cloudPayload = {
-            schemaVersion: 'ov-mj-session/v1', id: 'cloud-1', title: '資料庫載入局', entries: []
+            schemaVersion: 'ov-mj-session/v1', id: 'cloud-1', title: '資料庫載入局', entries: [],
+            physicalSeats: { me: 'p1', upper: 'p3', opposite: 'p2', lower: 'p4' }
         };
 
         function response(value, status) {
@@ -614,7 +856,9 @@
             if (/\/players$/.test(url.pathname) && method === 'POST' && forceUnauthorizedPlayer) {
                 return response({ message: 'expired' }, 401);
             }
-            if (/\/players$/.test(url.pathname)) return response([]);
+            if (/\/players$/.test(url.pathname)) {
+                return response([{ id: 'profile-1', name: '常用甲', color: '#236b5e', createdAt: '2026-01-01T00:00:00.000Z' }]);
+            }
             return response({ message: 'unexpected mock route: ' + method + ' ' + url.pathname }, 404);
         };
 
@@ -640,18 +884,34 @@
             assert(calls.some(function (call) { return call.path.indexOf(part) >= 0; }), 'missing API call: ' + part);
         });
 
-        var hostedSession = { schemaVersion: 'ov-mj-session/v1', id: 'cloud-1', title: '本頁測試局', entries: [] };
+        var hostedSession = {
+            schemaVersion: 'ov-mj-session/v1', id: 'cloud-1', title: '本頁測試局', entries: [],
+            physicalSeats: { me: 'p1', upper: 'p2', opposite: 'p4', lower: 'p3' }
+        };
         doc.getElementById('scorekeeper').contentWindow.OVMJSessionHost = Object.freeze({
             ready: win.Promise.resolve(),
             getSession: function () { return hostedSession; },
             normalizeSession: function (value) { return JSON.parse(JSON.stringify(value)); },
             hasStorageConflict: function () { return false; },
+            applyPlayerName: function (playerId, name) { appliedProfile = { playerId: playerId, name: name }; },
             replaceSession: function (value) { replacedSession = value; }
         });
+
+        var profileTarget = doc.querySelector('#players .seat-select');
+        deepEqual(Array.prototype.map.call(profileTarget.options, function (option) { return option.value; }), ['p1', 'p2', 'p3', 'p4']);
+        deepEqual(Array.prototype.map.call(profileTarget.options, function (option) { return option.textContent; }),
+            ['我（記分者）', '玩家 2', '玩家 3', '玩家 4']);
+        profileTarget.value = 'p4';
+        doc.querySelector('#players .profile-apply').click();
+        await waitFor(function () { return appliedProfile !== null; }, 'stable player profile target');
+        deepEqual(appliedProfile, { playerId: 'p4', name: '常用甲' });
+        assert(doc.getElementById('message').textContent.indexOf('玩家 4') >= 0, 'neutral profile target message missing');
+
         doc.getElementById('save-current').click();
         await waitFor(function () { return savedRequest !== null; }, 'versioned DB save request');
         equal(savedRequest.expectedVersion, 7, 'optimistic version');
         equal(savedRequest.payload.id, 'cloud-1', 'saved payload id');
+        deepEqual(savedRequest.payload.physicalSeats, hostedSession.physicalSeats, 'save dropped physical seat mapping');
         await waitFor(function () {
             return doc.getElementById('message').textContent.indexOf('保存') >= 0;
         }, 'save completion');
@@ -660,6 +920,7 @@
         doc.querySelector('.session .mini').click();
         await waitFor(function () { return replacedSession !== null; }, 'DB session load');
         equal(replacedSession.title, '資料庫載入局', 'loaded payload');
+        deepEqual(replacedSession.physicalSeats, cloudPayload.physicalSeats, 'load dropped physical seat mapping');
 
         doc.getElementById('logout').click();
         await waitFor(function () { return doc.documentElement.dataset.accountState === 'guest'; }, 'local logout');

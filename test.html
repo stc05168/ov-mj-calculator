@@ -447,12 +447,12 @@ add('小三風',20,'2 wind pungs + 1 wind pair',()=>{
     seed:'preserve-ordinary-small-three-winds-v1',preservation:true,expectLiguligu:false,
     prohibited:[
         {name:'小三風',score:10,matcher:'exact'},
-        {name:'嚦咕嚦咕',matcher:'prefix'}
+        {name:'嚦咕嚦咕',matcher:'prefix'},
+        {name:'三小姊妹',score:8,matcher:'exact'}
     ],
     baselineResults:[
         {name:'無花',score:2},
         {name:'二相逢x1',score:3},
-        {name:'三小姊妹',score:8},
         {name:'小三風',score:20}
     ]
 });
@@ -530,12 +530,12 @@ add('小三元',30,'2 dragon pungs + 1 dragon pair',()=>{
     seed:'preserve-ordinary-small-three-dragons-v1',preservation:true,expectLiguligu:false,
     prohibited:[
         {name:'小三元',score:15,matcher:'exact'},
-        {name:'嚦咕嚦咕',matcher:'prefix'}
+        {name:'嚦咕嚦咕',matcher:'prefix'},
+        {name:'三小姊妹',score:8,matcher:'exact'}
     ],
     baselineResults:[
         {name:'無花',score:2},
         {name:'二相逢x1',score:3},
-        {name:'三小姊妹',score:8},
         {name:'小三元',score:30}
     ]
 });
@@ -645,11 +645,11 @@ add('小四喜',80,'3 wind pungs + 1 wind pair',()=>{
     seed:'preserve-ordinary-small-four-winds-v1',preservation:true,expectLiguligu:false,
     prohibited:[
         {name:'小四喜',score:40,matcher:'exact'},
-        {name:'嚦咕嚦咕',matcher:'prefix'}
+        {name:'嚦咕嚦咕',matcher:'prefix'},
+        {name:'四小姊妹',score:20,matcher:'exact'}
     ],
     baselineResults:[
         {name:'無花',score:2},
-        {name:'四小姊妹',score:20},
         {name:'小四喜',score:80}
     ]
 });
@@ -960,6 +960,230 @@ add('四般高暗採單一分解',60,'11112222333344455 chooses the higher valid
         {name:'對對糊',matcher:'exact'},{name:'嚦咕嚦咕',matcher:'prefix'},
         {name:'3暗刻',matcher:'exact'},{name:'五小姊妹',matcher:'exact'}
     ]
+});
+// ---------- Scoring-fix regression matrix ----------
+function regressionShiSanYaoOrphans(){
+    return[
+        w(1),w(9),t(1),t(9),s(1),s(9),
+        h(1),h(2),h(3),h(4),h(5),h(6),h(7)
+    ];
+}
+function regressionExact(name,score){
+    return{name,score,matcher:'exact',minCount:1,maxCount:1};
+}
+
+// A) 十三么 decomposition, waits, and meld-type isolation.
+add('十三么（13 飛）',150,'Terminal 123 chow remains valid when the winner forms the pair',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),w(1),w(2),w(3)];
+    state.winningTile=h(7);
+},{
+    id:'regression-shisanyao-123-pair-win',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么（13 飛）',150)],
+    prohibited:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么（13 飛）',150,'Terminal 789 chow remains valid when the winner forms the pair',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),w(7),w(8),w(9)];
+    state.winningTile=h(7);
+},{
+    id:'regression-shisanyao-789-pair-win',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么（13 飛）',150)],
+    prohibited:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么',140,'Winner completes the terminal 123 chow on the sole wait',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),h(7),w(1),w(2)];
+    state.winningTile=w(3);
+},{
+    id:'regression-shisanyao-123-chow-win',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么',140,'Winner completes the terminal 789 chow on the sole wait',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),h(7),w(8),w(9)];
+    state.winningTile=w(7);
+},{
+    id:'regression-shisanyao-789-chow-win',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么（13 飛）',150,'A middle same-suit chow is a valid remaining meld',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),w(4),w(5),w(6)];
+    state.winningTile=h(7);
+},{
+    id:'regression-shisanyao-middle-chow',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么（13 飛）',150)],
+    prohibited:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么（13 飛）',150,'An ordinary suited pung is a valid remaining meld',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),w(5),w(5),w(5)];
+    state.winningTile=h(7);
+},{
+    id:'regression-shisanyao-suited-pung',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么（13 飛）',150)],
+    prohibited:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么（12 飛）',150,'An honor pung is a valid remaining meld',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),h(1),h(1),h(1)];
+    state.winningTile=h(7);
+},{
+    id:'regression-shisanyao-honor-pung',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('十三么（12 飛）',150)],
+    prohibited:[regressionExact('十三么',140),regressionExact('十三么（獨獨）',2)]
+});
+add('十三么',140,'Mixed suits with consecutive values cannot form the remaining chow',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),h(7),w(4),s(5)];
+    state.winningTile=t(6);
+},{
+    id:'regression-shisanyao-mixed-pseudo-chow',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('無花',2)],
+    prohibited:[{name:'十三么',matcher:'prefix'}]
+});
+add('十三么',140,'Consecutive honor values cannot form the remaining chow',()=>{
+    state.handTiles=[...regressionShiSanYaoOrphans(),w(1),h(1),h(2)];
+    state.winningTile=h(3);
+},{
+    id:'regression-shisanyao-honor-pseudo-chow',category:'regression-shisanyao',traceCandidates:true,
+    expectLiguligu:false,
+    required:[regressionExact('無花',2)],
+    prohibited:[{name:'十三么',matcher:'prefix'}]
+});
+
+// B) 缺一門 counts exactly two numbered suits and no honors.
+add('缺一門',10,'Exactly two numbered suits without honors is the positive control',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,5),mkPung(s,8)];
+    state.chows=[mkChow(s,2,3,4),mkChow(w,6,7,8)];
+    state.handTiles=[s(9)];state.winningTile=s(9);
+},{
+    id:'regression-missing-suit-two-suits-no-honors',category:'regression-missing-suit',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('缺一門',10)],
+    prohibited:[{name:'無字',matcher:'exact'},{name:'無字花',matcher:'prefix'}]
+});
+add('缺一門',10,'One numbered suit plus honors is not 缺一門',()=>{
+    state.pungs=[mkPung(w,2),mkPung(w,6),mkPung(h,1),mkPung(h,5)];
+    state.chows=[mkChow(w,3,4,5)];
+    state.handTiles=[h(7)];state.winningTile=h(7);
+},{
+    id:'regression-missing-suit-one-suit-honors',category:'regression-missing-suit',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('混一色',40)],
+    prohibited:[regressionExact('缺一門',10)]
+});
+add('缺一門',10,'Two numbered suits plus honors is not 缺一門',()=>{
+    state.pungs=[mkPung(w,2),mkPung(s,6),mkPung(h,4)];
+    state.chows=[mkChow(w,3,4,5),mkChow(s,7,8,9)];
+    state.handTiles=[h(7)];state.winningTile=h(7);
+},{
+    id:'regression-missing-suit-two-suits-honors',category:'regression-missing-suit',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('無花',2)],
+    prohibited:[regressionExact('缺一門',10)]
+});
+add('缺一門',10,'One numbered suit without honors is not 缺一門',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,5)];
+    state.chows=[mkChow(w,2,3,4),mkChow(w,6,7,8),mkChow(w,7,8,9)];
+    state.handTiles=[w(9)];state.winningTile=w(9);
+},{
+    id:'regression-missing-suit-one-suit-no-honors',category:'regression-missing-suit',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('清一色',100)],
+    prohibited:[regressionExact('缺一門',10)]
+});
+add('缺一門',10,'An honors-only hand is not 缺一門',()=>{
+    state.pungs=[mkPung(h,1),mkPung(h,2),mkPung(h,3),mkPung(h,4),mkPung(h,5)];
+    state.handTiles=[h(6)];state.winningTile=h(6);
+},{
+    id:'regression-missing-suit-honors-only',category:'regression-missing-suit',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('字一色',150)],
+    prohibited:[regressionExact('缺一門',10)]
+});
+
+// C) Honor isolation for 姊妹/兄弟, with suited positive controls.
+add('大四喜',120,'東東東南南南西西西北北北 cannot count as 四姊妹',()=>{
+    state.pungs=[mkPung(h,1),mkPung(h,2),mkPung(h,3),mkPung(h,4)];
+    state.chows=[mkChow(w,4,5,6)];
+    state.handTiles=[t(8)];state.winningTile=t(8);
+},{
+    id:'regression-sisters-four-wind-pungs',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('大四喜',120)],
+    prohibited:[regressionExact('四姊妹',40)]
+});
+add('小三風',20,'Two wind pungs and a wind pair cannot count as 三小姊妹',()=>{
+    state.pungs=[mkPung(h,1),mkPung(h,2)];
+    state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7),mkChow(t,3,4,5)];
+    state.handTiles=[h(3)];state.winningTile=h(3);
+},{
+    id:'regression-sisters-small-three-winds',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('小三風',20)],
+    prohibited:[regressionExact('三小姊妹',8)]
+});
+add('小三元',30,'Two dragon pungs and a dragon pair cannot count as 三小姊妹',()=>{
+    state.pungs=[mkPung(h,5),mkPung(h,6)];
+    state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7),mkChow(t,3,4,5)];
+    state.handTiles=[h(7)];state.winningTile=h(7);
+},{
+    id:'regression-sisters-small-three-dragons',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('小三元',30)],
+    prohibited:[regressionExact('三小姊妹',8)]
+});
+add('小四喜',80,'Three wind pungs and a wind pair cannot count as 四小姊妹',()=>{
+    state.pungs=[mkPung(h,1),mkPung(h,2),mkPung(h,3)];
+    state.chows=[mkChow(w,2,3,4),mkChow(s,5,6,7)];
+    state.handTiles=[h(4)];state.winningTile=h(4);
+},{
+    id:'regression-sisters-small-four-winds',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('小四喜',80)],
+    prohibited:[regressionExact('四小姊妹',20)]
+});
+add('大雜兄弟',15,'An honor pung cannot act as the third suit in 大雜兄弟',()=>{
+    state.pungs=[mkPung(w,2),mkPung(s,3),mkPung(h,4)];
+    state.chows=[mkChow(w,5,6,7),mkChow(t,6,7,8)];
+    state.handTiles=[h(7)];state.winningTile=h(7);
+},{
+    id:'regression-brothers-big-reject-honor',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('無花',2)],
+    prohibited:[regressionExact('大雜兄弟',15),regressionExact('小雜兄弟',8)]
+});
+add('小雜兄弟',8,'An honor pung cannot participate in 小雜兄弟',()=>{
+    state.pungs=[mkPung(h,4),mkPung(w,3)];
+    state.chows=[mkChow(w,6,7,8),mkChow(s,1,2,3),mkChow(t,6,7,8)];
+    state.handTiles=[s(5)];state.winningTile=s(5);
+},{
+    id:'regression-brothers-small-reject-honor',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('無花',2)],
+    prohibited:[regressionExact('小雜兄弟',8)]
+});
+add('四姊妹',40,'Four consecutive suited pungs remain a valid 四姊妹 control',()=>{
+    state.pungs=[mkPung(w,2),mkPung(w,3),mkPung(w,4),mkPung(w,5)];
+    state.chows=[mkChow(s,6,7,8)];
+    state.handTiles=[t(8)];state.winningTile=t(8);
+},{
+    id:'regression-sisters-suited-four-positive',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('四姊妹',40)],
+    prohibited:[regressionExact('四小姊妹',20),regressionExact('五小姊妹',60)]
+});
+add('大雜兄弟',15,'Three consecutive pung ranks in the three numbered suits remain valid',()=>{
+    state.pungs=[mkPung(w,2),mkPung(s,3),mkPung(t,4)];
+    state.chows=[mkChow(w,5,6,7),mkChow(s,6,7,8)];
+    state.handTiles=[t(8)];state.winningTile=t(8);
+},{
+    id:'regression-brothers-suited-big-positive',category:'regression-honor-isolation',
+    traceCandidates:true,expectLiguligu:false,
+    required:[regressionExact('大雜兄弟',15)],
+    prohibited:[regressionExact('小雜兄弟',8)]
 });
 // TEST-DEFINITIONS-END
 

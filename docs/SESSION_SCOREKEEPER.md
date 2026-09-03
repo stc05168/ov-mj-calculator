@@ -2,7 +2,7 @@
 
 ## 1. 用途與入口
 
-`session-scorekeeper/` 是不依賴框架的四人整場麻將記分器。它可以計算付款、莊家、連莊、拉莊、斷拉、餘額、統計與找數，但現行版本刻意採用**純記憶體模式**。
+`session-scorekeeper/` 是不依賴框架的四人整場麻將記分器。它可以計算付款、莊家、連莊、拉莊、餘額、統計與找數，並可唯讀相容重播舊斷拉紀錄；現行版本刻意採用**純記憶體模式**。
 
 最友善的使用方式是從整合殼層進入，因為可把單局計番結果帶入本局草稿：
 
@@ -40,13 +40,16 @@ python -m http.server 8000
 
 ### 3.1 三欄快速帳（預設）
 
-記分頁以東家 `p1` 為「我」，固定映射：
+記分頁以第一位玩家 `p1` 為固定的「我（記分者）」，並以可持久化 `physicalSeats` 決定三欄顯示。舊 payload 沒有此欄位時使用相容預設：
 
-| 位置 | 關係 | canonical 玩家 |
+| 位置 | 關係 | 預設玩家 ID |
 |---|---|---|
-| 左欄 | 上家 | 北家 `p4` |
-| 中欄 | 對家 | 西家 `p3` |
-| 右欄 | 下家 | 南家 `p2` |
+| 固定 | 我（記分者） | `p1` |
+| 左欄 | 上家 | `p4` |
+| 中欄 | 對家 | `p3` |
+| 右欄 | 下家 | `p2` |
+
+這些 ID 是穩定玩家身份，不是東／南／西／北設定。按「調整座位」可拖曳、點兩張卡交換，或使用 Enter／Space 與方向鍵；`p1` 固定，只交換上家／對家／下家。確認只更新 mapping，pending 快速列按 player ID 跟人移動，分數、莊家、玩家順序及歷史不變；Escape／取消不 dirty。每完成 4 局會顯示可略過的非阻塞提示。
 
 每欄可直接修改名稱、輸入番數，再按「我食」或「被食」。同方向、同一段的回溯倍率為：
 
@@ -64,42 +67,39 @@ multiplier(i) = 1.5 ^（同段內位於第 i 鋪之後的輸入數）
 
 這不是 `×1、×1.5、×2` 的線性序列；新鋪本身由 `×1` 開始，較早鋪才因後續同段輸入再次乘 `1.5`。
 
-- **斷拉**：標記該欄下一筆開始新段並回到 `×1`；舊段仍保留待同欄結算。
-- **方向反轉**：若目前有「我食」pending 後輸入「被食」，或相反，系統會先自動結算舊方向，再只留下新方向第一筆。
+- **方向反轉**：若目前有「我食」pending 後輸入「被食」，或相反，系統會先按正常整欄 `ceil` 規則結算舊方向，再留下新方向第一筆。
 - **結算**：把該欄結果轉成既有零和 `adjustment` entry，然後清空該欄。
-- **復原**：頁首按鈕回復最近一次快速輸入、斷拉或結算；自動方向反轉的結算與新 pending 會一起回復。
-- **改名**：欄首名稱修改 canonical 玩家；這是一般 session mutation。
+- **復原**：頁首按鈕回復最近一次快速輸入或結算；方向反轉的自動結算與新 pending 會一起回復。
+- **改名**：欄首名稱修改穩定 player ID 對應的姓名，這是一般 session mutation。
 
-快速帳輸入的番數已包含底，結算不會再另加 `baseAmount`。每個 segment 先整段計 signed 拉番小計，再依狀態處理番數，最後乘每番值：
+快速帳輸入的番數已包含底，結算不會再另加 `baseAmount`。整欄先計 signed 拉番，再依正負方向向外取整，最後乘每番值：
 
 ```text
-segment fan = Σ(direction × fan × multiplier)
-正常 rounded fan = sign(segment fan) × ceil(abs(segment fan))
-斷拉 rounded fan = sign(segment fan) × floor(abs(segment fan) ÷ 2)
-segment amount = rounded fan × taiValue
+column fan = Σ(direction × fan × multiplier)
+rounded fan = sign(column fan) × ceil(abs(column fan))
+amount = rounded fan × taiValue
 ```
 
-`ov-mj-session/v1` 的 adjustment 金額必須是整數。正常連拉將完整 segment 的加權番數向上取整；手動「斷拉」或方向反轉自動斷拉，則將完整 segment 加權番數先除以 2，再向下取整。除 2 與取整都不是逐筆進行。例如每番 1、三鋪 10 番：
+例如每番 1、三鋪 10 番：
 
 ```text
 10 × 2.25 + 10 × 1.5 + 10 = 47.5
-正常連拉 = ceil(47.5) × 1 = 48
-斷拉 = floor(47.5 ÷ 2) × 1 = 23
+ceil(47.5) × 1 = 48
 ```
 
-正負方向採相同絕對值規則。按「結算」後該欄 pending 會清空，但頁面上方四家「目前總分」會從 canonical entries 持續累計，不會歸零。
+正負方向採相同絕對值規則。產品已移除快速帳及進階表單所有新斷拉入口，方向反轉也不再折半；但舊 `breakPull`／`breakPullAfter` 仍可載入與 replay。按「結算」後 pending 清空，四家目前總分繼續由 canonical entries 累計。
 
 **保存限制：**每欄未結算列只存在目前畫面，不在 aggregate 內，也不會令登入工作區 dirty。重新整理、關頁、載入另一場或直接按 DB 儲存都不會保存 pending；必須先按欄內「結算」。快速結算以 `adjustment` 保存，所以不會增加胡牌／自摸統計，也不會改變莊家、連莊或全桌拉莊。
 
 ### 3.2 進階記一局
 
-需要出銃、自摸、包自摸、一炮多響、流局、莊家 override、全桌斷拉或完整統計時，展開「進階記一局」：
+需要出銃、自摸、包自摸、一炮多響、流局、莊家 override 或完整統計時，展開「進階記一局」：
 
 1. 選擇結果與玩家，直接輸入牌型番。
-2. 確認倍率、莊家處理、付款預覽及本局後斷拉。
+2. 確認倍率、莊家處理及付款預覽。
 3. 提交後才新增完整 hand／draw／adjustment entry，並 replay 餘額、莊家、統計與圖表。
 
-欄內快速「斷拉」只是個別對手倍率分段；進階表單的「立即斷拉／本局後斷拉」才操作 canonical 全桌 `pull` 狀態。
+新 UI 不再建立 `breakPull` 或 `breakPullAfter`；相容 parser 只為舊牌局保留。
 
 ### 3.3 不確定番數時選用計番器
 
@@ -109,7 +109,7 @@ segment amount = rounded fan × taiValue
    - `tai = handTai`；
    - 最終牌型與各自番數組成的備註；
    - 自摸或出銃狀態。
-4. 確認贏家、出銃者、包牌者、倍率、莊家處理及斷拉行為，再預覽付款並提交。
+4. 確認贏家、出銃者、包牌者、倍率與莊家處理，再預覽付款並提交。
 
 轉移不會自動新增歷史。`fillRoundDraft()` 只改進階表單及預覽，既有 session aggregate、undo／redo 與 dirty 狀態保持不變。若記分器啟動逾時、橋接失敗或回填番數不符，頁面會提示重試或直接輸入，不會誤提交。
 
@@ -117,13 +117,14 @@ segment amount = rounded fan × taiValue
 
 ## 4. 可用功能
 
-- 上家／對家／下家三欄快速帳、可改名、我食／被食、回溯 `×1.5`、正常逐段向上取整、斷拉整段除 2 後向下取整、四家累計總分、個別斷拉、自動方向反轉結算及快速復原。
+- 上家／對家／下家三欄快速帳、可改名、我食／被食、回溯 `×1.5`、整欄向外取整、四家累計總分、方向反轉正常結算及快速復原。
+- 調位 dialog 支援 Pointer Events 拖曳、點選互換、鍵盤操作、aria-live、focus return、pending 警告及確認／取消草稿。
 - 新牌局與缺省 config 使用底 5／每番 1；另提供 30／10、50／20、100／50 preset，舊牌局明載設定保持不變。
 - 進階表單直接輸入本局牌型番並預覽付款。
-- 四個座位、可修改玩家名稱及初始分數。
+- 四名純姓名玩家、可修改姓名及初始分數；起始莊家按姓名選擇，顯示位置由 `physicalSeats` 獨立管理。
 - 自訂底、每番價值、貨幣、莊家基本番、連莊番與拉莊番。
 - 出銃、自摸、包自摸、一炮多響、流局及手動賞罰。
-- 自動或強制連莊／過莊；全桌即時斷拉與本局後斷拉。
+- 自動或強制連莊／過莊；新 UI 不提供斷拉操作，但舊斷拉 entries 保持 replay 相容。
 - 依不可變 entry ledger 重新計算全部結果。
 - 編輯／刪除歷史、30 步 undo／redo、篩選、統計及 SVG 圖表。
 - 依最終淨額產生「精簡找數建議」。
@@ -141,25 +142,23 @@ segment amount = rounded fan × taiValue
 
 登入版會在外層另行提供 DB 保存、載入、刪除及伺服器 JSON／TXT 匯出，不會重新啟用內層訪客控制項。未結算快速列仍不在 DB payload 內。
 
-## 5. 莊家、連莊、拉莊與斷拉
+## 5. 莊家、連莊、拉莊與舊斷拉相容
 
-專案不假設所有牌桌使用同一套慣例，而是使用可設定公式。每局開始前：
+每局開始前：
 
 ```text
 dealer tai = dealerBaseTai + streak × streakTai + pull × pullTai
 ```
 
-預設為 `1 + streak + pull`，因此「連一拉一」在涉及莊家的付款中增加三番。提交與 replay 的狀態轉換如下：
+預設為 `1 + streak + pull`。提交與 replay 的主要狀態轉換：
 
-- **莊家食糊／自摸**：莊家不變，`streak + 1`、`pull + 1`；莊家連續食糊會自然逐局累加，不需要另一個「連食」開關。
-- **閒家食糊（莊家被食）**：按東、南、西、北順序由下一席接莊，`streak`、`pull` 都歸零；即使莊家不是放銃者，只要贏家不是莊家，預設仍是下莊。
-- **流局**：依設定決定是否續莊，以及續莊時是否增加拉莊；預設為續莊並增加連／拉。
-- **立即斷拉**：立即新增斷拉操作，只把目前 `pull` 歸零，莊家與 `streak` 不變。
-- **本局後斷拉**：先按本局結果正常處理；若結果仍是同一莊家，保留新的 `streak` 但把 `pull` 歸零。若本局已下莊，連／拉原本就會一併歸零。
-- **強制續莊／下莊**：只有使用者明確選擇覆寫時才取代上述預設轉換。
-- **過莊**：莊家輪到下一席，連莊及拉莊都重設。
+- **莊家食糊／自摸**：莊家不變，`streak + 1`、`pull + 1`。
+- **閒家食糊（莊家被食）**：按穩定的 `session.players` 順序由下一位接莊，`streak`、`pull` 歸零；調整 `physicalSeats` 不會改變此順序。
+- **流局**：依設定決定是否續莊，以及續莊時是否增加拉莊；預設續莊並增加連／拉。
+- **強制續莊／下莊**：只有使用者明確覆寫時取代預設轉換。
+- **過莊**：莊家輪到下一位玩家，連莊及拉莊重設。
 
-斷拉的允許時點應由開局採用的牌桌規則共同確認；介面提供兩種清楚操作，但不會自行猜測或強制未設定的牌桌慣例。
+現行 UI 不再提供立即斷拉或本局後斷拉，也不會建立新 `breakPull`。為保持舊 DB／匯出資料相容，normalization 仍接受 `breakPull` entry 與 hand 上的 `breakPullAfter`，replay 結果及歷史顯示保持原意，使用者亦可刪除舊紀錄。
 
 ## 6. 計算與 replay 模型
 
@@ -171,9 +170,10 @@ ov-mj-session/v1
 
 資料包含：
 
-- `players`：四名玩家與初始分數；
+- `players`：四名穩定 ID 玩家、姓名與初始分數；陣列順序繼續決定莊家輪轉；
+- `physicalSeats`：optional 的 `{me, upper, opposite, lower}` player-ID permutation；舊 payload 缺省時補成 `p1/p4/p3/p2`，`me` 必須是第一位玩家；
 - `config`：底、番、貨幣及莊家規則；
-- `entries`：按時間排列的本局／調整／斷拉記錄。
+- `entries`：按時間排列的本局／調整記錄，以及只為舊資料保留的斷拉記錄。
 
 目前餘額、每個圖表點、統計、莊家狀態及找數都由 entries 依序 replay。修改或刪除較早記錄時，後續結果會全部重新計算。每個 entry 都必須保持四人 transfer 零和。
 
@@ -194,7 +194,7 @@ window.OVMJSessionHost = {
   hasStorageConflict(),
   markSaved(),
   createSession(title, { clearHistory }),
-  applyPlayerName(seat, name),
+  applyPlayerName(playerId, name),
   fillRoundDraft({ tai, note, isSelfDraw }),
   replaceSession(value)
 };
@@ -209,7 +209,7 @@ window.OVMJSessionHost = {
 - `hasStorageConflict()`：為舊整合相容性保留；記憶體版不使用 storage，因此永遠為 false。
 - `markSaved()`：由 durable 外層確認 GET／PUT 成功後清除 dirty；它本身不寫 DB。
 - `createSession(title, { clearHistory })`：以指定名稱建立隨機新 ID；外層建立獨立牌局／刪除後重設時可清除跨場 history。
-- `applyPlayerName(seat, name)`：經正常 session mutation 把名稱複製到東／南／西／北其中一席；固定顏色不變。牌局玩家名稱上限為 20 字，超長 profile 會清楚報錯而不會靜默截斷。
+- `applyPlayerName(playerId, name)`：經正常 session mutation 把 profile 名稱複製到穩定的 `p1…p4` 玩家身份；之後 `physicalSeats` 調位不會改變姓名 ownership。牌局玩家名稱上限為 20 字，超長 profile 會清楚報錯。
 - `fillRoundDraft()`：只填本局草稿，不提交 entry、不推 history，也不改 dirty。
 - `replaceSession(value)`：正規化、derive 後替換目前頁面記憶體並標成 dirty；外層載入並綁定 DB version 後再呼叫 `markSaved()`。不寫入瀏覽器持久儲存。
 
@@ -233,7 +233,7 @@ DB payload --------replaceSession()------------------------------------> 記憶�
 - 「新增未儲存」表示此 ID 尚無 DB 記錄，「有未儲存變更」表示 memory aggregate 已改動，「已儲存 · DB 版本 N」才表示目前 payload 已綁定 durable version；沒有 autosave；
 - 只有外層顯示建立／更新成功後，資料才算進入 DB；
 - 載入 DB 記錄會替換目前工作區的記憶體 aggregate，綁定 GET 回傳版本並標成 clean；
-- 常用玩家的套用只是呼叫 `applyPlayerName()` 複製名稱，不會把 session 接到 player profile foreign key，也不會改變固定座位顏色；
+- 常用玩家的套用以 `p1…p4` 穩定 ID 呼叫 `applyPlayerName()`；只複製姓名，不會把 session 接到 player profile foreign key，也不會被之後的顯示調位改名；
 - ownership、驗證、版本衝突與匯出由 Java API 負責；
 - 付款、莊家、拉莊、圖表及 replay 邏輯仍只有前端記分器一份實作。
 
