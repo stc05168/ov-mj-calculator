@@ -644,41 +644,69 @@ const QUICK_RELATIONS = [
 ];
 
 function quickLedgerFor(playerId) {
-    if (!quickLedgers.has(playerId)) quickLedgers.set(playerId, { items: [] });
+    if (!quickLedgers.has(playerId)) quickLedgers.set(playerId, { items: [], breakNext: false });
     return quickLedgers.get(playerId);
 }
 
 function quickWeightedItems(ledger) {
     return ledger.items.map((item, index, items) => {
-        const multiplier = 1.5 ** (items.length - index - 1);
-        return { ...item, multiplier, weightedFan: item.fan * multiplier };
+        const segment = Number(item.segment) || 0;
+        const laterInSegment = items.slice(index + 1)
+            .filter((next) => (Number(next.segment) || 0) === segment)
+            .length;
+        const multiplier = 1.5 ** laterInSegment;
+        return { ...item, segment, multiplier, weightedFan: item.fan * multiplier };
     });
 }
 
-function quickRoundFan(fan) {
-    const magnitude = Math.ceil(Math.abs(fan));
-    return magnitude ? Math.sign(fan) * magnitude : 0;
-}
-
-function quickLedgerTotals(ledger) {
+function quickLedgerTotals(ledger, { breakLast = false } = {}) {
     const weightedItems = quickWeightedItems(ledger);
-    const fan = weightedItems.reduce((sum, item) => sum + item.direction * item.weightedFan, 0);
-    const roundedFan = quickRoundFan(fan);
+    const grouped = new Map();
+    weightedItems.forEach((item) => {
+        if (!grouped.has(item.segment)) grouped.set(item.segment, []);
+        grouped.get(item.segment).push(item);
+    });
+    const maxSegment = grouped.size ? Math.max(...grouped.keys()) : -1;
+    const segmentTotals = [...grouped.entries()].map(([segment, items]) => {
+        const fan = items.reduce((sum, item) => sum + item.direction * item.weightedFan, 0);
+        const broken = segment < maxSegment || (segment === maxSegment && (ledger.breakNext || breakLast));
+        const adjustedFan = broken ? fan / 2 : fan;
+        const roundedFan = broken 
+            ? Math.floor(Math.abs(adjustedFan))
+            : Math.ceil(Math.abs(adjustedFan));
+        const finalFan = roundedFan ? Math.sign(adjustedFan) * roundedFan : 0;
+        const rawAmount = adjustedFan * session.config.taiValue;
+        return {
+            segment,
+            fan,
+            adjustedFan,
+            roundedFan: finalFan,
+            rawAmount,
+            amount: finalFan * session.config.taiValue,
+            broken
+        };
+    });
     return {
-        fan,
-        rawAmount: fan * session.config.taiValue,
-        amount: roundedFan * session.config.taiValue,
-        roundedFan,
-        weightedItems
+        fan: segmentTotals.reduce((sum, segment) => sum + segment.fan, 0),
+        rawAmount: segmentTotals.reduce((sum, segment) => sum + segment.rawAmount, 0),
+        amount: segmentTotals.reduce((sum, segment) => sum + segment.amount, 0),
+        weightedItems,
+        segmentTotals
     };
 }
 
 function quickBreakdown(ledger, totals = quickLedgerTotals(ledger)) {
-    const items = totals.weightedItems
-        .map((item) => `${item.direction > 0 ? '+' : '−'}${item.fan}×${Number(item.multiplier.toFixed(4))}`)
-        .join('、');
-    const fan = Number(totals.fan.toFixed(3));
-    return `${items}（整欄 ${fan}→${totals.roundedFan}）`;
+    return totals.segmentTotals.map((segmentTotal) => {
+        const items = totals.weightedItems
+            .filter((item) => item.segment === segmentTotal.segment)
+            .map((item) => `${item.direction > 0 ? '+' : '−'}${item.fan}×${Number(item.multiplier.toFixed(4))}`)
+            .join('、');
+        const fan = Number(segmentTotal.fan.toFixed(3));
+        const calculation = segmentTotal.broken
+            ? `${fan}÷2→${segmentTotal.roundedFan}`
+            : `${fan}→${segmentTotal.roundedFan}`;
+        return `${items}（${segmentTotal.broken ? '斷拉↓' : '連拉↑'}${calculation}）`;
+    }).join('｜');
 }
 
 function cloneQuickLedgers() {
@@ -773,9 +801,13 @@ function renderQuickLedger() {
 
         const subtotal = element('div', 'tms-quick-subtotal');
         const displayedFan = Number(totals.fan.toFixed(3));
-        const rounding = ledger.items.length ? `${totals.roundedFan} 番（整欄向上取整）` : '—';
+        const segmentInfo = totals.segmentTotals.length 
+            ? totals.segmentTotals.map((seg) => 
+                `${seg.broken ? '↓' : '↑'}${seg.roundedFan}番`
+              ).join('｜')
+            : '—';
         subtotal.append(element('span', '', '拉番小計'), element('strong', '', `${displayedFan > 0 ? '+' : ''}${displayedFan}番`));
-        subtotal.append(element('span', '', '番數處理'), element('strong', '', rounding));
+        subtotal.append(element('span', '', '各段處理'), element('strong', '', segmentInfo));
         subtotal.append(element('span', '', '結算分數'), element('strong', '', formatMoney(totals.amount, true)));
         column.append(subtotal);
 
@@ -806,7 +838,11 @@ function addQuickFan(playerId, direction) {
         previous = null;
     }
 
-    ledger.items.push({ fan, direction });
+    const segment = previous 
+        ? (ledger.breakNext ? (Number(previous.segment) || 0) + 1 : Number(previous.segment) || 0) 
+        : 0;
+    ledger.items.push({ fan, direction, segment });
+    ledger.breakNext = false;
     renderQuickLedger();
     const nextInput = $(`[data-quick-fan="${playerId}"]`, refs.quickGrid);
     nextInput?.focus();
@@ -817,12 +853,12 @@ function settleQuickLedger(playerId, { capture = true, reason = 'explicit' } = {
     if (!ledger.items.length) return showToast('此欄尚未輸入番數。', true);
     if (capture) pushQuickUndo();
     const automatic = reason === 'direction-reversal';
-    const totals = quickLedgerTotals(ledger);
+    const totals = quickLedgerTotals(ledger, { breakLast: automatic });
     if (!totals.amount) {
         quickLedgers.delete(playerId);
         renderQuickLedger();
         return showToast(totals.fan
-            ? '此欄整體取整後為 0，已清除，毋須寫入紀錄。'
+            ? '此欄取整後為 0，已清除，毋須寫入紀錄。'
             : '此欄正負結果互相抵銷，已清除，毋須寫入紀錄。');
     }
     const me = session.players.find((player) => player.id === session.physicalSeats.me);
@@ -837,7 +873,7 @@ function settleQuickLedger(playerId, { capture = true, reason = 'explicit' } = {
             amount: Math.abs(totals.amount)
         });
     }, automatic
-        ? `方向反轉，已按整欄向上取整規則先與${opponent.name}結算 ${formatMoney(Math.abs(totals.amount))}。`
+        ? `方向反轉，已按斷拉規則（÷2後向下取整）先與${opponent.name}結算 ${formatMoney(Math.abs(totals.amount))}。`
         : `已與${opponent.name}結算 ${formatMoney(Math.abs(totals.amount))}。`,
     { preserveQuickUndo: true });
 }
