@@ -30,22 +30,11 @@
             <div class="tms-notice tms-notice--error">此工具需要啟用 JavaScript。</div>
         </noscript>
 
-        <section class="tms-memory-notice" id="tms-memory-notice" aria-label="訪客資料提示">
+        <!--<section class="tms-memory-notice" id="tms-memory-notice" aria-label="訪客資料提示">
             <div><strong>免登入暫存模式</strong><span>牌局只保留在目前頁面；重新整理、關閉或前往登入頁後會清除。</span></div>
             <a href="../session-scorekeeper-online/index.html" target="_top">登入後保存到 DB</a>
-        </section>
-
-        <section class="tms-scoreboard" aria-labelledby="tms-scoreboard-title">
-            <div class="tms-section-heading tms-section-heading--compact">
-                <div>
-                    <p class="tms-kicker" id="tms-scoreboard-title">目前總分</p>
-                    <p class="tms-round-label" id="tms-round-label">第 1 局</p>
-                </div>
-                <div class="tms-storage-status" id="tms-storage-status" role="status">此頁暫存</div>
-            </div>
-            <div class="tms-score-grid" id="tms-score-grid" aria-live="polite"></div>
-        </section>
-
+        </section>-->      
+        
         <main id="tms-main" tabindex="-1">
             <section class="tms-view is-active" id="tms-view-score" data-view="score" aria-labelledby="tms-tab-score">
                 <section class="tms-card tms-quick-ledger" aria-labelledby="tms-quick-ledger-title">
@@ -70,6 +59,17 @@
                     </aside>
                     <div class="tms-quick-ledger-grid" id="tms-quick-ledger-grid" aria-live="polite"></div>
                     <p class="tms-help">每欄未結算資料只保留在目前畫面。輸入番數已包含底，不另加底；連續同方向會將整欄加權番數依正負方向向外取整，再乘每番值。方向反轉時會先按相同規則自動結算原方向，再開始新方向。按「結算」後才會寫入牌局紀錄及目前總分。</p>
+                </section>
+
+                <section class="tms-scoreboard" aria-labelledby="tms-scoreboard-title">
+                    <div class="tms-section-heading tms-section-heading--compact">
+                        <div>
+                            <p class="tms-kicker" id="tms-scoreboard-title">目前總分</p>
+                            <p class="tms-round-label" id="tms-round-label">第 1 局</p>
+                        </div>
+                        <div class="tms-storage-status" id="tms-storage-status" role="status">此頁暫存</div>
+                    </div>
+                    <div class="tms-score-grid" id="tms-score-grid" aria-live="polite"></div>
                 </section>
 
                 <details class="tms-advanced-entry" id="tms-advanced-entry">
