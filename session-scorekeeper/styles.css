@@ -1355,6 +1355,38 @@ html {
     gap: 6px 10px;
 }
 
+.tms-quick-fan-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tms-quick-fan-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: 1px solid var(--tms-line);
+    border-radius: 6px;
+    background: var(--tms-surface);
+    color: var(--tms-ink);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.tms-quick-fan-btn:hover {
+    background: var(--tms-green-100);
+    color: var(--tms-green-900);
+}
+
+.tms-quick-fan-btn[data-quick-fan-action^="+"]:hover {
+    background: var(--tms-green-100);
+    color: var(--tms-green-900);
+}
+
+.tms-quick-fan-btn[data-quick-fan-action^="-"]:hover {
+    background: var(--tms-red-soft);
+    color: #842c27;
+}
+
 .tms-quick-name,
 .tms-quick-fan,
 .tms-quick-actions button,

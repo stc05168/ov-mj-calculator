@@ -709,6 +709,49 @@ function quickBreakdown(ledger, totals = quickLedgerTotals(ledger)) {
     }).join('｜');
 }
 
+function applyQuickFanToAllOpponents(fanDelta) {
+    pushQuickUndo();
+    const me = session.players.find((player) => player.id === session.physicalSeats.me);
+    const opponents = QUICK_RELATIONS.map(({ key }) => session.physicalSeats[key])
+        .map((playerId) => session.players.find((p) => p.id === playerId));
+    
+    let totalAmount = 0;
+    const affectedOpponents = [];
+    
+    opponents.forEach((opponent) => {
+        if (fanDelta > 0) {
+            totalAmount += Math.abs(fanDelta) * session.config.taiValue;
+            affectedOpponents.push({ opponent, isReceiver: true });
+        } else {
+            totalAmount -= Math.abs(fanDelta) * session.config.taiValue;
+            affectedOpponents.push({ opponent, isReceiver: false });
+        }
+    });
+    
+    if (totalAmount === 0) {
+        showToast('番數變動為 0，毋須寫入紀錄。');
+        return;
+    }
+    
+    const note = `即時結算 ${fanDelta > 0 ? '+' : ''}${fanDelta}番 × 每番${session.config.taiValue}`.slice(0, 120);
+    
+    mutateSession((draft) => {
+        affectedOpponents.forEach(({ opponent, isReceiver }) => {
+            const amount = Math.abs(fanDelta) * session.config.taiValue;
+            draft.entries.push({
+                id: uid(),
+                type: 'adjustment',
+                createdAt: new Date().toISOString(),
+                note: `即時結算 ${fanDelta > 0 ? '+' : ''}${fanDelta}番；每番${session.config.taiValue}`.slice(0, 120),
+                payerId: isReceiver ? me.id : opponent.id,
+                receiverId: isReceiver ? opponent.id : me.id,
+                amount
+            });
+        });
+    }, `已與三位玩家即時結算 ${fanDelta > 0 ? '+' : ''}${fanDelta}番（每人 ${formatMoney(Math.abs(fanDelta) * session.config.taiValue)}）。`,
+    { preserveQuickUndo: true });
+}
+
 function cloneQuickLedgers() {
     return [...quickLedgers.entries()].map(([playerId, ledger]) => [playerId, clone(ledger)]);
 }
@@ -1918,6 +1961,15 @@ function wireEvents() {
         }
         const tab = event.target.closest('[data-tab]');
         if (tab) switchView(tab.dataset.tab);
+        
+        const quickFanButton = event.target.closest('[data-quick-fan-action]');
+        if (quickFanButton) {
+            const action = quickFanButton.dataset.quickFanAction;
+            const fanDelta = parseInt(action, 10);
+            if (!isNaN(fanDelta)) {
+                applyQuickFanToAllOpponents(fanDelta);
+            }
+        }
     });
 
     [refs.winner, refs.discarder, refs.tai, refs.multiplier, refs.baoPlayer, refs.dealerAction,
