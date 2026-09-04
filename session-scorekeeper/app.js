@@ -618,7 +618,7 @@ function redo() {
 
 function renderAll() {
     derived = deriveSession(session);
-    refs.subtitle.textContent = `${session.title} · ${new Date(session.updatedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+    refs.subtitle.textContent = `${session.title}`;
     refs.roundLabel.textContent = `已完成 ${derived.handCount} 局 · 共 ${session.entries.length} 筆紀錄`;
     renderScoreboard();
     renderQuickLedger();
@@ -1751,14 +1751,7 @@ async function shareImage() {
 }
 
 function suggestedSessionTitle() {
-    const timestamp = new Intl.DateTimeFormat('zh-TW', {
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }).format(new Date());
-    return `${timestamp} 牌局`;
+    return '';
 }
 
 function createHostedSession(title, options = {}) {
