@@ -15,10 +15,10 @@
         <header class="tms-header">
             <div class="tms-header__brand">
                 <p class="tms-eyebrow">ONE VICTORIA</p>
-                <h1>台牌整場記分</h1>
+                <h1>台牌記分</h1>
                 <p class="tms-header__subtitle" id="tms-session-subtitle">訪客暫存 · 關閉即清除</p>
             </div>
-            <div class="tms-header__actions" aria-label="牌局操作">
+            <div class="tms-header__actions" aria-label="牌局操作" style="display: none;">
                 <button class="tms-icon-button" id="tms-new-session" type="button" title="建立新的獨立牌局">新牌局</button>
                 <button class="tms-icon-button" id="tms-export-json" type="button" title="匯出牌局 JSON">匯出</button>
                 <button class="tms-icon-button" id="tms-import-trigger" type="button" title="匯入牌局 JSON">匯入</button>
@@ -41,8 +41,6 @@
                     <div class="tms-section-heading tms-section-heading--compact">
                         <div>
                             <p class="tms-kicker">三家快速帳</p>
-                            <h2 id="tms-quick-ledger-title">上家・對家・下家</h2>
-                            <p class="tms-round-label">以「我（記分者）」為本位；連續同方向每次在上一級再 ×1.5（×1、×1.5、×2.25…）</p>
                         </div>
                         <div class="tms-quick-heading-actions">
                             <button class="tms-text-button" id="tms-adjust-seats" type="button" data-open-seat-dialog>調整座位</button>

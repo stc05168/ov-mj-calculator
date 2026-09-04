@@ -638,9 +638,9 @@ function renderAll() {
 }
 
 const QUICK_RELATIONS = [
-    { key: 'upper', label: '上家' },
-    { key: 'opposite', label: '對家' },
-    { key: 'lower', label: '下家' }
+    { key: 'upper', label: '' },
+    { key: 'opposite', label: '' },
+    { key: 'lower', label: '' }
 ];
 
 function quickLedgerFor(playerId) {
