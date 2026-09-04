@@ -71,7 +71,6 @@
                             <p class="tms-kicker" id="tms-scoreboard-title">目前總分</p>
                             <p class="tms-round-label" id="tms-round-label">第 1 局</p>
                         </div>
-                        <div class="tms-storage-status" id="tms-storage-status" role="status">此頁暫存</div>
                     </div>
                     <div class="tms-score-grid" id="tms-score-grid" aria-live="polite"></div>
                 </section>
@@ -406,11 +405,6 @@
     <div class="tms-toast" id="tms-toast" role="status" aria-live="polite" hidden></div>
     <script>
         window.addEventListener('error', function (event) {
-            var status = document.getElementById('tms-storage-status');
-            if (status) {
-                status.textContent = '啟動失敗：' + event.message + ' (' + event.lineno + ':' + event.colno + ')';
-                status.classList.add('is-error');
-            }
             var quickGrid = document.getElementById('tms-quick-ledger-grid');
             if (quickGrid && !quickGrid.children.length) {
                 quickGrid.textContent = '快速記分啟動失敗：' + event.message;
@@ -421,13 +415,6 @@
             window.setTimeout(function () {
                 var state = document.documentElement.dataset.tmsApp || 'not-parsed';
                 document.documentElement.dataset.tmsProbe = state;
-                if (state !== 'ready') {
-                    var status = document.getElementById('tms-storage-status');
-                    if (status) {
-                        status.textContent = state === 'loading' ? '啟動未完成' : '腳本未解析';
-                        status.classList.add('is-error');
-                    }
-                }
             }, 0);
         });
     </script>
