@@ -1356,35 +1356,40 @@ html {
 }
 
 .tms-quick-fan-buttons {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
 }
 
 .tms-quick-fan-btn {
-    padding: 4px 8px;
-    font-size: 0.75rem;
+    padding: 8px 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
     border: 1px solid var(--tms-line);
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--tms-surface);
     color: var(--tms-ink);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tms-quick-fan-btn:hover {
-    background: var(--tms-green-100);
-    color: var(--tms-green-900);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tms-quick-fan-btn[data-quick-fan-action^="+"]:hover {
     background: var(--tms-green-100);
     color: var(--tms-green-900);
+    border-color: var(--tms-green-200);
 }
 
 .tms-quick-fan-btn[data-quick-fan-action^="-"]:hover {
     background: var(--tms-red-soft);
     color: #842c27;
+    border-color: var(--tms-red-200);
 }
 
 .tms-quick-name,
@@ -1447,6 +1452,10 @@ html {
     .tms-quick-heading-actions {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .tms-quick-fan-buttons {
+        margin-top: 8px;
     }
 
     .tms-quick-column {
