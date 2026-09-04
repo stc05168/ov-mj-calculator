@@ -715,7 +715,7 @@ function applyQuickFanToAllOpponents(fanDelta) {
     const opponents = QUICK_RELATIONS.map(({ key }) => session.physicalSeats[key])
         .map((playerId) => session.players.find((p) => p.id === playerId));
     
-    // fanDelta 是每個對手的番數變動
+    // fanDelta 是每個對手的番數變動（正數表示對手輸給我，負數表示我輸給對手）
     // 自己的變動 = fanDelta * 3 (因為有三位對手)
     const selfFanDelta = fanDelta * 3;
     
@@ -724,13 +724,13 @@ function applyQuickFanToAllOpponents(fanDelta) {
     
     opponents.forEach((opponent) => {
         if (fanDelta > 0) {
-            // 對手輸錢給我
+            // 對手輸錢給我：對手是 payer，我是 receiver
             totalAmount += Math.abs(fanDelta) * session.config.taiValue;
-            affectedOpponents.push({ opponent, isReceiver: false }); // opponent pays me
+            affectedOpponents.push({ opponent, isReceiver: true }); // I am receiver
         } else {
-            // 我輸錢給對手
+            // 我輸錢給對手：我是 payer，對手是 receiver
             totalAmount -= Math.abs(fanDelta) * session.config.taiValue;
-            affectedOpponents.push({ opponent, isReceiver: true }); // I pay opponent
+            affectedOpponents.push({ opponent, isReceiver: false }); // opponent is receiver
         }
     });
     
@@ -749,8 +749,8 @@ function applyQuickFanToAllOpponents(fanDelta) {
                 type: 'adjustment',
                 createdAt: new Date().toISOString(),
                 note: `即時結算 ${fanDelta > 0 ? '+' : ''}${fanDelta}番；每番${session.config.taiValue}`.slice(0, 120),
-                payerId: isReceiver ? me.id : opponent.id,
-                receiverId: isReceiver ? opponent.id : me.id,
+                payerId: isReceiver ? opponent.id : me.id,
+                receiverId: isReceiver ? me.id : opponent.id,
                 amount
             });
         });
