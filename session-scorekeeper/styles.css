@@ -90,6 +90,17 @@ html {
     font-size: clamp(1.7rem, 6vw, 2.65rem);
     letter-spacing: .04em;
 }
+.tms-header__subtitle,
+.tms-eyebrow,
+.tms-kicker,
+.tms-help,
+.tms-field small,
+.tms-toggle small { color: var(--tms-muted); }
+.tms-header__subtitle {
+    margin: 0;
+    color: rgba(255, 255, 255, .7);
+    font-size: .88rem;
+}
 .tms-eyebrow,
 .tms-kicker {
     margin: 0;
@@ -97,9 +108,6 @@ html {
     font-weight: 800;
     letter-spacing: .14em;
 }
-.tms-help,
-.tms-field small,
-.tms-toggle small { color: var(--tms-muted); }
 .tms-eyebrow { color: var(--tms-gold-soft); }
 
 .tms-header__actions,
@@ -165,11 +173,11 @@ html {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 0;
+    margin-bottom: 18px;
 }
 .tms-section-heading--compact {
     align-items: center;
-    margin-bottom: 0;
+    margin-bottom: 12px;
 }
 .tms-section-heading h2,
 .tms-preview h3 {
@@ -1133,7 +1141,7 @@ html[data-embedded="true"] .tms-body {
 /* Primary three-column quick ledger with canonical running totals above it. */
 .tms-scoreboard { display: block; }
 .tms-quick-ledger {
-    margin-bottom: 0;
+    margin-bottom: 14px;
     padding: 20px;
     overflow: hidden;
 }
@@ -1339,7 +1347,7 @@ html {
 }
 
 .tms-quick-fan-btn {
-    padding: 8px 4px 14px 4px;
+    padding: 12px 4px;
     font-size: 0.85rem;
     font-weight: 600;
     border: 1px solid var(--tms-line);
