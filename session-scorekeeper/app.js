@@ -715,16 +715,22 @@ function applyQuickFanToAllOpponents(fanDelta) {
     const opponents = QUICK_RELATIONS.map(({ key }) => session.physicalSeats[key])
         .map((playerId) => session.players.find((p) => p.id === playerId));
     
+    // fanDelta 是每個對手的番數變動
+    // 自己的變動 = fanDelta * 3 (因為有三位對手)
+    const selfFanDelta = fanDelta * 3;
+    
     let totalAmount = 0;
     const affectedOpponents = [];
     
     opponents.forEach((opponent) => {
         if (fanDelta > 0) {
+            // 對手輸錢給我
             totalAmount += Math.abs(fanDelta) * session.config.taiValue;
-            affectedOpponents.push({ opponent, isReceiver: true });
+            affectedOpponents.push({ opponent, isReceiver: false }); // opponent pays me
         } else {
+            // 我輸錢給對手
             totalAmount -= Math.abs(fanDelta) * session.config.taiValue;
-            affectedOpponents.push({ opponent, isReceiver: false });
+            affectedOpponents.push({ opponent, isReceiver: true }); // I pay opponent
         }
     });
     
@@ -748,7 +754,7 @@ function applyQuickFanToAllOpponents(fanDelta) {
                 amount
             });
         });
-    }, `已與三位玩家即時結算 ${fanDelta > 0 ? '+' : ''}${fanDelta}番（每人 ${formatMoney(Math.abs(fanDelta) * session.config.taiValue)}）。`,
+    }, `已與三位玩家即時結算 ${fanDelta > 0 ? '+' : ''}${fanDelta}番（每人 ${formatMoney(Math.abs(fanDelta) * session.config.taiValue)}，總計 ${formatMoney(Math.abs(selfFanDelta) * session.config.taiValue)}）。`,
     { preserveQuickUndo: true });
 }
 
