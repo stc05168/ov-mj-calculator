@@ -190,22 +190,6 @@ html {
     color: var(--tms-muted);
     font-size: .83rem;
 }
-.tms-storage-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--tms-green-700);
-    font-size: .78rem;
-    font-weight: 700;
-}
-.tms-storage-status::before {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-    content: "";
-}
-.tms-storage-status.is-error { color: var(--tms-red); }
 
 .tms-score-grid {
     display: grid;

@@ -43,7 +43,6 @@ const boundedInt = (value, min, max, fallback = min) => {
 
 const refs = {
     subtitle: $('#tms-session-subtitle'),
-    storageStatus: $('#tms-storage-status'),
     roundLabel: $('#tms-round-label'),
     scoreGrid: $('#tms-score-grid'),
     quickGrid: $('#tms-quick-ledger-grid'),
@@ -154,7 +153,7 @@ function createDefaultSession() {
     return {
         schemaVersion: SCHEMA_VERSION,
         id: uid(),
-        title: '今晚牌局',
+        title: '',
         createdAt: now,
         updatedAt: now,
         players,
@@ -263,7 +262,7 @@ function normalizeSession(raw) {
     const normalized = {
         schemaVersion: SCHEMA_VERSION,
         id: String(raw.id || uid()),
-        title: String(raw.title || '今晚牌局').slice(0, 40),
+        title: String(raw.title || '').slice(0, 40),
         createdAt: validDate(raw.createdAt) ? raw.createdAt : new Date().toISOString(),
         updatedAt: validDate(raw.updatedAt) ? raw.updatedAt : new Date().toISOString(),
         players,
@@ -341,8 +340,6 @@ function loadSession() {
 
 function setSessionDirty(dirty) {
     sessionDirty = Boolean(dirty);
-    refs.storageStatus.textContent = '此頁暫存';
-    refs.storageStatus.classList.remove('is-error');
 }
 
 function getHostedSessionStatus() {
@@ -621,7 +618,7 @@ function redo() {
 
 function renderAll() {
     derived = deriveSession(session);
-    refs.subtitle.textContent = `${session.title} · 本頁暫存 · ${new Date(session.updatedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+    refs.subtitle.textContent = `${session.title} · ${new Date(session.updatedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
     refs.roundLabel.textContent = `已完成 ${derived.handCount} 局 · 共 ${session.entries.length} 筆紀錄`;
     renderScoreboard();
     renderQuickLedger();
@@ -1613,7 +1610,7 @@ function saveSettings(event) {
         const names = Object.fromEntries($$('[data-player-name]', refs.playerSettings).map((input) => [input.dataset.playerName, input.value.trim()]));
         if (Object.values(names).some((name) => !name)) throw new Error('玩家名稱不可空白。');
         mutateSession((draft) => {
-            draft.title = refs.sessionTitle.value.trim() || '今晚牌局';
+            draft.title = refs.sessionTitle.value.trim() || '';
             draft.players.forEach((player) => {
                 player.name = names[player.id].slice(0, 20);
             });
