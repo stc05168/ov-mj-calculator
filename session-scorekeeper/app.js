@@ -42,6 +42,7 @@ const boundedInt = (value, min, max, fallback = min) => {
 };
 
 const refs = {
+    subtitle: $('#tms-session-subtitle'),
     roundLabel: $('#tms-round-label'),
     scoreGrid: $('#tms-score-grid'),
     quickGrid: $('#tms-quick-ledger-grid'),
@@ -617,6 +618,7 @@ function redo() {
 
 function renderAll() {
     derived = deriveSession(session);
+    refs.subtitle.textContent = `${session.title}`;
     refs.roundLabel.textContent = `已完成 ${derived.handCount} 局 · 共 ${session.entries.length} 筆紀錄`;
     renderScoreboard();
     renderQuickLedger();
