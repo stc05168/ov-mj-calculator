@@ -16,6 +16,7 @@
             <div class="tms-header__brand">
                 <p class="tms-eyebrow">ONE VICTORIA</p>
                 <h1>台牌記分</h1>
+                <p class="tms-header__subtitle" id="tms-session-subtitle">訪客暫存 · 關閉即清除</p>
             </div>
             <div class="tms-header__actions" aria-label="牌局操作" style="display: none;">
                 <button class="tms-icon-button" id="tms-new-session" type="button" title="建立新的獨立牌局">新牌局</button>
@@ -47,15 +48,6 @@
                             <button class="tms-text-button" id="tms-quick-undo" type="button" disabled>↶ 復原</button>
                         </div>
                     </div>
-                    
-                    <!-- 獨立即時結算按鈕 (獨立於快速帳系統) -->
-                    <div class="tms-instant-settle-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0 12px;">
-                        <button type="button" data-quick-fan-action="5" style="padding: 12px 4px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s;">+5 番</button>
-                        <button type="button" data-quick-fan-action="-5" style="padding: 12px 4px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s;">-5 番</button>
-                        <button type="button" data-quick-fan-action="3" style="padding: 12px 4px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s;">+3 番</button>
-                        <button type="button" data-quick-fan-action="-3" style="padding: 12px 4px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s;">-3 番</button>
-                    </div>
-                    
                     <div class="tms-quick-fan-buttons">
                         <button class="tms-quick-fan-btn" type="button" data-quick-fan-action="+5">+5 番</button>
                         <button class="tms-quick-fan-btn" type="button" data-quick-fan-action="-5">-5 番</button>
@@ -79,6 +71,7 @@
                             <p class="tms-kicker" id="tms-scoreboard-title">目前總分</p>
                             <p class="tms-round-label" id="tms-round-label">第 1 局</p>
                         </div>
+                        <div class="tms-storage-status" id="tms-storage-status" role="status">此頁暫存</div>
                     </div>
                     <div class="tms-score-grid" id="tms-score-grid" aria-live="polite"></div>
                 </section>
@@ -413,6 +406,11 @@
     <div class="tms-toast" id="tms-toast" role="status" aria-live="polite" hidden></div>
     <script>
         window.addEventListener('error', function (event) {
+            var status = document.getElementById('tms-storage-status');
+            if (status) {
+                status.textContent = '啟動失敗：' + event.message + ' (' + event.lineno + ':' + event.colno + ')';
+                status.classList.add('is-error');
+            }
             var quickGrid = document.getElementById('tms-quick-ledger-grid');
             if (quickGrid && !quickGrid.children.length) {
                 quickGrid.textContent = '快速記分啟動失敗：' + event.message;
@@ -423,6 +421,13 @@
             window.setTimeout(function () {
                 var state = document.documentElement.dataset.tmsApp || 'not-parsed';
                 document.documentElement.dataset.tmsProbe = state;
+                if (state !== 'ready') {
+                    var status = document.getElementById('tms-storage-status');
+                    if (status) {
+                        status.textContent = state === 'loading' ? '啟動未完成' : '腳本未解析';
+                        status.classList.add('is-error');
+                    }
+                }
             }, 0);
         });
     </script>
