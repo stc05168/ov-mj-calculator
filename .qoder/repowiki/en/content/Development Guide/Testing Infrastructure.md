@@ -17,6 +17,13 @@
 - [test-results/scorekeeper-latest.json](file://test-results/scorekeeper-latest.json)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated browser execution environment to prioritize Edge over Chrome
+- Modified preservation test IDs from canonical-063/076/093 to canonical-066/079/096
+- Enhanced test coverage with new regression tests for complex hand patterns including three-color ascending runs, exposed meld handling, and honor isolation scenarios
+- Updated evidence validation to reflect new preservation baseline requirements
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -96,7 +103,7 @@ AIT --> TAP
 - [docs/TESTING.md:13-48](file://docs/TESTING.md#L13-L48)
 
 ## Core Components
-- Canonical browser suite runner: discovers browsers, builds a standalone test page, runs headless Chrome/Edge, validates completion payloads, and writes evidence.
+- Canonical browser suite runner: discovers browsers, builds a standalone test page, runs headless Edge/Chrome, validates completion payloads, and writes evidence.
 - Canonical builder: extracts markers from canonical sources, inlines dependencies, injects build metadata, and atomically writes output.
 - Scorekeeper suite runner: starts a local server, launches browsers, waits for same-origin callbacks, validates schema and counts, and writes evidence.
 - Backend integration tests: register users, authenticate, create sessions, enforce ownership and optimistic concurrency, validate schemas, and export data.
@@ -119,7 +126,7 @@ Key responsibilities and guarantees:
 The canonical suite follows a strict pipeline:
 
 1. Build phase: inline canonical sources and inject build metadata into a standalone HTML file.
-2. Discovery phase: locate Chrome and/or Edge executables from PATH and standard locations.
+2. Discovery phase: locate Edge and/or Chrome executables from PATH and standard locations.
 3. Execution phase: start a loopback HTTP server, launch headless browsers with isolated profiles, and request auto/manual modes.
 4. Validation phase: parse DOM dumps, extract JSON completion payloads, validate schemas and invariants, and compare manual vs auto parity.
 5. Evidence phase: write structured JSON artifacts with timestamps, hashes, and per-run diagnostics.
@@ -130,7 +137,7 @@ participant Dev as "Developer"
 participant Runner as "run_tests.py"
 participant Builder as "build_test.py"
 participant Server as "LoopbackServer"
-participant Browser as "Headless Chrome/Edge"
+participant Browser as "Headless Edge/Chrome"
 participant Page as "test_standalone.html"
 Dev->>Runner : Invoke with --browser and --timeout
 Runner->>Builder : Build standalone suite
@@ -170,13 +177,15 @@ Key implementation patterns:
 - Process trees are terminated reliably to avoid hanging browser processes.
 - Evidence includes invocation details, browser availability, protected material status, source revision, and per-run commands and stderr tails.
 
+**Updated** The browser discovery process now prioritizes Edge over Chrome when both are available, reflecting the updated test execution environment preference.
+
 ```mermaid
 flowchart TD
 Start(["Start run_tests.py"]) --> Build["Run build_test.py"]
 Build --> BuildOK{"Build success?"}
 BuildOK --> |No| EvidenceFail["Write evidence: build-failure"]
 EvidenceFail --> Exit2["Exit code 2"]
-BuildOK --> |Yes| Discover["Discover browsers"]
+BuildOK --> |Yes| Discover["Discover browsers (Edge priority)"]
 Discover --> Found{"Any browsers found?"}
 Found --> |No| EvidenceNoBrowser["Write evidence: no-browser"]
 EvidenceNoBrowser --> Exit3["Exit code 3"]
@@ -311,6 +320,20 @@ Service-->>MockMvc : 200 OK with version
 - [backend/pom.xml:1-21](file://backend/pom.xml#L1-L21)
 - [docs/TESTING.md:239-278](file://docs/TESTING.md#L239-L278)
 
+### Enhanced Test Coverage
+**New** The test suite has been enhanced with comprehensive regression tests for complex hand patterns:
+
+- Three-color ascending runs with exposed and concealed melds
+- Honor isolation scenarios with mixed suit combinations  
+- Complex multi-meld interactions with proper exclusion handling
+- Single-wait detection with multiple exposed melds
+- Regression tests for previously problematic hand pattern recognition
+
+These additions ensure robust coverage of edge cases and complex scoring scenarios that were not adequately tested before.
+
+**Section sources**
+- [test.html:1200-1255](file://test.html#L1200-L1255)
+
 ## Dependency Analysis
 The testing system has clear boundaries and minimal coupling:
 
@@ -369,6 +392,8 @@ Evidence inspection:
 - For canonical tests, verify status, discovered/executed/passed counts, invariant flag, and source hashes.
 - For scorekeeper tests, verify status, discovered/executed/passed counts, and browser app state.
 
+**Updated** With the switch to Edge as the primary test browser, ensure Edge is properly installed and accessible in PATH for optimal test execution.
+
 **Section sources**
 - [docs/TESTING.md:323-340](file://docs/TESTING.md#L323-L340)
 - [docs/TESTING.md:280-304](file://docs/TESTING.md#L280-L304)
@@ -376,5 +401,7 @@ Evidence inspection:
 
 ## Conclusion
 The testing infrastructure provides layered, deterministic, and auditable verification across browser UI behavior, canonical scoring rules, and backend APIs. By enforcing strict payload schemas, source hashing, parity checks, and protected material validation, it produces reliable evidence suitable for release qualification. The separation of concerns between builders, runners, test pages, and backend tests keeps the system maintainable and focused on reproducible outcomes.
+
+**Updated** Recent enhancements include Edge browser prioritization, updated preservation test IDs, and expanded regression test coverage for complex hand patterns, further strengthening the reliability and comprehensiveness of the testing framework.
 
 [No sources needed since this section summarizes without analyzing specific files]

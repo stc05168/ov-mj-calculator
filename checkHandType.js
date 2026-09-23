@@ -1045,17 +1045,19 @@ function detectSiguiHandTypes(allTiles) {
             if (isInKong) continue;
             
             const isConcealed = isSiguiConcealed(type, numValue);
-            
-            // 檢查四歸四（順子中使用四張相同的牌）
-            if (isSiguiSi(allTiles, type, numValue)) {
+
+            // 依「這四張牌在順子/刻子/對子之間如何分配」決定四歸類型。
+            // 四歸後面的數字代表「牌型」，不是副露數量：
+            //   四歸一 = 一刻子(3張) + 一順子(1張)
+            //   四歸二 = 兩順子(各1張) + 一對眼(2張)
+            //   四歸四 = 四順子(各1張)
+            const siguiType = classifySigui(allTiles, type, numValue);
+
+            if (siguiType === '四歸四') {
                 results.push({ name: isConcealed ? '四歸四 (暗)' : '四歸四', score: isConcealed ? 40 : 20 });
-            } 
-            // 檢查四歸二（兩隻做眼）
-            else if (isSiguiEr(allTiles, type, numValue)) {
+            } else if (siguiType === '四歸二') {
                 results.push({ name: isConcealed ? '四歸二 (暗)' : '四歸二', score: isConcealed ? 20 : 10 });
-            }
-            // 四歸一
-            else {
+            } else {
                 results.push({ name: isConcealed ? '四歸一 (暗)' : '四歸一', score: isConcealed ? 10 : 5 });
             }
         }
@@ -1087,32 +1089,29 @@ function isSiguiConcealed(type, value) {
     return true;
 }
 
-// 檢查四歸四（順子中使用四張相同的牌）
-function isSiguiSi(allTiles, type, value) {
-    // 檢查這張牌是否在順子中使用
+// 判斷某個「已用滿四張」的花點，其四張牌在順子/刻子/對子間如何分配，
+// 回傳四歸類型名稱：'四歸四' / '四歸二' / '四歸一'。
+//
+// 關鍵：每個順子最多只會用到「一張」同點牌，因此
+//   「含有此花點的順子數量」＝「被順子用掉的張數」。
+// 由於四張全數用完（且已排除槓），剩下的張數只能落在刻子(3)或對子(2)：
+//   被順子用掉 4 張 → 剩 0 → 四張各在一個順子 → 四歸四
+//   被順子用掉 2 張 → 剩 2 張做眼          → 兩順子＋一對眼 → 四歸二
+//   被順子用掉 1 張 → 剩 3 張成刻          → 一刻子＋一順子 → 四歸一
+function classifySigui(allTiles, type, value) {
     const allChows = getAllChows(allTiles);
-    
+
+    let chowCount = 0;
     for (const chow of allChows) {
         if (chow.type === type && chow.values.includes(value)) {
-            // 檢查這個順子中是否使用了四張相同的牌
-            const countInChow = allTiles.filter(t => 
-                t.type === type && t.value === value && 
-                isTileInChow(t, chow)
-            ).length;
-            
-            if (countInChow === 4) {
-                return true;
-            }
+            chowCount++;
         }
     }
-    
-    return false;
-}
 
-// 檢查四歸二（兩隻做眼）
-function isSiguiEr(allTiles, type, value) {
-    const eye = findEye(allTiles);
-    return eye && eye.type === type && eye.value === value;
+    if (chowCount >= 4) return '四歸四';
+    if (chowCount === 2) return '四歸二';
+    // chowCount === 1（或其他無法構成四歸二/四歸四的情況）→ 一刻子＋一順子
+    return '四歸一';
 }
 
 // 檢查牌是否在順子中

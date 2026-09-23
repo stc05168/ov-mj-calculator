@@ -7,6 +7,13 @@
 - [mjConst.js](file://mjConst.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated four-of-a-kind scoring logic with proper kong detection to exclude kongs from 四歸一 patterns
+- Added base scoring pattern '底' worth 5 points that is automatically included in all hands
+- Improved three-suit ascending sequence detection for better accuracy in complex hands
+- Enhanced single wait detection with exposed melds to correctly identify waits when melds are present
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -50,7 +57,7 @@ UI --> Tiles["Tile Definitions<br/>mjConst.js"]
 ## Core Components
 - Application state and UI interactions: tile input, exposed groups (chows/pungs/kongs), winning tile, and flags for special conditions (Tenhou, Chihou, Ippatsu, last-tile draw/discard, face-down, multi-win, visible win tiles).
 - Score calculation entry: validates tile counts, invokes detection, aggregates fan points, adds dealer count bonus, and renders results.
-- Hand detection pipeline: detects many Taiwanese patterns, applies exclusion rules, handles “big chicken”/“duck” overrides, and sorts results.
+- Hand detection pipeline: detects many Taiwanese patterns, applies exclusion rules, handles "big chicken"/"duck" overrides, and sorts results.
 
 Key responsibilities:
 - mj.js: orchestrates user input, maintains state, triggers calculateScore on changes.
@@ -63,7 +70,7 @@ Key responsibilities:
 - [mjConst.js:1-65](file://mjConst.js#L1-L65)
 
 ## Architecture Overview
-The scoring flow is triggered whenever the UI state changes. The pipeline validates the hand shape, detects eligible hand types, applies exclusions to avoid double-counting, optionally replaces low-scoring base hands with high-value “big chicken/duck” variants, and finally sums all remaining fans.
+The scoring flow is triggered whenever the UI state changes. The pipeline validates the hand shape, detects eligible hand types, applies exclusions to avoid double-counting, optionally replaces low-scoring base hands with high-value "big chicken/duck" variants, and finally sums all remaining fans.
 
 ```mermaid
 sequenceDiagram
@@ -93,7 +100,7 @@ Calc->>UI : Render names + total fan sum
 - Validation: Ensures total tile count matches required 17 plus any kongs; otherwise shows an error and resets display.
 - Detection: Runs a comprehensive set of checks for standard and advanced Taiwanese patterns.
 - Exclusions: Removes lower-priority or conflicting patterns based on a prefix-matching rule table.
-- Special override: If non-reward fan points are ≤1, replaces base hand with “Big Chicken” (discard win) or “Duck” (self-draw) while keeping reward-type bonuses.
+- Special override: If non-reward fan points are ≤1, replaces base hand with "Big Chicken" (discard win) or "Duck" (self-draw) while keeping reward-type bonuses.
 - Aggregation: Sums all remaining fans and adds dealer count bonus if applicable.
 
 ```mermaid
@@ -139,10 +146,11 @@ Below is a consolidated reference of all scoring combinations recognized by the 
   - Robbing double kong (搶槓上槓糊): 30 fans
   - Face-down (蓋牌): 10 fans
   - Dealer count bonus: 2 × dealerCount + 1 fans
+  - **Base score (底): 5 fans** - Automatically added to all hands
 
 - High-value structural hands
   - Thirteen Orphans (十三么): 140 fans; variant with multiple waits up to 150 fans
-  - Sixteen Unconnected (十六不搭): 60–70 fans depending on whether the winning tile completes the pair (“sixteen fly”)
+  - Sixteen Unconnected (十六不搭): 60–70 fans depending on whether the winning tile completes the pair ("sixteen fly")
   - Greater than Five (大於五): 50 fans
   - Less than Five (小於五): 50 fans
   - Missing Five (缺五): 10 fans
@@ -166,7 +174,7 @@ Below is a consolidated reference of all scoring combinations recognized by the 
   - Eight flowers (兩台花): 80 fans (instant win condition)
 
 - Multi-win and visibility
-  - Visible win tile count 3 (明絕/絕絕): Single wait “絕絕” = 10 fans; otherwise “明絕” = 5 fans
+  - Visible win tile count 3 (明絕/絕絕): Single wait "絕絕" = 10 fans; otherwise "明絕" = 5 fans
   - Double win (雪上霜(雙響)): 5 fans
   - Triple win (雪上冰(三響)): 10 fans
   - Multi-win self-draw (錦上添花): Double 10 fans; Triple 20 fans
@@ -212,9 +220,15 @@ Below is a consolidated reference of all scoring combinations recognized by the 
   - Liguligu (嚦咕嚦咕): 50 fans; 6/8-wait variant 60 fans
   - Eight pairs + one pung (七對+刻子): part of liguligu detection
 
+- Four-of-a-kind patterns (四歸一系列)
+  - Four-in-one (四歸一): 5 fans (exposed), 10 fans (concealed)
+  - Four-in-two (四歸二): 10 fans (exposed), 20 fans (concealed)
+  - Four-in-four (四歸四): 20 fans (exposed), 40 fans (concealed)
+
 Notes:
-- Many patterns have both “ming” (exposed) and “an” (concealed) variants with different scores.
+- Many patterns have both "ming" (exposed) and "an" (concealed) variants with different scores.
 - Some patterns are mutually exclusive via exclusion rules; see next section.
+- **Updated**: Four-of-a-kind patterns now properly exclude kongs from detection to prevent false positives.
 
 **Section sources**
 - [checkHandType.js:105-587](file://checkHandType.js#L105-L587)
@@ -239,14 +253,14 @@ Notes:
 
 ### Exclusion Rules and Priority-Based Calculations
 - Exclusion table: When a hand type is detected, certain other types are excluded using prefix matching. Examples include:
-  - “門清大叮” excludes “門清”, “宣告聽牌”
-  - “門清自摸” excludes “門清”, “自摸”
-  - “無字花大平糊” excludes “無字”, “無字花”, “平糊”
-  - “清么碰” excludes several overlapping patterns including “斷么”
-  - “天糊”/“地糊” exclude “四子” and “天聽”
-  - “十三么”/“十六不搭”/“嚦咕嚦咕” exclude “門清”, “門清自摸”, “自摸”
+  - "門清大叮" excludes "門清", "宣告聽牌"
+  - "門清自摸" excludes "門清", "自摸"
+  - "無字花大平糊" excludes "無字", "無字花", "平糊"
+  - "清么碰" excludes several overlapping patterns including "斷么"
+  - "天糊"/"地糊" exclude "四子" and "天聽"
+  - "十三么"/"十六不搭"/"嚦咕嚦咕" exclude "門清", "門清自摸", "自摸"
 - Sorting: After exclusions, the list is sorted by descending score, then alphabetically by name.
-- Big Chicken/Duck override: If the total non-reward fan points are ≤1, the base hand is replaced by “Big Chicken” (30 fans) for discard wins or “Duck” (10 fans) for self-draws, while preserving reward-type bonuses (e.g., Tenhou, Ippatsu).
+- Big Chicken/Duck override: If the total non-reward fan points are ≤1, the base hand is replaced by "Big Chicken" (30 fans) for discard wins or "Duck" (10 fans) for self-draws, while preserving reward-type bonuses (e.g., Tenhou, Ippatsu).
 
 ```mermaid
 flowchart TD
@@ -271,11 +285,12 @@ F --> |No| H["Keep as-is"]
 - [checkHandType.js:2949-2958](file://checkHandType.js#L2949-L2958)
 
 ### How Different Combinations Affect Final Scores
-- Multiple identical patterns can be counted multiple times when allowed (e.g., “老少上xN”, “老少碰xN”, “三相逢xN”).
-- Some patterns are mutually exclusive due to exclusion rules (e.g., “清么碰” vs “斷么”; “無字花大平糊” vs “平糊”).
-- Hidden vs exposed matters: many patterns have higher scores when fully concealed (e.g., “暗清龍”, “暗雜龍”, “四般高 (暗)”).
+- Multiple identical patterns can be counted multiple times when allowed (e.g., "老少上xN", "老少碰xN", "三相逢xN").
+- Some patterns are mutually exclusive due to exclusion rules (e.g., "清么碰" vs "斷么"; "無字花大平糊" vs "平糊").
+- Hidden vs exposed matters: many patterns have higher scores when fully concealed (e.g., "暗清龍", "暗雜龍", "四般高 (暗)").
 - Flower draws and special draws add small bonuses but can combine with high-value hands.
 - Dealer count increases total fans linearly.
+- **Updated**: Base score '底' (5 fans) is automatically added to all hands after exclusions and big chicken/duck processing.
 
 **Section sources**
 - [checkHandType.js:1257-1500](file://checkHandType.js#L1257-L1500)
@@ -285,20 +300,25 @@ F --> |No| H["Keep as-is"]
 
 ### Examples of Complex Hands
 - Example 1: Fully concealed pure suit with clear dragons and multiple sisters
-  - Expected detections: Pure One Suit (清一色), Clear Dragons (暗清龍), Sisters (e.g., 五姊妹/六小姊妹), possibly “All X” patterns if numbers align.
-  - Exclusions may remove lower-level patterns like “平糊”.
-  - Final score sums all remaining fans plus dealer bonus if applicable.
+  - Expected detections: Pure One Suit (清一色), Clear Dragons (暗清龍), Sisters (e.g., 五姊妹/六小姊妹), possibly "All X" patterns if numbers align.
+  - Exclusions may remove lower-level patterns like "平糊".
+  - Final score sums all remaining fans plus dealer bonus and base score if applicable.
 
 - Example 2: Thirteen Orphans with extra meld forming a sequence or pung
-  - Detected as “十三么” (base 140) or “十三么（N 飛）” up to 150 fans if many waits exist.
-  - Excludes “門清”, “門清自摸”, “自摸”.
+  - Detected as "十三么" (base 140) or "十三么（N 飛）" up to 150 fans if many waits exist.
+  - Excludes "門清", "門清自摸", "自摸".
 
 - Example 3: Sixteen Unconnected with three-same-number across suits
-  - Detected as “十六不搭” and potentially “十六不搭三相逢” depending on configuration.
-  - Excludes “門清”, “門清自摸”, “自摸”.
+  - Detected as "十六不搭" and potentially "十六不搭三相逢" depending on configuration.
+  - Excludes "門清", "門清自摸", "自摸".
 
 - Example 4: Big Chicken scenario
-  - If only reward-type bonuses exist (e.g., Tenhou + Ippatsu) and non-reward fan ≤1, the base hand is replaced by “大雞糊” (30 fans) for discard wins or “鴨糊” (10 fans) for self-draws, while keeping reward bonuses.
+  - If only reward-type bonuses exist (e.g., Tenhou + Ippatsu) and non-reward fan ≤1, the base hand is replaced by "大雞糊" (30 fans) for discard wins or "鴨糊" (10 fans) for self-draws, while keeping reward bonuses.
+
+- Example 5: Four-of-a-kind with proper kong detection
+  - Four tiles of the same type not in a kong can trigger 四歸一 patterns
+  - Kongs are properly excluded from four-of-a-kind detection to prevent false positives
+  - Concealed vs exposed status affects scoring (e.g., 四歸四 (暗) = 40 fans vs 四歸四 = 20 fans)
 
 These examples illustrate how detection, exclusions, and overrides interact to produce the final fan total.
 
@@ -334,14 +354,15 @@ Check --> MJJS
 - The detection pipeline performs multiple passes over tiles and melds; complexity grows with the number of possible combinations (e.g., permutations for zha long, recursive meld formation).
 - Exclusion rules reduce output size early, improving downstream performance.
 - UI recalculates on every state change; heavy operations are localized to the detection function.
-
-[No sources needed since this section provides general guidance]
+- **Updated**: Four-of-a-kind detection now includes proper kong exclusion checks which may slightly increase computation time but improves accuracy.
 
 ## Troubleshooting Guide
 - Invalid tile count: If the total tiles do not equal 17 plus the number of kongs, the UI displays an error and clears hand-type display. Ensure correct number of exposed groups and hand tiles.
-- Unexpected exclusions: Review the exclusion table; some patterns intentionally suppress others (e.g., “清么碰” excludes “斷么”). Adjust your hand composition or exposed status accordingly.
-- Big Chicken/Duck override: If you expected a base hand but got “大雞糊” or “鴨糊”, check that non-reward fan points were ≤1 and that the win was discard vs self-draw.
-- Visibility and multi-win: Ensure “visible win tile count” and “multi-win” flags reflect actual game state to correctly award “明絕/絕絕” and “錦上添花”.
+- Unexpected exclusions: Review the exclusion table; some patterns intentionally suppress others (e.g., "清么碰" excludes "斷么"). Adjust your hand composition or exposed status accordingly.
+- Big Chicken/Duck override: If you expected a base hand but got "大雞糊" or "鴨糊", check that non-reward fan points were ≤1 and that the win was discard vs self-draw.
+- Visibility and multi-win: Ensure "visible win tile count" and "multi-win" flags reflect actual game state to correctly award "明絕/絕絕" and "錦上添花".
+- **Updated**: Four-of-a-kind patterns: If four-of-a-kind patterns are not being detected, check that the four tiles are not part of a kong (open or concealed). Kongs should not trigger four-of-a-kind scoring.
+- **Updated**: Base score: The base score '底' (5 fans) should always appear in the final hand types list regardless of other patterns detected.
 
 **Section sources**
 - [mj.js:1082-1101](file://mj.js#L1082-L1101)
@@ -359,7 +380,7 @@ The calculator implements a comprehensive Taiwanese Mahjong scoring system with 
 - calculateScore(): Validates tile count, calls detection, aggregates fans, adds dealer bonus.
 - detectHandTypes(): Orchestrates all pattern checks, applies exclusions, handles big chicken/duck override, sorts results.
 - applyExclusions(): Removes conflicting patterns based on prefix rules.
-- checkDaJiHu(): Replaces low-scoring base hands with “Big Chicken/Duck” under specific conditions.
+- checkDaJiHu(): Replaces low-scoring base hands with "Big Chicken/Duck" under specific conditions.
 
 **Section sources**
 - [mj.js:1082-1129](file://mj.js#L1082-L1129)
@@ -370,9 +391,11 @@ The calculator implements a comprehensive Taiwanese Mahjong scoring system with 
 ### Appendix B: Edge Cases and Rare Patterns
 - Thirteen Orphans with extra melds and multiple waits
 - Sixteen Unconnected with three-same-number across suits or mixed dragon configurations
-- Full hands satisfying “Greater/Less than Five” or “Missing Five” constraints
-- Multi-win self-draw with triple wins (“錦上添花(三響劈)”)
+- Full hands satisfying "Greater/Less than Five" or "Missing Five" constraints
+- Multi-win self-draw with triple wins ("錦上添花(三響劈)")
 - Face-down wins combined with other bonuses
+- **Updated**: Four-of-a-kind patterns with proper kong exclusion
+- **Updated**: Base score '底' automatically applied to all hands
 
 **Section sources**
 - [checkHandType.js:3259-3485](file://checkHandType.js#L3259-L3485)

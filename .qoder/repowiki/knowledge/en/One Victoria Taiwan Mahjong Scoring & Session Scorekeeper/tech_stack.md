@@ -1,0 +1,1 @@
+Pure-browser frontend (vanilla JS, CSS, SVG charts) with no build step; Spring Boot 3.5.7 (Java 17) backend using Spring Web, Spring Data JPA, Jakarta Validation, Spring Security Crypto (BCrypt), H2 (default) and PostgreSQL (runtime profile); test automation uses Python 3 with headless Chrome/Edge and MockMvc/H2.

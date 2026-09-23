@@ -1,6 +1,6 @@
 {
   "schemaVersion": "mahjong-runner-evidence/v1",
-  "timestamp": "2026-09-19T08:26:07.444554+00:00",
+  "timestamp": "2026-09-23T02:53:11.513759+00:00",
   "status": "protected-material-missing",
   "executionPath": "Python build_test.py -> loopback HTTP -> isolated headless Chrome/Edge --dump-dom",
   "globalNodeRequired": false,
@@ -129,13 +129,13 @@
       }
     ]
   },
-  "sourceRevision": "1814bb55b443259b1ca5f93138238d94d165a980",
+  "sourceRevision": "f776da3f5bf908ca905b56de43df9ad1f1522774",
   "sourceHashes": {
-    "test.html": "cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9",
+    "test.html": "c2d208e53c4faa9f46df1593db5123fe2da4268e893903b35c6592493518a90e",
     "mjConst.js": "f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8",
-    "checkHandType.js": "f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8"
+    "checkHandType.js": "b8d675dd5a66b75e93970595a292b5a45bc41704d37aab04609a11e9e5b24b8d"
   },
-  "buildOutput": "{\"bytes\": 219735, \"output\": \"test_standalone.html\", \"sourceHashes\": {\"checkHandType.js\": \"f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8\", \"mjConst.js\": \"f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8\", \"test.html\": \"cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9\"}}",
+  "buildOutput": "{\"bytes\": 222827, \"output\": \"test_standalone.html\", \"sourceHashes\": {\"checkHandType.js\": \"b8d675dd5a66b75e93970595a292b5a45bc41704d37aab04609a11e9e5b24b8d\", \"mjConst.js\": \"f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8\", \"test.html\": \"c2d208e53c4faa9f46df1593db5123fe2da4268e893903b35c6592493518a90e\"}}",
   "runs": [
     {
       "browser": {
@@ -143,9 +143,9 @@
         "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
         "source": "standard-location"
       },
-      "version": "edge 153.0.4234.32",
+      "version": "edge 153.0.4234.48",
       "kind": "success",
-      "message": "166 passed, 0 failed, 0 errors, 166 discovered",
+      "message": "170 passed, 0 failed, 0 errors, 170 discovered",
       "returncode": 0,
       "command": [
         "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
@@ -161,26 +161,26 @@
         "--metrics-recording-only",
         "--no-first-run",
         "--no-default-browser-check",
-        "--user-data-dir=C:\\Users\\SCB\\AppData\\Local\\Temp\\mj-browser-profile-l82n1h_p",
+        "--user-data-dir=C:\\Users\\SCB\\AppData\\Local\\Temp\\mj-browser-profile-tjd5d8l1",
         "--dump-dom",
-        "http://127.0.0.1:63301/test_standalone.html?run=auto"
+        "http://127.0.0.1:55473/test_standalone.html?run=auto"
       ],
-      "stderr": "[21248:23944:0919/162602.010:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n",
+      "stderr": "[2808:5752:0923/105306.081:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n",
       "parity": {
         "passed": true,
         "autoMode": "auto",
         "manualMode": "manual",
         "autoCounts": {
-          "discovered": 166,
-          "executed": 166,
-          "passed": 166,
+          "discovered": 170,
+          "executed": 170,
+          "passed": 170,
           "failed": 0,
           "errors": 0
         },
         "manualCounts": {
-          "discovered": 166,
-          "executed": 166,
-          "passed": 166,
+          "discovered": 170,
+          "executed": 170,
+          "passed": 170,
           "failed": 0,
           "errors": 0
         }
@@ -190,9 +190,9 @@
         "status": "success",
         "executionMode": "auto",
         "counts": {
-          "discovered": 166,
-          "executed": 166,
-          "passed": 166,
+          "discovered": 170,
+          "executed": 170,
+          "passed": 170,
           "failed": 0,
           "errors": 0
         },
@@ -200,9 +200,9 @@
         "build": {
           "schemaVersion": "mahjong-test-result/v1",
           "sourceHashes": {
-            "test.html": "cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9",
+            "test.html": "c2d208e53c4faa9f46df1593db5123fe2da4268e893903b35c6592493518a90e",
             "mjConst.js": "f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8",
-            "checkHandType.js": "f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8"
+            "checkHandType.js": "b8d675dd5a66b75e93970595a292b5a45bc41704d37aab04609a11e9e5b24b8d"
           }
         },
         "oracleProbes": {
@@ -697,7 +697,11 @@
           "base-fan-di",
           "sanse-bugao-bu",
           "sanse-bugao-bu-mixed-ming",
-          "dudu-exposed-melds"
+          "dudu-exposed-melds",
+          "sigui-double-one",
+          "sigui-single-one",
+          "sigui-two",
+          "sigui-four"
         ],
         "amendmentCaseIds": [
           "v27-no-honor-duanyao-nf",
@@ -2932,20 +2936,20 @@
                 "score": 5
               },
               {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
                 "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
                 "score": 5
-              },
-              {
-                "name": "四歸四",
-                "score": 20
-              },
-              {
-                "name": "四歸四",
-                "score": 20
               }
             ],
             "rawCandidates": null,
@@ -3261,11 +3265,16 @@
                 "name": "四歸一",
                 "score": 5,
                 "matcher": "exact",
-                "minCount": 1,
-                "maxCount": 1
+                "minCount": 2,
+                "maxCount": 2
               }
             ],
-            "prohibited": [],
+            "prohibited": [
+              {
+                "name": "四歸四",
+                "matcher": "prefix"
+              }
+            ],
             "violations": [],
             "setup": {
               "handTiles": [
@@ -3300,6 +3309,10 @@
                 "score": 5
               },
               {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
                 "name": "底",
                 "score": 5
               },
@@ -3310,10 +3323,6 @@
               {
                 "name": "缺一門",
                 "score": 10
-              },
-              {
-                "name": "四歸四",
-                "score": 20
               }
             ],
             "rawCandidates": null,
@@ -3781,6 +3790,154 @@
                 "score": 2
               }
             ],
+            "error": null
+          },
+          {
+            "id": "sigui-double-one",
+            "name": "四歸一x2",
+            "score": 5,
+            "category": "regression-sigui",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "四歸一",
+                "score": 5,
+                "matcher": "exact",
+                "minCount": 2,
+                "maxCount": 2
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "四歸四",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸二",
+                "matcher": "prefix"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "s2",
+                "s3",
+                "s4",
+                "t6",
+                "t7",
+                "s9",
+                "s9"
+              ],
+              "winningTile": "t8",
+              "chows": [
+                "[w1,w2,w3]"
+              ],
+              "pungs": [
+                "[w1,w1,w1]",
+                "[w2,w2,w2]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "二姊妹",
+                "score": 5
+              },
+              {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "缺五",
+                "score": 10
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "sigui-single-one",
+            "name": "四歸一",
+            "score": 5,
+            "category": "regression-sigui",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "四歸一",
+                "score": 5,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "四歸四",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸二",
+                "matcher": "prefix"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "s2",
+                "s3",
+                "s4",
+                "t2",
+                "t3",
+                "t4",
+                "s6",
+                "s7",
+                "s8",
+                "t9"
+              ],
+              "winningTile": "t9",
+              "chows": [
+                "[w3,w4,w5]"
+              ],
+              "pungs": [
+                "[w5,w5,w5]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "無字花",
+                "score": 5
+              }
+            ],
+            "rawCandidates": null,
             "error": null
           },
           {
@@ -8112,6 +8269,81 @@
             "error": null
           },
           {
+            "id": "sigui-two",
+            "name": "四歸二",
+            "score": 20,
+            "category": "regression-sigui",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "四歸二",
+                "score": 20,
+                "matcher": "prefix",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "四歸四",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸一",
+                "matcher": "prefix"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "w3",
+                "w4",
+                "w4",
+                "w5",
+                "w5",
+                "w5",
+                "w5",
+                "s2",
+                "s3",
+                "s4",
+                "t2",
+                "t3",
+                "t4",
+                "s6",
+                "s7",
+                "s8"
+              ],
+              "winningTile": "w6"
+            },
+            "actual": [
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
+                "score": 5
+              },
+              {
+                "name": "四歸二 (暗)",
+                "score": 20
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
             "id": "canonical-071",
             "name": "全姊妹",
             "score": 25,
@@ -9850,6 +10082,85 @@
             "error": null
           },
           {
+            "id": "sigui-four",
+            "name": "四歸四",
+            "score": 40,
+            "category": "regression-sigui",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "四歸四",
+                "score": 40,
+                "matcher": "prefix",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "四歸二",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸一",
+                "matcher": "prefix"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "w3",
+                "w3",
+                "w4",
+                "w4",
+                "w5",
+                "w5",
+                "w5",
+                "w5",
+                "w6",
+                "w6",
+                "w7",
+                "w7",
+                "s1",
+                "s1",
+                "s1",
+                "s2"
+              ],
+              "winningTile": "s2"
+            },
+            "actual": [
+              {
+                "name": "將眼",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "缺一門",
+                "score": 10
+              },
+              {
+                "name": "雙般高",
+                "score": 10
+              },
+              {
+                "name": "四歸四 (暗)",
+                "score": 40
+              },
+              {
+                "name": "嚦咕嚦咕六/八飛",
+                "score": 60
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
             "id": "v27-ligu-small-four-winds",
             "name": "小四喜",
             "score": 40,
@@ -10172,12 +10483,12 @@
                 "score": 10
               },
               {
-                "name": "四歸四 (暗)",
-                "score": 40
+                "name": "四歸二 (暗)",
+                "score": 20
               },
               {
-                "name": "四歸四 (暗)",
-                "score": 40
+                "name": "四歸二 (暗)",
+                "score": 20
               },
               {
                 "name": "嚦咕嚦咕",
@@ -11355,16 +11666,16 @@
                 "score": 3
               },
               {
-                "name": "底",
+                "name": "四歸一",
                 "score": 5
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "四歸一",
+                "score": 5
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "三兄弟",
@@ -11381,12 +11692,12 @@
                 "score": 3
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "四歸一",
+                "score": 5
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "四歸一",
+                "score": 5
               },
               {
                 "name": "純全帶7",
@@ -11467,16 +11778,16 @@
                 "score": 3
               },
               {
-                "name": "底",
+                "name": "四歸一",
                 "score": 5
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "四歸一",
+                "score": 5
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "三兄弟",
@@ -11493,12 +11804,12 @@
                 "score": 3
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "四歸一",
+                "score": 5
               },
               {
-                "name": "四歸四",
-                "score": 20
+                "name": "四歸一",
+                "score": 5
               },
               {
                 "name": "純全帶7",

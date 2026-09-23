@@ -269,12 +269,13 @@ add('搶槓食糊',5,'Robbing kong',()=>{
 add('明絕',5,'Visible win tile=3, not single wait',()=>{
     const b=baseHand();applyBase(b);state.visibleWinTileCount=3;
 });
-add('四歸一',5,'All 4 copies used (exposed)',()=>{
+add('四歸一',5,'All 4 copies used (exposed): w5=pung555+chow345, t8=pung888+chow678 → two separate 四歸一',()=>{
     state.pungs=[mkPung(w,5),mkPung(t,8)];
     state.chows=[mkChow(w,3,4,5)];
     state.handTiles=[t(2),t(2),t(3),t(4),t(5),t(6),t(7)];
     state.winningTile=t(8);
-});
+},{required:[{name:'四歸一',score:5,matcher:'exact',minCount:2,maxCount:2}],
+  prohibited:[{name:'四歸四',matcher:'prefix'}]});
 add('暗槓不觸發四歸一',2,'Concealed kong of t(5) must NOT count as 四歸一',()=>{
     state.concealedKongs=[mkKong(t,5)];
     state.chows=[mkChow(w,2,3,4),mkChow(w,6,7,8),mkChow(s,2,3,4)];
@@ -1252,6 +1253,42 @@ add('獨獨(多明順)', 2, 'Single wait with multiple exposed melds', () => {
     state.winningTile = s(2);
 }, {id: 'dudu-exposed-melds',
     required:[{name:'獨獨',score:2,matcher:'exact',minCount:1,maxCount:1}]});
+
+// ---------- 四歸一/四歸二/四歸四 classification regressions (Task #14) ----------
+// 四歸後面的數字代表「牌型」，不是副露數量：
+//   四歸一 = 一刻子(3張) + 一順子(1張)
+//   四歸二 = 兩順子(各1張) + 一對眼(2張)
+//   四歸四 = 四順子(各1張)
+// 舊版只要該花點出現在任一順子中就誤判為四歸四，故 111萬+222萬+123萬 被當成四歸四。
+// 使用 explicit id 避免位移 canonical 序號。
+add('四歸一x2',5,'Two separate 四歸一: 1萬=pung111+chow123, 2萬=pung222+chow123',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,2)];
+    state.chows=[mkChow(w,1,2,3)];
+    state.handTiles=[s(2),s(3),s(4),t(6),t(7),s(9),s(9)];
+    state.winningTile=t(8);
+},{id:'sigui-double-one',category:'regression-sigui',
+    required:[{name:'四歸一',score:5,matcher:'exact',minCount:2,maxCount:2}],
+    prohibited:[{name:'四歸四',matcher:'prefix'},{name:'四歸二',matcher:'prefix'}]});
+add('四歸一',5,'One pung + one chow using all 4 copies: 5萬=pung555+chow345',()=>{
+    state.pungs=[mkPung(w,5)];
+    state.chows=[mkChow(w,3,4,5)];
+    state.handTiles=[s(2),s(3),s(4),t(2),t(3),t(4),s(6),s(7),s(8),t(9)];
+    state.winningTile=t(9);
+},{id:'sigui-single-one',category:'regression-sigui',
+    required:[{name:'四歸一',score:5,matcher:'exact',minCount:1,maxCount:1}],
+    prohibited:[{name:'四歸四',matcher:'prefix'},{name:'四歸二',matcher:'prefix'}]});
+add('四歸二',20,'Two chows + pair using all 4 copies: 5萬=345+456+pair55 (concealed)',()=>{
+    state.handTiles=[w(3),w(4),w(4),w(5),w(5),w(5),w(5),s(2),s(3),s(4),t(2),t(3),t(4),s(6),s(7),s(8)];
+    state.winningTile=w(6);
+},{id:'sigui-two',category:'regression-sigui',
+    required:[{name:'四歸二',score:20,matcher:'prefix',minCount:1,maxCount:1}],
+    prohibited:[{name:'四歸四',matcher:'prefix'},{name:'四歸一',matcher:'prefix'}]});
+add('四歸四',40,'Four chows each using one copy: 5萬 in 345+345+567+567 (concealed)',()=>{
+    state.handTiles=[w(3),w(3),w(4),w(4),w(5),w(5),w(5),w(5),w(6),w(6),w(7),w(7),s(1),s(1),s(1),s(2)];
+    state.winningTile=s(2);
+},{id:'sigui-four',category:'regression-sigui',
+    required:[{name:'四歸四',score:40,matcher:'prefix',minCount:1,maxCount:1}],
+    prohibited:[{name:'四歸二',matcher:'prefix'},{name:'四歸一',matcher:'prefix'}]});
 // TEST-DEFINITIONS-END
 
 // TEST-HARNESS-BEGIN

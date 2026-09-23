@@ -8,6 +8,13 @@
 - [checkHandType.js](file://checkHandType.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated detection logic for 四歸一 (four-of-a-kind one), 三色步步高 (three-suit ascending sequence), and 獨獨 (single wait) patterns
+- Enhanced handling of exposed and concealed melds in pattern detection
+- Improved accuracy for mixed exposed/concealed sequence combinations
+- Fixed wait analysis to properly include exposed melds in test hand construction
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -29,6 +36,8 @@ This document explains the standard Taiwanese Mahjong hand types implemented in 
 - 清一色 (Pure One Suit)
 
 For each hand type, we detail detection logic, scoring values, exclusion rules, and how these hands interact with other scoring conditions. We also provide examples of qualifying tile combinations and reference tables for all possible combinations.
+
+**Updated**: Enhanced detection accuracy for 四歸一 (four-of-a-kind one), 三色步步高 (three-suit ascending sequence), and 獨獨 (single wait) patterns with improved handling of exposed and concealed melds.
 
 ## Project Structure
 The application is a single-page web app with three main files:
@@ -284,6 +293,32 @@ End --> |Yes| Pure["清一色 (100 fan)"]
 - [checkHandType.js:2180-2198](file://checkHandType.js#L2180-L2198)
 - [checkHandType.js:389-392](file://checkHandType.js#L389-L392)
 
+### Enhanced Pattern Detection Improvements
+
+#### 四歸一 (Four-of-a-Kind One) Detection
+- **Updated**: Improved detection accuracy with better handling of exposed and concealed melds
+- Detection logic now properly excludes kongs (both exposed and concealed) from consideration
+- Enhanced concealed detection checks exposed chows, pungs, and kongs to determine if four-of-a-kind tiles are truly concealed
+- Scoring varies based on concealment: 10 fan for concealed, 5 fan for exposed
+
+#### 三色步步高 (Three-Suit Ascending Sequence) Detection  
+- **Updated**: Fixed issues with mixed exposed/concealed sequence combinations
+- Now properly handles cases where exposed and concealed sequences can be mixed
+- Improved algorithm prevents false negatives when exposed sequences might hide valid concealed sequences
+- Correctly identifies ascending sequences across three different suits regardless of exposure status
+
+#### 獨獨 (Single Wait) Detection
+- **Updated**: Fixed wait analysis to properly include exposed melds in test hand construction
+- Previously failed when exposed melds were present due to incomplete test hand construction
+- Now correctly includes melded tiles when analyzing waiting tiles
+- Properly handles complex scenarios with multiple exposed melds
+
+**Section sources**
+- [test_standalone.html:1149-1234](file://test_standalone.html#L1149-L1234)
+- [test_standalone.html:2015-2090](file://test_standalone.html#L2015-L2090)
+- [test_standalone.html:4260-4459](file://test_standalone.html#L4260-L4459)
+- [test_standalone.html:5579-5590](file://test_standalone.html#L5579-L5590)
+
 ## Dependency Analysis
 - mj.js depends on checkHandType.js for hand detection and on mjConst.js for tile definitions.
 - checkHandType.js reads state from mj.js (e.g., chows, pungs, open/concealed kongs, winning tile) and uses TILE_TYPES from mjConst.js.
@@ -314,8 +349,7 @@ CHECK --> MJS
 - Detection functions use early exits (e.g., rejecting hands with any pungs for 平糊) to minimize work.
 - Sorting and grouping operations are bounded by the fixed size of a Mahjong hand (17 tiles max), keeping complexity low.
 - Exclusion rules are applied once after detection to prevent redundant scoring.
-
-[No sources needed since this section provides general guidance]
+- **Updated**: Enhanced detection algorithms maintain performance while improving accuracy through optimized sequence matching and reduced redundant calculations.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -323,6 +357,7 @@ Common issues and resolutions:
 - Missing winning tile: If the hand reaches maximum tiles without setting a winning tile, the app auto-selects the last added tile as the winning tile.
 - Unexpected exclusions: Review exclusion rules; some hands are suppressed by higher-priority patterns (e.g., 平糊 excluded by 無字花大平糊).
 - Confusion between 混一色 and 清一色: 混一色 requires at least one honor tile; 清一色 forbids honor tiles.
+- **Updated**: Issues with 四歸一, 三色步步高, and 獨獨 detection should now be resolved with improved exposed/concealed meld handling.
 
 **Section sources**
 - [mj.js:1082-1129](file://mj.js#L1082-L1129)
@@ -337,9 +372,9 @@ The calculator implements robust detection for core Taiwanese Mahjong hand types
 - 混一色 (40 fan), excluded by 清一色
 - 清一色 (100 fan), excludes 混一色
 
-These hands integrate with numerous other scoring conditions through a structured detection pipeline and explicit exclusion rules, ensuring accurate and consistent scoring.
+**Updated**: Enhanced detection accuracy for 四歸一 (four-of-a-kind one), 三色步步高 (three-suit ascending sequence), and 獨獨 (single wait) patterns with improved handling of exposed and concealed melds ensures more reliable scoring across various hand configurations.
 
-[No sources needed since this section summarizes without analyzing specific files]
+These hands integrate with numerous other scoring conditions through a structured detection pipeline and explicit exclusion rules, ensuring accurate and consistent scoring.
 
 ## Appendices
 
@@ -372,6 +407,23 @@ These hands integrate with numerous other scoring conditions through a structure
   - Score: 100 fan
   - Exclusions: Suppresses 混一色
 
+### Enhanced Pattern Detection Tables
+
+- 四歸一 (Four-of-a-Kind One)
+  - Condition: Four identical tiles not part of a kong
+  - Score: 10 fan (concealed), 5 fan (exposed)
+  - Detection: Excludes tiles in exposed chows, pungs, or kongs
+
+- 三色步步高 (Three-Suit Ascending Sequence)
+  - Condition: Three ascending sequences across three different suits
+  - Score: 10 fan (all concealed), 5 fan (mixed/exposed)
+  - Detection: Handles mixed exposed/concealed sequences correctly
+
+- 獨獨 (Single Wait)
+  - Condition: Single waiting tile with complete hand structure
+  - Score: 2 fan
+  - Detection: Properly includes exposed melds in wait analysis
+
 [No sources needed since this section lists summarized information]
 
 ### Example Tile Combinations
@@ -395,5 +447,17 @@ These hands integrate with numerous other scoring conditions through a structure
 - 清一色
   - Example: All characters, no honors
   - Points: 100 fan
+
+- 四歸一 (Enhanced)
+  - Example: Four identical tiles not in kong, with proper exposed/concealed detection
+  - Points: 10 fan (concealed), 5 fan (exposed)
+
+- 三色步步高 (Enhanced)
+  - Example: Ascending sequences across three suits with mixed exposure
+  - Points: 10 fan (all concealed), 5 fan (mixed)
+
+- 獨獨 (Enhanced)
+  - Example: Single wait with multiple exposed melds properly analyzed
+  - Points: 2 fan
 
 [No sources needed since this section provides illustrative examples]

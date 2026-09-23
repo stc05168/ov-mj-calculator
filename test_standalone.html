@@ -33,7 +33,7 @@ h1{text-align:center;color:#e94560;margin-bottom:20px;font-size:1.8rem}
 <table id="results"><thead><tr><th>#</th><th>Case ID / Hand Type</th><th>Score</th><th>Result</th><th>Hand Setup</th></tr></thead><tbody></tbody></table>
 
 <script>
-window.__TEST_BUILD_META__={"schemaVersion":"mahjong-test-result/v1","sourceHashes":{"test.html":"cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9","mjConst.js":"f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8","checkHandType.js":"f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8"}};
+window.__TEST_BUILD_META__={"schemaVersion":"mahjong-test-result/v1","sourceHashes":{"test.html":"c2d208e53c4faa9f46df1593db5123fe2da4268e893903b35c6592493518a90e","mjConst.js":"f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8","checkHandType.js":"b8d675dd5a66b75e93970595a292b5a45bc41704d37aab04609a11e9e5b24b8d"}};
 // 牌型定義
 const TILE_TYPES = {
     CHARACTERS: '萬子',
@@ -1169,17 +1169,19 @@ function detectSiguiHandTypes(allTiles) {
             if (isInKong) continue;
             
             const isConcealed = isSiguiConcealed(type, numValue);
-            
-            // 檢查四歸四（順子中使用四張相同的牌）
-            if (isSiguiSi(allTiles, type, numValue)) {
+
+            // 依「這四張牌在順子/刻子/對子之間如何分配」決定四歸類型。
+            // 四歸後面的數字代表「牌型」，不是副露數量：
+            //   四歸一 = 一刻子(3張) + 一順子(1張)
+            //   四歸二 = 兩順子(各1張) + 一對眼(2張)
+            //   四歸四 = 四順子(各1張)
+            const siguiType = classifySigui(allTiles, type, numValue);
+
+            if (siguiType === '四歸四') {
                 results.push({ name: isConcealed ? '四歸四 (暗)' : '四歸四', score: isConcealed ? 40 : 20 });
-            } 
-            // 檢查四歸二（兩隻做眼）
-            else if (isSiguiEr(allTiles, type, numValue)) {
+            } else if (siguiType === '四歸二') {
                 results.push({ name: isConcealed ? '四歸二 (暗)' : '四歸二', score: isConcealed ? 20 : 10 });
-            }
-            // 四歸一
-            else {
+            } else {
                 results.push({ name: isConcealed ? '四歸一 (暗)' : '四歸一', score: isConcealed ? 10 : 5 });
             }
         }
@@ -1211,32 +1213,29 @@ function isSiguiConcealed(type, value) {
     return true;
 }
 
-// 檢查四歸四（順子中使用四張相同的牌）
-function isSiguiSi(allTiles, type, value) {
-    // 檢查這張牌是否在順子中使用
+// 判斷某個「已用滿四張」的花點，其四張牌在順子/刻子/對子間如何分配，
+// 回傳四歸類型名稱：'四歸四' / '四歸二' / '四歸一'。
+//
+// 關鍵：每個順子最多只會用到「一張」同點牌，因此
+//   「含有此花點的順子數量」＝「被順子用掉的張數」。
+// 由於四張全數用完（且已排除槓），剩下的張數只能落在刻子(3)或對子(2)：
+//   被順子用掉 4 張 → 剩 0 → 四張各在一個順子 → 四歸四
+//   被順子用掉 2 張 → 剩 2 張做眼          → 兩順子＋一對眼 → 四歸二
+//   被順子用掉 1 張 → 剩 3 張成刻          → 一刻子＋一順子 → 四歸一
+function classifySigui(allTiles, type, value) {
     const allChows = getAllChows(allTiles);
-    
+
+    let chowCount = 0;
     for (const chow of allChows) {
         if (chow.type === type && chow.values.includes(value)) {
-            // 檢查這個順子中是否使用了四張相同的牌
-            const countInChow = allTiles.filter(t => 
-                t.type === type && t.value === value && 
-                isTileInChow(t, chow)
-            ).length;
-            
-            if (countInChow === 4) {
-                return true;
-            }
+            chowCount++;
         }
     }
-    
-    return false;
-}
 
-// 檢查四歸二（兩隻做眼）
-function isSiguiEr(allTiles, type, value) {
-    const eye = findEye(allTiles);
-    return eye && eye.type === type && eye.value === value;
+    if (chowCount >= 4) return '四歸四';
+    if (chowCount === 2) return '四歸二';
+    // chowCount === 1（或其他無法構成四歸二/四歸四的情況）→ 一刻子＋一順子
+    return '四歸一';
 }
 
 // 檢查牌是否在順子中
@@ -4604,12 +4603,13 @@ add('搶槓食糊',5,'Robbing kong',()=>{
 add('明絕',5,'Visible win tile=3, not single wait',()=>{
     const b=baseHand();applyBase(b);state.visibleWinTileCount=3;
 });
-add('四歸一',5,'All 4 copies used (exposed)',()=>{
+add('四歸一',5,'All 4 copies used (exposed): w5=pung555+chow345, t8=pung888+chow678 → two separate 四歸一',()=>{
     state.pungs=[mkPung(w,5),mkPung(t,8)];
     state.chows=[mkChow(w,3,4,5)];
     state.handTiles=[t(2),t(2),t(3),t(4),t(5),t(6),t(7)];
     state.winningTile=t(8);
-});
+},{required:[{name:'四歸一',score:5,matcher:'exact',minCount:2,maxCount:2}],
+  prohibited:[{name:'四歸四',matcher:'prefix'}]});
 add('暗槓不觸發四歸一',2,'Concealed kong of t(5) must NOT count as 四歸一',()=>{
     state.concealedKongs=[mkKong(t,5)];
     state.chows=[mkChow(w,2,3,4),mkChow(w,6,7,8),mkChow(s,2,3,4)];
@@ -5587,6 +5587,42 @@ add('獨獨(多明順)', 2, 'Single wait with multiple exposed melds', () => {
     state.winningTile = s(2);
 }, {id: 'dudu-exposed-melds',
     required:[{name:'獨獨',score:2,matcher:'exact',minCount:1,maxCount:1}]});
+
+// ---------- 四歸一/四歸二/四歸四 classification regressions (Task #14) ----------
+// 四歸後面的數字代表「牌型」，不是副露數量：
+//   四歸一 = 一刻子(3張) + 一順子(1張)
+//   四歸二 = 兩順子(各1張) + 一對眼(2張)
+//   四歸四 = 四順子(各1張)
+// 舊版只要該花點出現在任一順子中就誤判為四歸四，故 111萬+222萬+123萬 被當成四歸四。
+// 使用 explicit id 避免位移 canonical 序號。
+add('四歸一x2',5,'Two separate 四歸一: 1萬=pung111+chow123, 2萬=pung222+chow123',()=>{
+    state.pungs=[mkPung(w,1),mkPung(w,2)];
+    state.chows=[mkChow(w,1,2,3)];
+    state.handTiles=[s(2),s(3),s(4),t(6),t(7),s(9),s(9)];
+    state.winningTile=t(8);
+},{id:'sigui-double-one',category:'regression-sigui',
+    required:[{name:'四歸一',score:5,matcher:'exact',minCount:2,maxCount:2}],
+    prohibited:[{name:'四歸四',matcher:'prefix'},{name:'四歸二',matcher:'prefix'}]});
+add('四歸一',5,'One pung + one chow using all 4 copies: 5萬=pung555+chow345',()=>{
+    state.pungs=[mkPung(w,5)];
+    state.chows=[mkChow(w,3,4,5)];
+    state.handTiles=[s(2),s(3),s(4),t(2),t(3),t(4),s(6),s(7),s(8),t(9)];
+    state.winningTile=t(9);
+},{id:'sigui-single-one',category:'regression-sigui',
+    required:[{name:'四歸一',score:5,matcher:'exact',minCount:1,maxCount:1}],
+    prohibited:[{name:'四歸四',matcher:'prefix'},{name:'四歸二',matcher:'prefix'}]});
+add('四歸二',20,'Two chows + pair using all 4 copies: 5萬=345+456+pair55 (concealed)',()=>{
+    state.handTiles=[w(3),w(4),w(4),w(5),w(5),w(5),w(5),s(2),s(3),s(4),t(2),t(3),t(4),s(6),s(7),s(8)];
+    state.winningTile=w(6);
+},{id:'sigui-two',category:'regression-sigui',
+    required:[{name:'四歸二',score:20,matcher:'prefix',minCount:1,maxCount:1}],
+    prohibited:[{name:'四歸四',matcher:'prefix'},{name:'四歸一',matcher:'prefix'}]});
+add('四歸四',40,'Four chows each using one copy: 5萬 in 345+345+567+567 (concealed)',()=>{
+    state.handTiles=[w(3),w(3),w(4),w(4),w(5),w(5),w(5),w(5),w(6),w(6),w(7),w(7),s(1),s(1),s(1),s(2)];
+    state.winningTile=s(2);
+},{id:'sigui-four',category:'regression-sigui',
+    required:[{name:'四歸四',score:40,matcher:'prefix',minCount:1,maxCount:1}],
+    prohibited:[{name:'四歸二',matcher:'prefix'},{name:'四歸一',matcher:'prefix'}]});
 // TEST-DEFINITIONS-END
 
 // TEST-HARNESS-BEGIN

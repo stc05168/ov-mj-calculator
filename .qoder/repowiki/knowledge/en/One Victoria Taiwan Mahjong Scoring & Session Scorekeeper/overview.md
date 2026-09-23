@@ -1,0 +1,1 @@
+Browser-based Taiwan 16-tile mahjong hand-scoring calculator and four-player session scorekeeper, with an optional Spring Boot backend for account-managed sessions.
