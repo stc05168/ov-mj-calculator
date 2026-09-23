@@ -1,0 +1,6 @@
+- All session mutations are funneled through `mutateSession(draftMutator, message, options)`, which snapshots the current session onto `undoStack`, applies the draft, recomputes `derived`, calls `saveSession()`, and triggers `renderAll()` — never mutate `session.entries` directly outside this wrapper.
+- User input is normalized with `boundedInt(value, min, max, fallback)` and string fields are truncated with `.slice(0, N)` before being stored, ensuring numeric ranges and length caps on every persisted field.
+- DOM references are cached once at module top into a `refs` object keyed by element `id`, and event wiring is centralized in `wireEvents()` rather than inline handlers.
+- Computed state is separated from source data: `deriveSession(source)` returns a fresh `{totals, stats, dealerState, entries, chartPoints, handCount}` object, and every render path reads from `derived` instead of recalculating inline.
+- Hand entry types are validated against a whitelist (`discard|selfDraw|multiWin|draw|adjustment|breakPull`) in both `normalizeEntry` and `validateHandInput`, throwing descriptive Chinese errors on invalid combinations.
+- UI fragments are built via a tiny `element(tag, className, text)` helper and SVG nodes via `svgElement(tag, attrs)`, keeping DOM construction uniform across scorecards, history rows, and chart elements.

@@ -1,0 +1,5 @@
+- Cross-frame contracts are validated by checking for specific globals (`OVMJCalculator`, `OVMJSessionHost`) before use, with fallback timers that mark the app as errored after a timeout.
+- State transitions are communicated via `document.documentElement.dataset.*` attributes (`suiteApp`, `suiteMode`, `suiteView`, `calculatorBridge`, `embedded`) which both drive CSS state and serve as UI signals.
+- UI panels are toggled by setting a single `data-suite-view` attribute on the root element and syncing `data-suite-panel` visibility and button `aria-pressed` states in one `switchView` function.
+- External data passed between frames is wrapped in a versioned schema object (`RESULT_SCHEMA = 'ov-mj-calculation-result/v1'`) and validated via a dedicated `validResult` guard before any downstream processing.
+- User feedback uses a centralized toast mechanism (`showToast`) that clears previous timers and auto-hides after a fixed delay rather than inline alerts.

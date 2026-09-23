@@ -1,0 +1,1 @@
+Run with `mvn spring-boot:run`; use `-Dspring.profiles.active=postgresql` to switch from the embedded H2 to a PostgreSQL datasource configured in `application-postgresql.properties`. The `app.token-days` property controls bearer token expiry, and `app.allowed-origins` configures CORS origins.

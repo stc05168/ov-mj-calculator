@@ -1,0 +1,1 @@
+A single-page browser app that records Taiwanese mahjong rounds, tracks dealer streak/pull bonuses, and computes per-player totals with a quick-ledger for rapid fan accounting.

@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: mahjong_suite
+title: Mahjong Suite Shell (Scorekeeper + Calculator Bridge)
+scope:
+    - mahjong-suite/
+source_files: []
+depends_on: []
+related_to:
+    - path: session_scorekeeper
+    - path: session_scorekeeper_online

@@ -1,0 +1,1 @@
+GitHub Actions workflows using `actions/checkout@v6` and `skills/action-update-step@v2`; Dependabot configured for `github-actions` ecosystem with monthly schedule.

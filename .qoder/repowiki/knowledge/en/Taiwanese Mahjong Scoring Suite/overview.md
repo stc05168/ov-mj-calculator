@@ -1,0 +1,1 @@
+A browser-first Taiwanese mahjong scoring calculator with a standalone UI, an iframe-based suite shell, and a Spring Boot backend that together record hands, compute fan scores, and persist sessions.

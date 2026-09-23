@@ -1,0 +1,1 @@
+Spring Boot REST API that manages user accounts, player profiles, and versioned Mahjong game-session payloads with JSON schema validation and Bearer-token authentication.

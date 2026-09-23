@@ -1,0 +1,6 @@
+- Public API contracts are expressed as local `record` types inside `ApiController` (e.g. `AuthRequest`, `LoginRequest`, `SessionRequest`, `PlayerView`) rather than separate DTO classes.
+- Input validation combines Jakarta Bean Validation annotations on request records with explicit in-method checks that throw `ApiProblem.badRequest(...)` for domain-level constraints (payload schema, range checks, uniqueness).
+- Authorization is enforced centrally by `AuthInterceptor` which strips the `Bearer ` prefix and resolves the `accountId` into `HttpServletRequest.setAttribute("accountId", ...)` for controllers to consume via `@RequestAttribute`.
+- Mutating session operations use optimistic concurrency control via JPA `@Version` and require an `expectedVersion` parameter; mismatches raise `ApiProblem.conflict("牌局版本已變更，請重新載入")`.
+- Error responses are uniformly produced through the `ApiProblem` helper factory methods (`badRequest`, `unauthorized`, `notFound`, `conflict`) instead of ad-hoc exception handling.
+- Configuration is externalized via `@Value` placeholders (`${app.token-days}`, `${app.allowed-origins}`) with sensible defaults, allowing environment-specific overrides without code changes.

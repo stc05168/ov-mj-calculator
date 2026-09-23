@@ -1,0 +1,1 @@
+Requires `../app-config.js` to be present at runtime to supply `apiBaseUrl` and `guestEntryUrl`; development defaults to `http://127.0.0.1:8080/api` but non-loopback endpoints must use HTTPS. A `?shellTest=1` query flag bypasses real API calls and simulates a loaded workspace for integration testing.

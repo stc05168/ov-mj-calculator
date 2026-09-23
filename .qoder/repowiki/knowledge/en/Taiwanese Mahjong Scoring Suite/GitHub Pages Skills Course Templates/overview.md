@@ -1,0 +1,1 @@
+GitHub template workflows and step documentation that guide learners through a multi-step GitHub Pages blog setup, using an in-repo step tracker to orchestrate branch creation, PRs, and deployment.

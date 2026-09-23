@@ -1,0 +1,5 @@
+- Each workflow is named with a step number prefix (`0-welcome.yml`, `5-merge-your-pull-request.yml`) and guarded by an `if` expression that compares the checked-out `-step.txt` value against the workflow's own step number.
+- Workflows declare explicit `permissions` blocks granting only `contents: write` and `pull-requests: write` when they need to modify the repo or open PRs.
+- Step progression is driven by calling `skills/action-update-step@v2` with `from_step`, `to_step`, and `branch_name: my-pages` rather than editing step metadata inline.
+- Workflow jobs read the current step via a dedicated `get_current_step` job that outputs `current_step` from `cat ./.github/steps/-step.txt`, keeping step detection decoupled from the main job.
+- Step documentation lives in parallel Markdown files under `steps/` whose filenames mirror the workflow numbers, providing a one-to-one mapping between automation and learner instructions.

@@ -1,0 +1,1 @@
+Vanilla ES5+ JavaScript with no framework; cross-frame messaging via custom DOM events and `contentWindow` API; CSS custom properties and `dvh` units for responsive layout; relies on external sibling apps `../session-scorekeeper` and `../mj.html` plus a shared `../app-config.js` for account entry URLs.

@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: ci_cd
+title: GitHub Pages Skills Course Templates
+scope:
+    - .github/
+source_files: []
+depends_on: []
+related_to: []

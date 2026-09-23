@@ -654,6 +654,7 @@ function detectHandTypes() {
     const decompositionResolvedTypes = resolveStructuralDecompositionConflicts(handTypes);
     let finalHandTypes = applyExclusions(decompositionResolvedTypes);
     finalHandTypes = checkDaJiHu(finalHandTypes, state.isSelfDraw);
+    finalHandTypes.push({ name: '底', score: 5 });
     return sortHandTypes(finalHandTypes);
 }
 
@@ -1037,6 +1038,12 @@ function detectSiguiHandTypes(allTiles) {
         if (tileCounts[key] === 4) {
             const [type, value] = key.split('-');
             const numValue = parseInt(value);
+            
+            // 排除槓子（明槓或暗槓）的牌 — 槓是單一組4張牌，不算四歸一
+            const isInKong = state.openKongs.some(kong => kong.type === type && kong.value === numValue) ||
+                             state.concealedKongs.some(kong => kong.type === type && kong.value === numValue);
+            if (isInKong) continue;
+            
             const isConcealed = isSiguiConcealed(type, numValue);
             
             // 檢查四歸四（順子中使用四張相同的牌）
@@ -1637,14 +1644,55 @@ function getAllChows(allTiles) {
     });
 
     // 從手牌中找出順子（排除已標記的牌）（暗順）
-    const handTiles = allTiles.filter(tile => 
-        !state.chows.some(chow => chow.tiles.some(ct => ct.type === tile.type && ct.value === tile.value))
-    );
+    // 只能排除「明順實際使用的那幾張牌」（以物件身分比對）。
+    // 舊版以「同花同點」比對，會把暗牌中剛好與明順同花同點的牌一併刪掉
+    // （例如明順 678索 會連暗牌裡的 索6、索7 一起刪除），
+    // 導致暗順 567索 消失，三色步步高因此漏判。
+    const handTiles = removeExposedChowTiles(allTiles);
     const handChows = findChowsInHand(handTiles);
     handChows.forEach(chow => { chow.isExposed = false; });
     chows.push(...handChows);
 
     return chows;
+}
+
+// 從全部牌張中扣除「已吃的明順」所占用的牌，剩下的才是可自由分解的暗牌。
+// 以物件身分比對：明順用的是它自己那三張牌，暗牌中同花同點的是另外幾張實體牌，
+// 必須保留下來才能組成暗順。若身分比對不到（牌張被複製過），才退回以
+// 「同花同點」逐張扣除相同「張數」，而不是把該花點的所有牌一次刪光。
+function removeExposedChowTiles(allTiles) {
+    const meldTiles = [];
+    state.chows.forEach(chow => {
+        if (chow && Array.isArray(chow.tiles)) meldTiles.push(...chow.tiles);
+    });
+    if (meldTiles.length === 0) return [...allTiles];
+
+    const dropped = new Set(); // 要扣除的牌張索引
+
+    // 1) 以物件身分比對明順實際使用的那幾張牌
+    const unmatched = [];
+    meldTiles.forEach(meldTile => {
+        const index = allTiles.findIndex((tile, i) => tile === meldTile && !dropped.has(i));
+        if (index >= 0) {
+            dropped.add(index);
+        } else {
+            unmatched.push(meldTile);
+        }
+    });
+
+    // 2) 身分比對不到（牌張被複製過）時，才依「同花同點」逐張扣抵相同「張數」。
+    //    由後往前扣：getAllTiles 把手牌排在副露之前，暗牌必須優先保留。
+    unmatched.forEach(meldTile => {
+        for (let i = allTiles.length - 1; i >= 0; i--) {
+            if (dropped.has(i)) continue;
+            if (allTiles[i].type === meldTile.type && allTiles[i].value === meldTile.value) {
+                dropped.add(i);
+                break;
+            }
+        }
+    });
+
+    return allTiles.filter((tile, index) => !dropped.has(index));
 }
 
 function findChowsInHand(allTiles) {
@@ -1841,54 +1889,79 @@ function detectGaoxiang(allChows) {
 }
 
 // 檢測步步高牌型
+// 步步高＝三個起始點連續遞增（N、N+1、N+2）的順子。
+//   一色步步高：三順同花色。
+//   三色步步高：三順分屬萬／索／筒三種不同花色。
+// 明順與暗順都要納入，且兩者可以混搭（例如明順 678索 ＋ 暗順 567萬、789筒）。
+// 注意：不可只在「依起始點排序後的相鄰三筆」中尋找。同一起始點常常同時存在
+// 明順與暗順（例如明順 678索 與暗順 678萬），相鄰掃描會被同起始點的順子擋住，
+// 錯失 567索＋678萬＋789筒 這類正確組合，因此改為完整組合搜尋。
 function detectBubugao(allChows) {
     const results = [];
-    const chowsBySuit = {};
-    
-    // 按花色分組順子（保留完整順子物件以追蹤明暗）
+
+    // 順子起始點只可能是 1~7（最大為 789）
+    const START_VALUES = [1, 2, 3, 4, 5, 6, 7];
+
+    // 依「花色＋起始點」分組，保留完整順子物件以追蹤明暗
+    const chowsBySuitAndStart = new Map();
     allChows.forEach(chow => {
-        if (!chowsBySuit[chow.type]) {
-            chowsBySuit[chow.type] = [];
-        }
-        chowsBySuit[chow.type].push(chow);
+        const key = `${chow.type}-${chow.startValue}`;
+        if (!chowsBySuitAndStart.has(key)) chowsBySuitAndStart.set(key, []);
+        chowsBySuitAndStart.get(key).push(chow);
     });
-    
+
+    // 全暗的組合番數較高，優先採用；否則維持 getAllChows 的出現順序（明順在前）
+    const isDarkTriple = triple => triple.every(chow => !chow.isExposed);
+    const pickBestTriple = triples => triples.find(isDarkTriple) || triples[0] || null;
+
     // 檢查一色步步高（同花色漸進式順子）
-    for (const suit in chowsBySuit) {
-        const suitChows = chowsBySuit[suit].sort((a, b) => a.startValue - b.startValue);
-        
-        if (suitChows.length >= 3) {
-            // 檢查是否有連續三個漸進式順子
-            for (let i = 0; i < suitChows.length - 2; i++) {
-                const c1 = suitChows[i];
-                const c2 = suitChows[i + 1];
-                const c3 = suitChows[i + 2];
-                if (c1.startValue + 1 === c2.startValue && c2.startValue + 1 === c3.startValue) {
-                    const isDark = !c1.isExposed && !c2.isExposed && !c3.isExposed;
-                    results.push({ name: isDark ? '一色步步高 (暗)' : '一色步步高', score: isDark ? 30 : 15 });
-                    break;
-                }
+    const suits = [];
+    allChows.forEach(chow => {
+        if (!suits.includes(chow.type)) suits.push(chow.type);
+    });
+
+    suits.forEach(suit => {
+        for (const start of START_VALUES) {
+            const triples = [];
+            chowsBySuitAndStart.get(`${suit}-${start}`)?.forEach(c1 => {
+                chowsBySuitAndStart.get(`${suit}-${start + 1}`)?.forEach(c2 => {
+                    chowsBySuitAndStart.get(`${suit}-${start + 2}`)?.forEach(c3 => {
+                        triples.push([c1, c2, c3]);
+                    });
+                });
+            });
+
+            const triple = pickBestTriple(triples);
+            if (triple) {
+                const isDark = isDarkTriple(triple);
+                results.push({ name: isDark ? '一色步步高 (暗)' : '一色步步高', score: isDark ? 30 : 15 });
+                break; // 同一花色只計一次（維持原本行為）
             }
         }
+    });
+
+    // 檢查三色步步高（三種不同花色的漸進式順子）
+    const sanseTriples = [];
+    for (const start of START_VALUES) {
+        allChows.filter(chow => chow.startValue === start).forEach(first => {
+            allChows.filter(chow => chow.startValue === start + 1 && chow.type !== first.type).forEach(second => {
+                allChows.filter(chow =>
+                    chow.startValue === start + 2 &&
+                    chow.type !== first.type &&
+                    chow.type !== second.type
+                ).forEach(third => {
+                    sanseTriples.push([first, second, third]);
+                });
+            });
+        });
     }
-    
-    // 檢查三色步步高（不同花色漸進式順子）
-    const allSortedChows = [...allChows].sort((a, b) => a.startValue - b.startValue);
-    
-    // 檢查三色步步高
-    for (let i = 0; i < allSortedChows.length - 2; i++) {
-        const first = allSortedChows[i];
-        const second = allSortedChows[i + 1];
-        const third = allSortedChows[i + 2];
-        
-        if (first.startValue + 1 === second.startValue && second.startValue + 1 === third.startValue &&
-            first.type !== second.type && first.type !== third.type && second.type !== third.type) {
-            const isDark = !first.isExposed && !second.isExposed && !third.isExposed;
-            results.push({ name: isDark ? '三色步步高 (暗)' : '三色步步高', score: isDark ? 10 : 5 });
-            break;
-        }
+
+    const sanseTriple = pickBestTriple(sanseTriples);
+    if (sanseTriple) {
+        const isDark = isDarkTriple(sanseTriple);
+        results.push({ name: isDark ? '三色步步高 (暗)' : '三色步步高', score: isDark ? 10 : 5 });
     }
-    
+
     return results;
 }
 
@@ -4063,8 +4136,11 @@ function analyzeWaitsBeforeWin(handTiles, chows, pungs, openKongs, concealedKong
     }
 
     // 检查每张可能的牌是否能使手牌和牌
+    // canWin 需要完整的 17 張牌（暗牌 + 副露牌 + 候選和牌），
+    // 因此必須把已副露的牌一併放進測試手牌，否则有副露時 testHand 不足 17 張，
+    // canWin 一律回傳 false，導致獨獨/假獨永遠檢測不到。
     for (const tile of allPossibleTiles) {
-        const testHand = [...filteredTiles, tile];
+        const testHand = [...filteredTiles, ...meldedTiles, tile];
         if (canWin(testHand, chows, pungs, openKongs, concealedKongs)) {
             waits.push(tile);
         }

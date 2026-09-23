@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: session_scorekeeper_online
+title: Online Session Scorekeeper Shell (Account & Cloud Sync)
+scope:
+    - session-scorekeeper-online/
+source_files: []
+depends_on: []
+related_to:
+    - path: backend
+    - path: mahjong_suite

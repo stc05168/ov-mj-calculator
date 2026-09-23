@@ -1,0 +1,1 @@
+Browser shell that authenticates users, manages a private Mahjong session workspace via an embedded iframe, and persists sessions to a Java API backend.

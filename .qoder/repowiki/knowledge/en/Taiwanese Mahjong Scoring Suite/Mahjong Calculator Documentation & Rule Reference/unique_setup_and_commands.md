@@ -1,0 +1,1 @@
+Rule changes must be validated by updating canonical fixtures in `test.html` and running the Chrome/Edge suite via `build_test.py` + `run_tests.py` producing `test-results/latest.json`, plus the session integration suite via `scorekeeper-tests.html` + `run_scorekeeper_tests.py` producing `test-results/scorekeeper-latest.json`.

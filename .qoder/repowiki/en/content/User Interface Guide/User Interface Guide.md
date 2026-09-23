@@ -8,6 +8,13 @@
 - [mj.css](file://mj.css)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated responsive design section to reflect enhanced mobile layout improvements
+- Added information about grid-based button layouts for better accessibility
+- Updated visual feedback descriptions for touch interactions
+- Enhanced documentation for header and scoreboard styling improvements
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -288,6 +295,51 @@ Sum --> Display["Update hand-types & score-display"]
 - [mj.html:237-242](file://mj.html#L237-L242)
 - [mj.js:1082-1129](file://mj.js#L1082-L1129)
 
+### Responsive Design and Touch Interactions
+**Updated** Enhanced responsive design provides better layout across different screen sizes with improved mobile experience.
+
+- **Mobile Optimization**: 
+  - Grid-based button layout fills available column width for better touch interaction
+  - Enhanced touch targets with minimum 44px height for accessibility compliance
+  - Improved spacing and padding for better usability on smaller screens
+  - Optimized tile sizing with responsive calculations
+
+- **Touch Gestures**:
+  - Long-press detection (300ms threshold) initiates drag operations
+  - Short taps (<300ms) simulate click actions for quick tile selection
+  - Floating drag clones follow finger movement with smooth animations
+  - Visual feedback includes scale transforms and shadow effects during interactions
+
+- **Responsive Layout Features**:
+  - Adaptive grid systems for controls and settings panels
+  - Flexible tile sizing that adjusts based on screen width
+  - Optimized spacing and margins for compact mobile views
+  - Enhanced accessibility with proper focus states and touch feedback
+
+```mermaid
+flowchart TD
+TouchStart["Touch Start"] --> Duration{"Touch Duration"}
+Duration --> |<300ms| TapAction["Simulate Click"]
+Duration --> |≥300ms| LongPress["Initiate Drag"]
+LongPress --> CreateClone["Create Floating Clone"]
+CreateClone --> FollowFinger["Follow Finger Movement"]
+FollowFinger --> DropTarget{"Drop Target?"}
+DropTarget --> |Valid| ExecuteAction["Execute Drop Action"]
+DropTarget --> |Invalid| ReturnToPlace["Return to Original Position"]
+TapAction --> UpdateUI["Update UI"]
+ExecuteAction --> UpdateUI
+ReturnToPlace --> End["End Interaction"]
+UpdateUI --> End
+```
+
+**Diagram sources**
+- [mj.js:182-310](file://mj.js#L182-L310)
+- [mj.css:469-570](file://mj.css#L469-L570)
+
+**Section sources**
+- [mj.css:469-570](file://mj.css#L469-L570)
+- [mj.js:182-310](file://mj.js#L182-L310)
+
 ## Dependency Analysis
 - Data model: Central state object holds hand, flowers, exposed sets, winning tile, and all settings.
 - Rendering: updateUI orchestrates rendering of tiles, exposed sets, winning tile, and button states.
@@ -320,6 +372,7 @@ Calc["calculateScore()"] --> DOM
 - Efficient event binding: setupDragEvents removes old listeners before adding new ones to avoid duplicates.
 - Minimal recalculations: calculateScore runs only on relevant changes; early exit when tile counts are invalid.
 - Touch optimization: Prevent default scrolling during drag and use passive:false where necessary to ensure smooth interactions.
+- Responsive performance: Grid-based layouts reduce reflow calculations and improve rendering efficiency on mobile devices.
 
 [No sources needed since this section provides general guidance]
 
@@ -328,6 +381,7 @@ Calc["calculateScore()"] --> DOM
 - Buttons disabled: Check that your selection meets the required pattern (e.g., three sequential same-type for 吃, at least three identical for 碰, four identical for 槓).
 - Score not updating: Confirm that the total tile count matches the required amount; the app will show a message indicating missing tiles.
 - Undo/Clear: Use the undo button to revert the last action or clear to reset everything.
+- Touch issues: On mobile devices, ensure long-press duration is sufficient to initiate drag operations; short taps should work for quick tile selection.
 
 **Section sources**
 - [mj.js:444-447](file://mj.js#L444-L447)
@@ -336,4 +390,4 @@ Calc["calculateScore()"] --> DOM
 - [mj.js:1082-1101](file://mj.js#L1082-L1101)
 
 ## Conclusion
-The OV MJ Calculator provides an intuitive, responsive interface for building and scoring Mahjong hands. Use the tile selection areas to build your hand, organize exposed sets, designate a winning tile, and configure game settings. Drag-and-drop and touch gestures make tile management fast on both desktop and mobile. The real-time score display helps you understand your hand’s value and adjust accordingly.
+The OV MJ Calculator provides an intuitive, responsive interface for building and scoring Mahjong hands. With enhanced responsive design and optimized touch interactions, the application delivers a seamless experience across desktop and mobile devices. Use the tile selection areas to build your hand, organize exposed sets, designate a winning tile, and configure game settings. The grid-based button layouts and improved touch gestures make tile management fast and accessible on all platforms. The real-time score display helps you understand your hand's value and adjust accordingly.

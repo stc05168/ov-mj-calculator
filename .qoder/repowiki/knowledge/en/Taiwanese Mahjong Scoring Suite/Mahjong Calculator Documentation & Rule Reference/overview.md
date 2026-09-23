@@ -1,0 +1,1 @@
+Authoritative documentation describing the Taiwan Mahjong scoring calculator's architecture, rules, deployment, testing, and session scorekeeping behavior.

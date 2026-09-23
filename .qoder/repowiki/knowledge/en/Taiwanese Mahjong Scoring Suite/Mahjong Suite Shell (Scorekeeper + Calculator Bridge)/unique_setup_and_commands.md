@@ -1,0 +1,1 @@
+Run by opening `mahjong-suite/index.html` in a browser; requires the sibling `session-scorekeeper` and `mj.html` apps to be served at relative paths so the iframes can load. Query parameters control behavior: `?account=1` or `?mode=account` enables account mode, `?embedded=1` hides header/nav for embedding, and `?shellTest=1` bypasses iframe loading to mark the shell test-ready.

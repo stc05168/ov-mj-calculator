@@ -1,0 +1,1 @@
+Pure browser JavaScript (no Node/npm) served by Python's built-in HTTP server; automated tests run on Chrome/Edge through Selenium driven by Python scripts; a Spring Boot REST backend handles authenticated session persistence.

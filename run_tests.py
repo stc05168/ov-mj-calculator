@@ -43,7 +43,7 @@ PROTECTED_PATHS = (
     ROOT / "LICENSE",
     ROOT.parent / "台灣牌規則_OV_2.7.docx",
 )
-PRESERVATION_CASE_IDS = ("canonical-063", "canonical-076", "canonical-093")
+PRESERVATION_CASE_IDS = ("canonical-066", "canonical-079", "canonical-096")
 
 
 class CompletionError(RuntimeError):

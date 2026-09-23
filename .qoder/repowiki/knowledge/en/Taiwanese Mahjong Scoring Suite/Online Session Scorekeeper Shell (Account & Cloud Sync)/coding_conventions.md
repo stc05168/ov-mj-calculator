@@ -1,0 +1,6 @@
+- All DOM access goes through a local `$` selector helper rather than repeated `document.querySelector` calls.
+- Long-running async operations are wrapped with `captureWorkspaceEpoch` / `awaitInWorkspaceEpoch` / `requireCurrentWorkspaceEpoch` to detect cancellation when the workspace is unloaded or reloaded mid-flight.
+- User-facing errors are surfaced through a single `message(text, error)` function that toggles an `.is-error` class on `#message` instead of using alerts or console logs.
+- UI busy states are centralized in `state.saving` / `state.transitioning` and propagated via `syncWorkspaceBusyUi`, which disables buttons, sets `aria-busy`, and applies `inert` to the workspace frame.
+- API URLs are validated through `validateApiUrl`, which enforces HTTPS for non-loopback hosts and strips trailing slashes, query strings, and credentials before being stored in `state.api`.
+- The embedded suite is treated as an optional plugin: calls like `host.markSaved`, `host.createSession`, and `host.applyPlayerName` are guarded by `typeof ... === 'function'` checks so older workspaces degrade gracefully.

@@ -3,22 +3,107 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-08-25T04:36:28Z"
+exported_at: "2026-09-19T07:10:05Z"
 modules:
     "":
-        dir_name: Mahjong Hand Scoring Calculator (Web UI)
-        title: Mahjong Hand Scoring Calculator (Web UI)
+        dir_name: Taiwanese Mahjong Scoring Suite
+        title: Taiwanese Mahjong Scoring Suite
         scope:
-            - .
+            - CONTRIBUTING.md
             - .gitignore
-            - LICENSE
-            - README.md
-            - checkHandType.js
-            - mj.css
+            - app-config.js
             - mj.html
             - mj.js
+            - mj.css
             - mjConst.js
+            - debug.html
+            - debug2.html
+            - test.html
+            - test_runner.html
+            - scorekeeper-tests.html
+            - run_tests.py
+            - run_tests.js
+            - build_test.py
+            - check_tests.py
+            - check_tests2.py
+            - run_scorekeeper_tests.py
+            - failures.txt
+            - results2.txt
+            - results3.txt
+            - test_output.html
+            - test_output2.html
+            - test_output3.html
+            - test_results.txt
+            - full_output.html
+            - full_output2.html
+            - full_output3.html
+        source_files: []
+        children:
+            - backend
+            - ci_cd
+            - docs
+            - mahjong_suite
+            - session_scorekeeper
+            - session_scorekeeper_online
+        depends_on: []
+        related_to: []
+    backend:
+        dir_name: Mahjong Scorekeeper REST Backend
+        title: Mahjong Scorekeeper REST Backend
+        scope:
+            - backend/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: session_scorekeeper_online
+    ci_cd:
+        dir_name: GitHub Pages Skills Course Templates
+        title: GitHub Pages Skills Course Templates
+        scope:
+            - .github/
         source_files: []
         children: []
         depends_on: []
         related_to: []
+    docs:
+        dir_name: Mahjong Calculator Documentation & Rule Reference
+        title: Mahjong Calculator Documentation & Rule Reference
+        scope:
+            - docs/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    mahjong_suite:
+        dir_name: Mahjong Suite Shell (Scorekeeper + Calculator Bridge)
+        title: Mahjong Suite Shell (Scorekeeper + Calculator Bridge)
+        scope:
+            - mahjong-suite/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: session_scorekeeper
+            - path: session_scorekeeper_online
+    session_scorekeeper:
+        dir_name: Taiwanese Mahjong Session Scorekeeper
+        title: Taiwanese Mahjong Session Scorekeeper
+        scope:
+            - session-scorekeeper/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: mahjong_suite
+    session_scorekeeper_online:
+        dir_name: Online Session Scorekeeper Shell (Account & Cloud Sync)
+        title: Online Session Scorekeeper Shell (Account & Cloud Sync)
+        scope:
+            - session-scorekeeper-online/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: backend
+            - path: mahjong_suite

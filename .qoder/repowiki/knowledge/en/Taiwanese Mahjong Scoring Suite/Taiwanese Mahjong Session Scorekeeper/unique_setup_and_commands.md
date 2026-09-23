@@ -1,0 +1,1 @@
+The HTML loads an optional `../app-config.js` script (deferred) that can provide hosted-session helpers; without it the app runs fully in-memory. Import files are limited to 2 MB (`MAX_IMPORT_BYTES`) and must match schema version `ov-mj-session/v1`. The app exposes a global error handler that injects an error message into the quick ledger grid if startup fails.

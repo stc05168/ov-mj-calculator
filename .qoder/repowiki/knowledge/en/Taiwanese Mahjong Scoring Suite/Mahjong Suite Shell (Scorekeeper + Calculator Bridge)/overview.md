@@ -1,0 +1,1 @@
+A browser shell that embeds the standalone mahjong scorekeeper and hand-type calculator in iframes and bridges their results into a single session with account/guest modes.

@@ -1,23 +1,21 @@
 {
   "schemaVersion": "mahjong-runner-evidence/v1",
-  "timestamp": "2026-09-03T03:23:16.652782+00:00",
-  "status": "success",
+  "timestamp": "2026-09-19T08:26:07.444554+00:00",
+  "status": "protected-material-missing",
   "executionPath": "Python build_test.py -> loopback HTTP -> isolated headless Chrome/Edge --dump-dom",
   "globalNodeRequired": false,
   "invocation": [
-    "D:\\itdev\\python-3.14.2-embed.-amd64\\python.exe",
+    "C:\\Program Files\\Python313\\python.exe",
     "run_tests.py",
     "--browser",
-    "chrome",
-    "--timeout",
-    "120"
+    "edge"
   ],
-  "browserSelector": "chrome",
+  "browserSelector": "edge",
   "browserAvailability": {
-    "chrome": [
-      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    "chrome": [],
+    "edge": [
+      "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
     ],
-    "edge": [],
     "attempted": [
       {
         "path": "chrome",
@@ -52,17 +50,17 @@
         "source": "standard-location"
       },
       {
-        "path": "C:\\Users\\edpdhws\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
+        "path": "C:\\Users\\SCB\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
         "source": "standard-location"
       },
       {
-        "path": "C:\\Users\\edpdhws\\AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe",
+        "path": "C:\\Users\\SCB\\AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe",
         "source": "standard-location"
       }
     ]
   },
   "protectedMaterial": {
-    "passed": true,
+    "passed": false,
     "paths": [
       {
         "path": "mj.html",
@@ -125,32 +123,32 @@
         "kind": "file"
       },
       {
-        "path": "D:\\itdev\\ov-mj-calculator\\台灣牌規則_OV_2.7.docx",
-        "exists": true,
+        "path": "C:\\stc05168\\台灣牌規則_OV_2.7.docx",
+        "exists": false,
         "kind": "file"
       }
     ]
   },
-  "sourceRevision": "b507de12dda5371e5cfe33459bfb400f9d5e03bc",
+  "sourceRevision": "1814bb55b443259b1ca5f93138238d94d165a980",
   "sourceHashes": {
-    "test.html": "f43570dec611daa34520e52a79006a6675b6678298e560e7e456c99796d67b5b",
+    "test.html": "cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9",
     "mjConst.js": "f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8",
-    "checkHandType.js": "f18f5e5b30351476e74c4977986522ec5044bc8072d010009e3e273314ee639a"
+    "checkHandType.js": "f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8"
   },
-  "buildOutput": "{\"bytes\": 211983, \"output\": \"test_standalone.html\", \"sourceHashes\": {\"checkHandType.js\": \"f18f5e5b30351476e74c4977986522ec5044bc8072d010009e3e273314ee639a\", \"mjConst.js\": \"f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8\", \"test.html\": \"f43570dec611daa34520e52a79006a6675b6678298e560e7e456c99796d67b5b\"}}",
+  "buildOutput": "{\"bytes\": 219735, \"output\": \"test_standalone.html\", \"sourceHashes\": {\"checkHandType.js\": \"f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8\", \"mjConst.js\": \"f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8\", \"test.html\": \"cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9\"}}",
   "runs": [
     {
       "browser": {
-        "name": "chrome",
-        "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "name": "edge",
+        "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
         "source": "standard-location"
       },
-      "version": "chrome 85.0.4183.121",
+      "version": "edge 153.0.4234.32",
       "kind": "success",
-      "message": "159 passed, 0 failed, 0 errors, 159 discovered",
+      "message": "166 passed, 0 failed, 0 errors, 166 discovered",
       "returncode": 0,
       "command": [
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
         "--headless",
         "--disable-gpu",
         "--no-sandbox",
@@ -163,26 +161,26 @@
         "--metrics-recording-only",
         "--no-first-run",
         "--no-default-browser-check",
-        "--user-data-dir=C:\\Users\\edpdhws\\AppData\\Local\\Temp\\mj-browser-profile-xbibpdt7",
+        "--user-data-dir=C:\\Users\\SCB\\AppData\\Local\\Temp\\mj-browser-profile-l82n1h_p",
         "--dump-dom",
-        "http://127.0.0.1:62958/test_standalone.html?run=auto"
+        "http://127.0.0.1:63301/test_standalone.html?run=auto"
       ],
-      "stderr": null,
+      "stderr": "[21248:23944:0919/162602.010:ERROR:chrome\\browser\\task_manager\\providers\\fallback_task_provider.cc:126] Every renderer should have at least one task provided by a primary task provider. If a \"Renderer\" fallback task is shown, it is a bug. If you have repro steps, please file a new bug and tag it as a dependency of crbug.com/40528867.\n",
       "parity": {
         "passed": true,
         "autoMode": "auto",
         "manualMode": "manual",
         "autoCounts": {
-          "discovered": 159,
-          "executed": 159,
-          "passed": 159,
+          "discovered": 166,
+          "executed": 166,
+          "passed": 166,
           "failed": 0,
           "errors": 0
         },
         "manualCounts": {
-          "discovered": 159,
-          "executed": 159,
-          "passed": 159,
+          "discovered": 166,
+          "executed": 166,
+          "passed": 166,
           "failed": 0,
           "errors": 0
         }
@@ -192,9 +190,9 @@
         "status": "success",
         "executionMode": "auto",
         "counts": {
-          "discovered": 159,
-          "executed": 159,
-          "passed": 159,
+          "discovered": 166,
+          "executed": 166,
+          "passed": 166,
           "failed": 0,
           "errors": 0
         },
@@ -202,9 +200,9 @@
         "build": {
           "schemaVersion": "mahjong-test-result/v1",
           "sourceHashes": {
-            "test.html": "f43570dec611daa34520e52a79006a6675b6678298e560e7e456c99796d67b5b",
+            "test.html": "cc5574680c4039862725fecb78e373f55fd7fd6624df2a69a92ac7c5a6b8f9c9",
             "mjConst.js": "f2725d98ef14eb776a3348e610571fa0485abe5f7db4b33895f06e43a48730e8",
-            "checkHandType.js": "f18f5e5b30351476e74c4977986522ec5044bc8072d010009e3e273314ee639a"
+            "checkHandType.js": "f633586f00f6f72c98a30c10ce7d1c2a5dda21b10d21453f51fd1a1ec79989e8"
           }
         },
         "oracleProbes": {
@@ -388,9 +386,9 @@
           "failed": 0,
           "errors": 0,
           "ids": [
-            "canonical-063",
-            "canonical-076",
-            "canonical-093"
+            "canonical-066",
+            "canonical-079",
+            "canonical-096"
           ],
           "seeds": [
             "preserve-ordinary-small-three-winds-v1",
@@ -399,15 +397,23 @@
           ],
           "baselines": [
             {
-              "id": "canonical-063",
+              "id": "canonical-066",
               "expected": [
                 {
                   "name": "無花",
                   "score": 2
                 },
                 {
+                  "name": "獨獨",
+                  "score": 2
+                },
+                {
                   "name": "二相逢x1",
                   "score": 3
+                },
+                {
+                  "name": "底",
+                  "score": 5
                 },
                 {
                   "name": "小三風",
@@ -420,8 +426,16 @@
                   "score": 2
                 },
                 {
+                  "name": "獨獨",
+                  "score": 2
+                },
+                {
                   "name": "二相逢x1",
                   "score": 3
+                },
+                {
+                  "name": "底",
+                  "score": 5
                 },
                 {
                   "name": "小三風",
@@ -430,15 +444,23 @@
               ]
             },
             {
-              "id": "canonical-076",
+              "id": "canonical-079",
               "expected": [
                 {
                   "name": "無花",
                   "score": 2
                 },
                 {
+                  "name": "獨獨",
+                  "score": 2
+                },
+                {
                   "name": "二相逢x1",
                   "score": 3
+                },
+                {
+                  "name": "底",
+                  "score": 5
                 },
                 {
                   "name": "小三元",
@@ -451,8 +473,16 @@
                   "score": 2
                 },
                 {
+                  "name": "獨獨",
+                  "score": 2
+                },
+                {
                   "name": "二相逢x1",
                   "score": 3
+                },
+                {
+                  "name": "底",
+                  "score": 5
                 },
                 {
                   "name": "小三元",
@@ -461,11 +491,19 @@
               ]
             },
             {
-              "id": "canonical-093",
+              "id": "canonical-096",
               "expected": [
                 {
                   "name": "無花",
                   "score": 2
+                },
+                {
+                  "name": "獨獨",
+                  "score": 2
+                },
+                {
+                  "name": "底",
+                  "score": 5
                 },
                 {
                   "name": "小四喜",
@@ -476,6 +514,14 @@
                 {
                   "name": "無花",
                   "score": 2
+                },
+                {
+                  "name": "獨獨",
+                  "score": 2
+                },
+                {
+                  "name": "底",
+                  "score": 5
                 },
                 {
                   "name": "小四喜",
@@ -603,6 +649,9 @@
           "canonical-115",
           "canonical-116",
           "canonical-117",
+          "canonical-118",
+          "canonical-119",
+          "canonical-120",
           "v27-no-honor-duanyao-nf",
           "v27-no-honor-duanyao-f1",
           "v27-no-honor-pure-terminal-nf",
@@ -644,7 +693,11 @@
           "regression-brothers-big-reject-honor",
           "regression-brothers-small-reject-honor",
           "regression-sisters-suited-four-positive",
-          "regression-brothers-suited-big-positive"
+          "regression-brothers-suited-big-positive",
+          "base-fan-di",
+          "sanse-bugao-bu",
+          "sanse-bugao-bu-mixed-ming",
+          "dudu-exposed-melds"
         ],
         "amendmentCaseIds": [
           "v27-no-honor-duanyao-nf",
@@ -666,9 +719,9 @@
           "v27-ligu-small-four-winds"
         ],
         "preservationCaseIds": [
-          "canonical-063",
-          "canonical-076",
-          "canonical-093"
+          "canonical-066",
+          "canonical-079",
+          "canonical-096"
         ],
         "cases": [
           {
@@ -717,12 +770,20 @@
                 "score": 1
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
               },
               {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "缺五",
@@ -779,16 +840,20 @@
             },
             "actual": [
               {
-                "name": "花上自摸",
+                "name": "假獨",
                 "score": 1
               },
               {
-                "name": "假獨",
+                "name": "花上自摸",
                 "score": 1
               },
               {
                 "name": "將眼",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "斷么",
@@ -869,6 +934,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -939,15 +1008,15 @@
                 "score": 3
               },
               {
-                "name": "四歸一",
-                "score": 5
-              },
-              {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "無字花",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               }
             ],
@@ -1009,11 +1078,15 @@
                 "score": 3
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "無字花",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -1070,11 +1143,11 @@
             },
             "actual": [
               {
-                "name": "風牌(北)",
+                "name": "假獨",
                 "score": 1
               },
               {
-                "name": "假獨",
+                "name": "風牌(北)",
                 "score": 1
               },
               {
@@ -1086,12 +1159,102 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
               {
                 "name": "三相逢x1 (暗)",
                 "score": 20
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "canonical-033",
+            "name": "明槓不觸發四歸一",
+            "score": 1,
+            "category": "canonical",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "明槓x1",
+                "score": 1,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "四歸一",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸二",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸四",
+                "matcher": "prefix"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "t6",
+                "t7",
+                "t8"
+              ],
+              "winningTile": "t8",
+              "chows": [
+                "[s2,s3,s4]",
+                "[s6,s7,s8]",
+                "[t2,t3,t4]"
+              ],
+              "openKongs": [
+                "[w3,w3,w3,w3]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "明槓x1",
+                "score": 1
+              },
+              {
+                "name": "將眼",
+                "score": 2
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "缺五",
+                "score": 10
+              },
+              {
+                "name": "四子",
+                "score": 30
               }
             ],
             "rawCandidates": null,
@@ -1148,7 +1311,7 @@
                 "score": 3
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
@@ -1156,8 +1319,8 @@
                 "score": 5
               },
               {
-                "name": "四歸一 (暗)",
-                "score": 10
+                "name": "門清",
+                "score": 5
               }
             ],
             "rawCandidates": null,
@@ -1228,6 +1391,10 @@
               {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "門清",
@@ -1315,6 +1482,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
@@ -1381,11 +1552,15 @@
                 "score": 3
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -1449,6 +1624,10 @@
               {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "門清",
@@ -1517,11 +1696,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -1586,16 +1769,20 @@
                 "score": 1
               },
               {
-                "name": "風牌(南圈)",
-                "score": 2
-              },
-              {
                 "name": "將眼",
                 "score": 2
               },
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "風牌(南圈)",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "門清",
@@ -1668,12 +1855,174 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
               {
                 "name": "三相逢x1 (暗)",
                 "score": 20
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "canonical-032",
+            "name": "暗槓不觸發四歸一",
+            "score": 2,
+            "category": "canonical",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "暗槓x1",
+                "score": 2,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "四歸一",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸二",
+                "matcher": "prefix"
+              },
+              {
+                "name": "四歸四",
+                "matcher": "prefix"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "s6",
+                "s7",
+                "s8"
+              ],
+              "winningTile": "s8",
+              "chows": [
+                "[w2,w3,w4]",
+                "[w6,w7,w8]",
+                "[s2,s3,s4]"
+              ],
+              "concealedKongs": [
+                "[t5,t5,t5,t5]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "將眼",
+                "score": 2
+              },
+              {
+                "name": "暗槓x1",
+                "score": 2
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "四子",
+                "score": 30
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "dudu-exposed-melds",
+            "name": "獨獨(多明順)",
+            "score": 2,
+            "category": "canonical",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "獨獨",
+                "score": 2,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "t6",
+                "t7",
+                "t8",
+                "h1",
+                "h1",
+                "h1",
+                "s2"
+              ],
+              "winningTile": "s2",
+              "chows": [
+                "[w3,w4,w5]",
+                "[w6,w7,w8]"
+              ],
+              "pungs": [
+                "[h7,h7,h7]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "元牌(白)",
+                "score": 2
+              },
+              {
+                "name": "將眼",
+                "score": 2
+              },
+              {
+                "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "風牌(東圈東位)",
+                "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "五門齊（大）",
+                "score": 15
               }
             ],
             "rawCandidates": null,
@@ -1738,6 +2087,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
@@ -1790,6 +2143,10 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
@@ -1800,6 +2157,10 @@
               {
                 "name": "老少上x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "無字花大平糊",
@@ -1854,6 +2215,10 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
               },
@@ -1862,12 +2227,86 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "明雜龍",
                 "score": 5
               },
               {
                 "name": "無字花大平糊",
                 "score": 15
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "base-fan-di",
+            "name": "底",
+            "score": 5,
+            "category": "canonical",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "底",
+                "score": 5,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "w2",
+                "w3",
+                "w4",
+                "w6",
+                "w7",
+                "w8",
+                "s2",
+                "s3",
+                "s4",
+                "s6",
+                "s7",
+                "s8",
+                "t5",
+                "t5",
+                "t5",
+                "t4"
+              ],
+              "winningTile": "t4"
+            },
+            "actual": [
+              {
+                "name": "假獨",
+                "score": 1
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
+                "score": 5
               }
             ],
             "rawCandidates": null,
@@ -1912,12 +2351,20 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
               {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "無字花",
@@ -1978,11 +2425,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -2049,6 +2500,10 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
               },
@@ -2058,6 +2513,10 @@
               },
               {
                 "name": "平糊",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               },
               {
@@ -2128,6 +2587,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "無字花",
                 "score": 5
               }
@@ -2193,11 +2656,15 @@
                 "score": 5
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -2253,6 +2720,10 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
@@ -2262,6 +2733,10 @@
               },
               {
                 "name": "一般高",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               },
               {
@@ -2323,11 +2798,15 @@
                 "score": 5
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               }
             ],
@@ -2377,11 +2856,19 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "風牌(東圈東位)",
                 "score": 3
               },
               {
                 "name": "兩兄弟",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               }
             ],
@@ -2433,11 +2920,19 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
               },
               {
                 "name": "二姊妹",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               },
               {
@@ -2497,6 +2992,10 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
@@ -2505,11 +3004,15 @@
                 "score": 3
               },
               {
-                "name": "老少碰x1",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "無字花",
+                "score": 5
+              },
+              {
+                "name": "老少碰x1",
                 "score": 5
               }
             ],
@@ -2563,8 +3066,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "斷么",
@@ -2628,7 +3139,7 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
@@ -2637,6 +3148,10 @@
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -2705,15 +3220,19 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
                 "name": "明絕",
                 "score": 5
               },
               {
                 "name": "門清",
-                "score": 5
-              },
-              {
-                "name": "斷么",
                 "score": 5
               },
               {
@@ -2781,6 +3300,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -2797,7 +3320,67 @@
             "error": null
           },
           {
-            "id": "canonical-032",
+            "id": "canonical-034",
+            "name": "四歸一(順刻 legitimate)",
+            "score": 5,
+            "category": "canonical",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "四歸一",
+                "score": 5,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "w5",
+                "t2",
+                "t3",
+                "t4",
+                "t6",
+                "t7",
+                "t9"
+              ],
+              "winningTile": "t9",
+              "chows": [
+                "[s2,s3,s4]",
+                "[s6,s7,s8]"
+              ],
+              "pungs": [
+                "[w5,w5,w5]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "四歸一",
+                "score": 5
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "無字花",
+                "score": 5
+              }
+            ],
+            "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "canonical-035",
             "name": "三色步步高",
             "score": 5,
             "category": "canonical",
@@ -2839,7 +3422,15 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "三色步步高",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               },
               {
@@ -2851,7 +3442,7 @@
             "error": null
           },
           {
-            "id": "canonical-033",
+            "id": "canonical-036",
             "name": "明雜龍",
             "score": 5,
             "category": "canonical",
@@ -2895,6 +3486,14 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "明雜龍",
                 "score": 5
               },
@@ -2907,7 +3506,7 @@
             "error": null
           },
           {
-            "id": "canonical-034",
+            "id": "canonical-037",
             "name": "雪上霜(雙響)",
             "score": 5,
             "category": "canonical",
@@ -2960,15 +3559,19 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
               {
                 "name": "雪上霜(雙響)",
-                "score": 5
-              },
-              {
-                "name": "斷么",
                 "score": 5
               },
               {
@@ -2984,7 +3587,7 @@
             "error": null
           },
           {
-            "id": "canonical-115",
+            "id": "canonical-118",
             "name": "斷么+平糊+門清",
             "score": 5,
             "category": "canonical",
@@ -3076,15 +3679,108 @@
                 "score": 5
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
                 "score": 5
+              },
+              {
+                "name": "門清",
+                "score": 5
               }
             ],
             "rawCandidates": null,
+            "error": null
+          },
+          {
+            "id": "sanse-bugao-bu-mixed-ming",
+            "name": "三色步步高",
+            "score": 5,
+            "category": "regression-sanse-bubugao",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "三色步步高",
+                "score": 5,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "三色步步高 (暗)",
+                "score": 10,
+                "matcher": "exact"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "s2",
+                "s3",
+                "s4",
+                "t3",
+                "t4",
+                "t5",
+                "w6",
+                "w7",
+                "w8",
+                "s7",
+                "s8",
+                "s9",
+                "t8"
+              ],
+              "winningTile": "t8",
+              "chows": [
+                "[w1,w2,w3]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "將眼",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "三色步步高",
+                "score": 5
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "無字花大平糊",
+                "score": 15
+              }
+            ],
+            "rawCandidates": [
+              {
+                "name": "三色步步高",
+                "score": 5
+              },
+              {
+                "name": "無字花大平糊",
+                "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "將眼",
+                "score": 2
+              }
+            ],
             "error": null
           },
           {
@@ -3146,6 +3842,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -3177,6 +3877,10 @@
               },
               {
                 "name": "無字",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -3242,6 +3946,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -3276,6 +3984,10 @@
                 "score": 5
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "將眼",
                 "score": 2
               }
@@ -3283,7 +3995,7 @@
             "error": null
           },
           {
-            "id": "canonical-035",
+            "id": "canonical-038",
             "name": "門清自摸",
             "score": 8,
             "category": "canonical",
@@ -3335,6 +4047,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "暗槓x3",
                 "score": 6
               },
@@ -3344,18 +4060,6 @@
               },
               {
                 "name": "五門齊（小）",
-                "score": 10
-              },
-              {
-                "name": "四歸一 (暗)",
-                "score": 10
-              },
-              {
-                "name": "四歸一 (暗)",
-                "score": 10
-              },
-              {
-                "name": "四歸一 (暗)",
                 "score": 10
               },
               {
@@ -3371,7 +4075,7 @@
             "error": null
           },
           {
-            "id": "canonical-036",
+            "id": "canonical-039",
             "name": "小雜兄弟",
             "score": 8,
             "category": "canonical",
@@ -3413,6 +4117,14 @@
               {
                 "name": "將眼",
                 "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "無字花",
@@ -3488,6 +4200,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               }
@@ -3506,6 +4222,10 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
@@ -3517,7 +4237,7 @@
             "error": null
           },
           {
-            "id": "canonical-037",
+            "id": "canonical-040",
             "name": "雙般高",
             "score": 10,
             "category": "canonical",
@@ -3557,6 +4277,14 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "雙般高",
                 "score": 10
               },
@@ -3569,7 +4297,7 @@
             "error": null
           },
           {
-            "id": "canonical-038",
+            "id": "canonical-041",
             "name": "三相逢x1",
             "score": 10,
             "category": "canonical",
@@ -3611,6 +4339,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "無字花",
                 "score": 5
               },
@@ -3627,7 +4359,7 @@
             "error": null
           },
           {
-            "id": "canonical-039",
+            "id": "canonical-042",
             "name": "河底撈魚",
             "score": 10,
             "category": "canonical",
@@ -3680,11 +4412,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -3704,7 +4440,7 @@
             "error": null
           },
           {
-            "id": "canonical-040",
+            "id": "canonical-043",
             "name": "缺一門",
             "score": 10,
             "category": "canonical",
@@ -3758,11 +4494,15 @@
                 "score": 5
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -3774,7 +4514,7 @@
             "error": null
           },
           {
-            "id": "canonical-041",
+            "id": "canonical-044",
             "name": "缺五",
             "score": 10,
             "category": "canonical",
@@ -3816,11 +4556,15 @@
             },
             "actual": [
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -3840,7 +4584,7 @@
             "error": null
           },
           {
-            "id": "canonical-042",
+            "id": "canonical-045",
             "name": "明清龍",
             "score": 10,
             "category": "canonical",
@@ -3880,12 +4624,20 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
               {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "明清龍(萬子)",
@@ -3900,7 +4652,7 @@
             "error": null
           },
           {
-            "id": "canonical-043",
+            "id": "canonical-046",
             "name": "蓋牌",
             "score": 10,
             "category": "canonical",
@@ -3953,11 +4705,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -3977,7 +4733,7 @@
             "error": null
           },
           {
-            "id": "canonical-044",
+            "id": "canonical-047",
             "name": "雪上冰(三響)",
             "score": 10,
             "category": "canonical",
@@ -4030,11 +4786,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -4054,7 +4814,7 @@
             "error": null
           },
           {
-            "id": "canonical-045",
+            "id": "canonical-048",
             "name": "絕絕",
             "score": 10,
             "category": "canonical",
@@ -4111,6 +4871,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
@@ -4131,7 +4895,7 @@
             "error": null
           },
           {
-            "id": "canonical-046",
+            "id": "canonical-049",
             "name": "十子",
             "score": 10,
             "category": "canonical",
@@ -4176,23 +4940,19 @@
                 "score": 1
               },
               {
-                "name": "暗槓x1",
-                "score": 2
-              },
-              {
                 "name": "對碰",
                 "score": 2
               },
               {
-                "name": "四歸一",
-                "score": 5
+                "name": "暗槓x1",
+                "score": 2
               },
               {
                 "name": "兩兄弟",
                 "score": 5
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
@@ -4200,11 +4960,11 @@
                 "score": 5
               },
               {
-                "name": "十子",
-                "score": 10
+                "name": "門清",
+                "score": 5
               },
               {
-                "name": "四歸一 (暗)",
+                "name": "十子",
                 "score": 10
               },
               {
@@ -4220,7 +4980,7 @@
             "error": null
           },
           {
-            "id": "canonical-047",
+            "id": "canonical-050",
             "name": "鴨糊",
             "score": 10,
             "category": "canonical",
@@ -4261,6 +5021,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "鴨糊",
                 "score": 10
               }
@@ -4269,7 +5033,7 @@
             "error": null
           },
           {
-            "id": "canonical-048",
+            "id": "canonical-051",
             "name": "錦上添花(雙響劈)",
             "score": 10,
             "category": "canonical",
@@ -4323,15 +5087,19 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "斷么",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
               {
                 "name": "雪上霜(雙響)",
-                "score": 5
-              },
-              {
-                "name": "斷么",
                 "score": 5
               },
               {
@@ -4351,7 +5119,7 @@
             "error": null
           },
           {
-            "id": "canonical-049",
+            "id": "canonical-052",
             "name": "暗雜龍",
             "score": 10,
             "category": "canonical",
@@ -4397,11 +5165,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "無字花",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -4413,7 +5185,7 @@
             "error": null
           },
           {
-            "id": "canonical-050",
+            "id": "canonical-053",
             "name": "五門齊（小）",
             "score": 10,
             "category": "canonical",
@@ -4463,6 +5235,10 @@
               {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "五門齊（小）",
@@ -4528,6 +5304,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               },
@@ -4567,6 +5347,10 @@
               },
               {
                 "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -4650,6 +5434,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               },
@@ -4669,6 +5457,10 @@
               },
               {
                 "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -4736,6 +5528,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "明清龍(萬子)",
                 "score": 10
               },
@@ -4772,6 +5568,10 @@
               {
                 "name": "無字花",
                 "score": 5
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "對碰",
@@ -4838,6 +5638,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               }
@@ -4849,6 +5653,10 @@
               },
               {
                 "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -4905,6 +5713,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "缺一門",
                 "score": 10
               },
@@ -4925,6 +5737,105 @@
               {
                 "name": "缺一門",
                 "score": 10
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              }
+            ],
+            "error": null
+          },
+          {
+            "id": "sanse-bugao-bu",
+            "name": "三色步步高 (暗)",
+            "score": 10,
+            "category": "regression-sanse-bubugao",
+            "seed": null,
+            "preservation": false,
+            "baselineResults": null,
+            "status": "passed",
+            "required": [
+              {
+                "name": "三色步步高 (暗)",
+                "score": 10,
+                "matcher": "exact",
+                "minCount": 1,
+                "maxCount": 1
+              }
+            ],
+            "prohibited": [
+              {
+                "name": "三色步步高",
+                "score": 5,
+                "matcher": "exact"
+              }
+            ],
+            "violations": [],
+            "setup": {
+              "handTiles": [
+                "t5",
+                "t5",
+                "s5",
+                "s6",
+                "s7",
+                "w6",
+                "w7",
+                "w8",
+                "t7",
+                "t8"
+              ],
+              "winningTile": "t9",
+              "chows": [
+                "[s6,s7,s8]",
+                "[t1,t2,t3]"
+              ]
+            },
+            "actual": [
+              {
+                "name": "將眼",
+                "score": 2
+              },
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "老少上x1",
+                "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
+                "name": "三色步步高 (暗)",
+                "score": 10
+              },
+              {
+                "name": "無字花大平糊",
+                "score": 15
+              }
+            ],
+            "rawCandidates": [
+              {
+                "name": "二相逢x1",
+                "score": 3
+              },
+              {
+                "name": "三色步步高 (暗)",
+                "score": 10
+              },
+              {
+                "name": "老少上x1",
+                "score": 3
+              },
+              {
+                "name": "無字花大平糊",
+                "score": 15
+              },
+              {
+                "name": "將眼",
+                "score": 2
               }
             ],
             "error": null
@@ -4989,12 +5900,16 @@
                 "score": 2
               },
               {
+                "name": "對碰",
+                "score": 2
+              },
+              {
                 "name": "無花",
                 "score": 2
               },
               {
-                "name": "對碰",
-                "score": 2
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小三風",
@@ -5088,6 +6003,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "缺五",
                 "score": 10
               },
@@ -5124,6 +6043,10 @@
               {
                 "name": "大雜兄弟",
                 "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "將眼",
@@ -5184,6 +6107,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "缺五",
                 "score": 10
               },
@@ -5220,6 +6147,10 @@
               {
                 "name": "大雜兄弟",
                 "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "將眼",
@@ -5287,6 +6218,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "缺一門",
                 "score": 10
               },
@@ -5319,6 +6254,10 @@
               {
                 "name": "缺一門",
                 "score": 10
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "將眼",
@@ -5383,6 +6322,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "缺一門",
                 "score": 10
               },
@@ -5417,6 +6360,10 @@
                 "score": 10
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "將眼",
                 "score": 2
               }
@@ -5424,7 +6371,7 @@
             "error": null
           },
           {
-            "id": "canonical-051",
+            "id": "canonical-054",
             "name": "3暗刻",
             "score": 15,
             "category": "canonical",
@@ -5466,11 +6413,15 @@
             },
             "actual": [
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -5482,7 +6433,7 @@
             "error": null
           },
           {
-            "id": "canonical-052",
+            "id": "canonical-055",
             "name": "門清大叮",
             "score": 15,
             "category": "canonical",
@@ -5534,23 +6485,15 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "暗槓x3",
                 "score": 6
               },
               {
                 "name": "五門齊（小）",
-                "score": 10
-              },
-              {
-                "name": "四歸一 (暗)",
-                "score": 10
-              },
-              {
-                "name": "四歸一 (暗)",
-                "score": 10
-              },
-              {
-                "name": "四歸一 (暗)",
                 "score": 10
               },
               {
@@ -5570,7 +6513,7 @@
             "error": null
           },
           {
-            "id": "canonical-053",
+            "id": "canonical-056",
             "name": "無字花大平糊",
             "score": 15,
             "category": "canonical",
@@ -5620,6 +6563,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
@@ -5632,7 +6579,7 @@
             "error": null
           },
           {
-            "id": "canonical-054",
+            "id": "canonical-057",
             "name": "一色步步高",
             "score": 15,
             "category": "canonical",
@@ -5674,8 +6621,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "一色步步高",
@@ -5690,7 +6645,7 @@
             "error": null
           },
           {
-            "id": "canonical-055",
+            "id": "canonical-058",
             "name": "三般高",
             "score": 15,
             "category": "canonical",
@@ -5728,6 +6683,14 @@
             },
             "actual": [
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "三般高",
                 "score": 15
               },
@@ -5740,7 +6703,7 @@
             "error": null
           },
           {
-            "id": "canonical-056",
+            "id": "canonical-059",
             "name": "三姊妹",
             "score": 15,
             "category": "canonical",
@@ -5782,6 +6745,14 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -5798,7 +6769,7 @@
             "error": null
           },
           {
-            "id": "canonical-057",
+            "id": "canonical-060",
             "name": "三小兄弟",
             "score": 15,
             "category": "canonical",
@@ -5838,6 +6809,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -5858,7 +6833,7 @@
             "error": null
           },
           {
-            "id": "canonical-058",
+            "id": "canonical-061",
             "name": "大雜兄弟",
             "score": 15,
             "category": "canonical",
@@ -5898,6 +6873,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -5914,7 +6893,7 @@
             "error": null
           },
           {
-            "id": "canonical-059",
+            "id": "canonical-062",
             "name": "半求人",
             "score": 15,
             "category": "canonical",
@@ -5957,6 +6936,10 @@
                 "score": 1
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "無字花",
                 "score": 5
               },
@@ -5969,7 +6952,7 @@
             "error": null
           },
           {
-            "id": "canonical-060",
+            "id": "canonical-063",
             "name": "五門齊（大）",
             "score": 15,
             "category": "canonical",
@@ -6011,16 +6994,20 @@
                 "score": 2
               },
               {
-                "name": "無花",
+                "name": "對碰",
                 "score": 2
               },
               {
-                "name": "對碰",
+                "name": "無花",
                 "score": 2
               },
               {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "五門齊（大）",
@@ -6031,7 +7018,7 @@
             "error": null
           },
           {
-            "id": "canonical-109",
+            "id": "canonical-112",
             "name": "無字花大平糊自摸",
             "score": 15,
             "category": "canonical",
@@ -6112,6 +7099,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清自摸",
                 "score": 8
               },
@@ -6124,7 +7115,7 @@
             "error": null
           },
           {
-            "id": "canonical-117",
+            "id": "canonical-120",
             "name": "三姊妹+對對糊",
             "score": 15,
             "category": "canonical",
@@ -6169,6 +7160,14 @@
               {
                 "name": "將眼",
                 "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "斷么",
@@ -6251,6 +7250,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "五門齊（小）",
                 "score": 10
               },
@@ -6270,6 +7273,10 @@
               },
               {
                 "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -6329,6 +7336,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -6357,6 +7368,10 @@
               {
                 "name": "大雜兄弟",
                 "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "將眼",
@@ -6425,12 +7440,16 @@
                 "score": 2
               },
               {
+                "name": "對碰",
+                "score": 2
+              },
+              {
                 "name": "無花",
                 "score": 2
               },
               {
-                "name": "對碰",
-                "score": 2
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小三元",
@@ -6470,7 +7489,7 @@
             "error": null
           },
           {
-            "id": "canonical-061",
+            "id": "canonical-064",
             "name": "海底撈月",
             "score": 20,
             "category": "canonical",
@@ -6524,6 +7543,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -6548,7 +7571,7 @@
             "error": null
           },
           {
-            "id": "canonical-062",
+            "id": "canonical-065",
             "name": "暗清龍",
             "score": 20,
             "category": "canonical",
@@ -6593,6 +7616,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "無字花",
                 "score": 5
               },
@@ -6609,7 +7636,7 @@
             "error": null
           },
           {
-            "id": "canonical-063",
+            "id": "canonical-066",
             "name": "小三風",
             "score": 20,
             "category": "canonical",
@@ -6622,8 +7649,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小三風",
@@ -6680,8 +7715,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小三風",
@@ -6692,7 +7735,7 @@
             "error": null
           },
           {
-            "id": "canonical-064",
+            "id": "canonical-067",
             "name": "七子",
             "score": 20,
             "category": "canonical",
@@ -6735,6 +7778,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -6747,7 +7794,7 @@
             "error": null
           },
           {
-            "id": "canonical-065",
+            "id": "canonical-068",
             "name": "四小姊妹",
             "score": 20,
             "category": "canonical",
@@ -6789,6 +7836,14 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -6809,7 +7864,7 @@
             "error": null
           },
           {
-            "id": "canonical-066",
+            "id": "canonical-069",
             "name": "七門齊（小）",
             "score": 20,
             "category": "canonical",
@@ -6865,6 +7920,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "七門齊（小）",
                 "score": 20
               },
@@ -6877,7 +7936,7 @@
             "error": null
           },
           {
-            "id": "canonical-067",
+            "id": "canonical-070",
             "name": "錦上添花(三響劈)",
             "score": 20,
             "category": "canonical",
@@ -6931,11 +7990,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -7008,6 +8071,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "小三風",
                 "score": 20
               },
@@ -7030,6 +8097,10 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "風牌(東圈東位)",
                 "score": 3
               },
@@ -7041,7 +8112,7 @@
             "error": null
           },
           {
-            "id": "canonical-068",
+            "id": "canonical-071",
             "name": "全姊妹",
             "score": 25,
             "category": "canonical",
@@ -7075,6 +8146,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "三相逢x1",
                 "score": 10
               },
@@ -7091,7 +8166,7 @@
             "error": null
           },
           {
-            "id": "canonical-069",
+            "id": "canonical-072",
             "name": "七門齊（大）",
             "score": 25,
             "category": "canonical",
@@ -7137,16 +8212,20 @@
                 "score": 2
               },
               {
-                "name": "花牌 (0正花 + 2其他花)",
+                "name": "對碰",
                 "score": 2
               },
               {
-                "name": "對碰",
+                "name": "花牌 (0正花 + 2其他花)",
                 "score": 2
               },
               {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "七門齊（大）",
@@ -7157,7 +8236,7 @@
             "error": null
           },
           {
-            "id": "canonical-070",
+            "id": "canonical-073",
             "name": "大雞糊",
             "score": 30,
             "category": "canonical",
@@ -7195,6 +8274,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "大雞糊",
                 "score": 30
               }
@@ -7203,7 +8286,7 @@
             "error": null
           },
           {
-            "id": "canonical-071",
+            "id": "canonical-074",
             "name": "槓上槓食糊",
             "score": 30,
             "category": "canonical",
@@ -7256,11 +8339,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -7280,7 +8367,7 @@
             "error": null
           },
           {
-            "id": "canonical-072",
+            "id": "canonical-075",
             "name": "搶槓上槓糊",
             "score": 30,
             "category": "canonical",
@@ -7333,11 +8420,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -7357,7 +8448,7 @@
             "error": null
           },
           {
-            "id": "canonical-073",
+            "id": "canonical-076",
             "name": "全求人",
             "score": 30,
             "category": "canonical",
@@ -7397,6 +8488,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -7409,7 +8504,7 @@
             "error": null
           },
           {
-            "id": "canonical-074",
+            "id": "canonical-077",
             "name": "四子",
             "score": 30,
             "category": "canonical",
@@ -7455,6 +8550,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -7467,7 +8566,7 @@
             "error": null
           },
           {
-            "id": "canonical-075",
+            "id": "canonical-078",
             "name": "4暗刻",
             "score": 30,
             "category": "canonical",
@@ -7509,11 +8608,15 @@
             },
             "actual": [
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -7525,7 +8628,7 @@
             "error": null
           },
           {
-            "id": "canonical-076",
+            "id": "canonical-079",
             "name": "小三元",
             "score": 30,
             "category": "canonical",
@@ -7538,8 +8641,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小三元",
@@ -7596,8 +8707,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小三元",
@@ -7608,7 +8727,7 @@
             "error": null
           },
           {
-            "id": "canonical-077",
+            "id": "canonical-080",
             "name": "三兄弟",
             "score": 30,
             "category": "canonical",
@@ -7650,8 +8769,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "斷么",
@@ -7670,7 +8797,7 @@
             "error": null
           },
           {
-            "id": "canonical-078",
+            "id": "canonical-081",
             "name": "樓梯",
             "score": 30,
             "category": "canonical",
@@ -7712,6 +8839,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               },
@@ -7724,7 +8855,7 @@
             "error": null
           },
           {
-            "id": "canonical-079",
+            "id": "canonical-082",
             "name": "地聽",
             "score": 30,
             "category": "canonical",
@@ -7777,6 +8908,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -7797,7 +8932,7 @@
             "error": null
           },
           {
-            "id": "canonical-080",
+            "id": "canonical-083",
             "name": "四般高",
             "score": 30,
             "category": "canonical",
@@ -7833,6 +8968,14 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "四歸四",
                 "score": 20
               },
@@ -7857,7 +9000,7 @@
             "error": null
           },
           {
-            "id": "canonical-107",
+            "id": "canonical-110",
             "name": "混全帶1",
             "score": 30,
             "category": "canonical",
@@ -7895,11 +9038,11 @@
                 "score": 2
               },
               {
-                "name": "無花",
+                "name": "對碰",
                 "score": 2
               },
               {
-                "name": "對碰",
+                "name": "無花",
                 "score": 2
               },
               {
@@ -7907,11 +9050,15 @@
                 "score": 3
               },
               {
-                "name": "大雜兄弟",
-                "score": 15
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "五門齊（大）",
+                "score": 15
+              },
+              {
+                "name": "大雜兄弟",
                 "score": 15
               },
               {
@@ -7984,11 +9131,15 @@
                 "score": 2
               },
               {
-                "name": "小三元",
-                "score": 30
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "全求人",
+                "score": 30
+              },
+              {
+                "name": "小三元",
                 "score": 30
               }
             ],
@@ -8006,6 +9157,10 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "元牌(中)",
                 "score": 2
               },
@@ -8017,7 +9172,7 @@
             "error": null
           },
           {
-            "id": "canonical-081",
+            "id": "canonical-084",
             "name": "天聽",
             "score": 40,
             "category": "canonical",
@@ -8071,6 +9226,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -8091,7 +9250,7 @@
             "error": null
           },
           {
-            "id": "canonical-082",
+            "id": "canonical-085",
             "name": "對對糊",
             "score": 40,
             "category": "canonical",
@@ -8131,8 +9290,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "對對糊",
@@ -8143,7 +9310,7 @@
             "error": null
           },
           {
-            "id": "canonical-083",
+            "id": "canonical-086",
             "name": "混一色",
             "score": 40,
             "category": "canonical",
@@ -8189,12 +9356,20 @@
                 "score": 2
               },
               {
+                "name": "對碰",
+                "score": 2
+              },
+              {
                 "name": "無花",
                 "score": 2
               },
               {
-                "name": "對碰",
+                "name": "獨獨",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "混一色",
@@ -8205,7 +9380,7 @@
             "error": null
           },
           {
-            "id": "canonical-084",
+            "id": "canonical-087",
             "name": "大三風",
             "score": 40,
             "category": "canonical",
@@ -8243,12 +9418,20 @@
             },
             "actual": [
               {
+                "name": "假獨",
+                "score": 1
+              },
+              {
                 "name": "將眼",
                 "score": 2
               },
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "大三風",
@@ -8259,7 +9442,7 @@
             "error": null
           },
           {
-            "id": "canonical-085",
+            "id": "canonical-088",
             "name": "混全帶么九",
             "score": 40,
             "category": "canonical",
@@ -8305,12 +9488,20 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
               },
               {
                 "name": "老少上x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "混全帶么九",
@@ -8321,7 +9512,7 @@
             "error": null
           },
           {
-            "id": "canonical-086",
+            "id": "canonical-089",
             "name": "四姊妹",
             "score": 40,
             "category": "canonical",
@@ -8361,6 +9552,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -8381,7 +9576,7 @@
             "error": null
           },
           {
-            "id": "canonical-110",
+            "id": "canonical-113",
             "name": "混一色+對對糊+小三元",
             "score": 40,
             "category": "canonical",
@@ -8437,7 +9632,15 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "2暗刻",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               },
               {
@@ -8445,11 +9648,11 @@
                 "score": 30
               },
               {
-                "name": "混一色",
+                "name": "對對糊",
                 "score": 40
               },
               {
-                "name": "對對糊",
+                "name": "混一色",
                 "score": 40
               }
             ],
@@ -8457,7 +9660,7 @@
             "error": null
           },
           {
-            "id": "canonical-116",
+            "id": "canonical-119",
             "name": "混一色+對對糊",
             "score": 40,
             "category": "canonical",
@@ -8510,6 +9713,10 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "風牌(東圈東位)",
                 "score": 3
               },
@@ -8518,11 +9725,15 @@
                 "score": 5
               },
               {
-                "name": "混一色",
-                "score": 40
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "對對糊",
+                "score": 40
+              },
+              {
+                "name": "混一色",
                 "score": 40
               }
             ],
@@ -8586,6 +9797,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -8622,6 +9837,10 @@
               {
                 "name": "無字花",
                 "score": 5
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "將眼",
@@ -8690,12 +9909,16 @@
                 "score": 2
               },
               {
+                "name": "對碰",
+                "score": 2
+              },
+              {
                 "name": "無花",
                 "score": 2
               },
               {
-                "name": "對碰",
-                "score": 2
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小四喜",
@@ -8735,7 +9958,7 @@
             "error": null
           },
           {
-            "id": "canonical-087",
+            "id": "canonical-090",
             "name": "大於五",
             "score": 50,
             "category": "canonical",
@@ -8781,7 +10004,7 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
@@ -8789,8 +10012,8 @@
                 "score": 5
               },
               {
-                "name": "混全帶678",
-                "score": 10
+                "name": "門清",
+                "score": 5
               },
               {
                 "name": "雙般高",
@@ -8801,6 +10024,10 @@
                 "score": 50
               },
               {
+                "name": "混全帶678",
+                "score": 60
+              },
+              {
                 "name": "三相逢x4 (暗)",
                 "score": 80
               }
@@ -8809,7 +10036,7 @@
             "error": null
           },
           {
-            "id": "canonical-088",
+            "id": "canonical-091",
             "name": "小於五",
             "score": 50,
             "category": "canonical",
@@ -8855,7 +10082,7 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
@@ -8863,8 +10090,8 @@
                 "score": 5
               },
               {
-                "name": "混全帶234",
-                "score": 10
+                "name": "門清",
+                "score": 5
               },
               {
                 "name": "雙般高",
@@ -8875,6 +10102,10 @@
                 "score": 50
               },
               {
+                "name": "混全帶234",
+                "score": 60
+              },
+              {
                 "name": "三相逢x4 (暗)",
                 "score": 80
               }
@@ -8883,7 +10114,7 @@
             "error": null
           },
           {
-            "id": "canonical-089",
+            "id": "canonical-092",
             "name": "嚦咕嚦咕",
             "score": 50,
             "category": "canonical",
@@ -8930,6 +10161,10 @@
               },
               {
                 "name": "一般高",
+                "score": 5
+              },
+              {
+                "name": "底",
                 "score": 5
               },
               {
@@ -9005,12 +10240,16 @@
             },
             "actual": [
               {
+                "name": "對碰",
+                "score": 2
+              },
+              {
                 "name": "無花",
                 "score": 2
               },
               {
-                "name": "對碰",
-                "score": 2
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "四歸一 (暗)",
@@ -9120,6 +10359,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "大雜兄弟",
                 "score": 15
               },
@@ -9168,6 +10411,10 @@
               {
                 "name": "大雜兄弟",
                 "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "花牌 (0正花 + 1其他花)",
@@ -9228,6 +10475,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "大雜兄弟",
                 "score": 15
               },
@@ -9276,12 +10527,16 @@
               {
                 "name": "大雜兄弟",
                 "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               }
             ],
             "error": null
           },
           {
-            "id": "canonical-090",
+            "id": "canonical-093",
             "name": "大三元",
             "score": 60,
             "category": "canonical",
@@ -9327,8 +10582,16 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "大三元",
@@ -9339,7 +10602,7 @@
             "error": null
           },
           {
-            "id": "canonical-091",
+            "id": "canonical-094",
             "name": "五小姊妹",
             "score": 60,
             "category": "canonical",
@@ -9375,6 +10638,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "缺一門",
                 "score": 10
               },
@@ -9395,7 +10662,7 @@
             "error": null
           },
           {
-            "id": "canonical-092",
+            "id": "canonical-095",
             "name": "嚦咕嚦咕六/八飛",
             "score": 60,
             "category": "canonical",
@@ -9443,6 +10710,10 @@
               {
                 "name": "對碰",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "缺一門",
@@ -9538,6 +10809,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "門清",
                 "score": 5
               },
@@ -9603,7 +10878,7 @@
             "error": null
           },
           {
-            "id": "canonical-093",
+            "id": "canonical-096",
             "name": "小四喜",
             "score": 80,
             "category": "canonical",
@@ -9614,6 +10889,14 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "小四喜",
@@ -9670,6 +10953,14 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "小四喜",
                 "score": 80
               }
@@ -9678,7 +10969,7 @@
             "error": null
           },
           {
-            "id": "canonical-094",
+            "id": "canonical-097",
             "name": "純全帶么九",
             "score": 80,
             "category": "canonical",
@@ -9714,15 +11005,19 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "小雜兄弟",
                 "score": 8
               },
               {
-                "name": "老少碰x2",
+                "name": "缺五",
                 "score": 10
               },
               {
-                "name": "缺五",
+                "name": "老少碰x2",
                 "score": 10
               },
               {
@@ -9742,7 +11037,7 @@
             "error": null
           },
           {
-            "id": "canonical-095",
+            "id": "canonical-098",
             "name": "花糊:兩台花",
             "score": 80,
             "category": "canonical",
@@ -9802,11 +11097,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -9830,7 +11129,7 @@
             "error": null
           },
           {
-            "id": "canonical-096",
+            "id": "canonical-099",
             "name": "五姊妹",
             "score": 80,
             "category": "canonical",
@@ -9866,6 +11165,10 @@
               {
                 "name": "將眼",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "斷么",
@@ -9945,6 +11248,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               },
@@ -9964,6 +11271,10 @@
               },
               {
                 "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -10042,6 +11353,10 @@
               {
                 "name": "二相逢x1",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "四歸四",
@@ -10152,6 +11467,10 @@
                 "score": 3
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "四歸四",
                 "score": 20
               },
@@ -10253,15 +11572,19 @@
                 "score": 1
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "小雜兄弟",
                 "score": 8
               },
               {
-                "name": "老少碰x2",
+                "name": "缺五",
                 "score": 10
               },
               {
-                "name": "缺五",
+                "name": "老少碰x2",
                 "score": 10
               },
               {
@@ -10305,6 +11628,10 @@
               {
                 "name": "小雜兄弟",
                 "score": 8
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               },
               {
                 "name": "花牌 (0正花 + 1其他花)",
@@ -10359,15 +11686,19 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "小雜兄弟",
                 "score": 8
               },
               {
-                "name": "老少碰x2",
+                "name": "缺五",
                 "score": 10
               },
               {
-                "name": "缺五",
+                "name": "老少碰x2",
                 "score": 10
               },
               {
@@ -10411,12 +11742,16 @@
               {
                 "name": "小雜兄弟",
                 "score": 8
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               }
             ],
             "error": null
           },
           {
-            "id": "canonical-097",
+            "id": "canonical-100",
             "name": "地糊",
             "score": 90,
             "category": "canonical",
@@ -10469,11 +11804,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -10493,7 +11832,7 @@
             "error": null
           },
           {
-            "id": "canonical-098",
+            "id": "canonical-101",
             "name": "天糊",
             "score": 100,
             "category": "canonical",
@@ -10546,11 +11885,15 @@
                 "score": 2
               },
               {
-                "name": "門清",
+                "name": "底",
                 "score": 5
               },
               {
                 "name": "斷么",
+                "score": 5
+              },
+              {
+                "name": "門清",
                 "score": 5
               },
               {
@@ -10570,7 +11913,7 @@
             "error": null
           },
           {
-            "id": "canonical-099",
+            "id": "canonical-102",
             "name": "5暗刻",
             "score": 100,
             "category": "canonical",
@@ -10616,6 +11959,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -10628,7 +11975,7 @@
             "error": null
           },
           {
-            "id": "canonical-100",
+            "id": "canonical-103",
             "name": "清一色",
             "score": 100,
             "category": "canonical",
@@ -10678,6 +12025,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "暗清龍(萬子)",
                 "score": 20
               },
@@ -10694,7 +12045,7 @@
             "error": null
           },
           {
-            "id": "canonical-101",
+            "id": "canonical-104",
             "name": "六小姊妹",
             "score": 100,
             "category": "canonical",
@@ -10728,6 +12079,10 @@
             },
             "actual": [
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -10756,7 +12111,7 @@
             "error": null
           },
           {
-            "id": "canonical-108",
+            "id": "canonical-111",
             "name": "清一色+對對糊",
             "score": 100,
             "category": "canonical",
@@ -10803,6 +12158,14 @@
                 "score": 2
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "三姊妹",
                 "score": 15
               },
@@ -10823,7 +12186,7 @@
             "error": null
           },
           {
-            "id": "canonical-111",
+            "id": "canonical-114",
             "name": "清一色+一色步步高",
             "score": 100,
             "category": "canonical",
@@ -10876,6 +12239,10 @@
                 "score": 5
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "一色步步高",
                 "score": 15
               },
@@ -10888,7 +12255,7 @@
             "error": null
           },
           {
-            "id": "canonical-114",
+            "id": "canonical-117",
             "name": "天糊-excludes四子",
             "score": 100,
             "category": "canonical",
@@ -10942,6 +12309,10 @@
               {
                 "name": "對碰",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "斷么",
@@ -11027,6 +12398,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "5暗刻",
                 "score": 100
               }
@@ -11056,7 +12431,7 @@
             "error": null
           },
           {
-            "id": "canonical-102",
+            "id": "canonical-105",
             "name": "大四喜",
             "score": 120,
             "category": "canonical",
@@ -11098,6 +12473,14 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "大四喜",
@@ -11161,6 +12544,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "全求人",
                 "score": 30
               },
@@ -11180,6 +12567,10 @@
               },
               {
                 "name": "無花",
+                "score": 2
+              },
+              {
+                "name": "獨獨",
                 "score": 2
               },
               {
@@ -11262,6 +12653,10 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "混全帶么九",
@@ -11351,6 +12746,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "混全帶么九",
                 "score": 40
               },
@@ -11430,6 +12829,10 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "門清",
@@ -11525,6 +12928,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "十六不搭",
                 "score": 60
               }
@@ -11542,7 +12949,7 @@
             "error": null
           },
           {
-            "id": "canonical-103",
+            "id": "canonical-106",
             "name": "十三么",
             "score": 150,
             "category": "canonical",
@@ -11588,6 +12995,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "四歸一 (暗)",
                 "score": 10
               },
@@ -11604,7 +13015,7 @@
             "error": null
           },
           {
-            "id": "canonical-104",
+            "id": "canonical-107",
             "name": "字一色",
             "score": 150,
             "category": "canonical",
@@ -11646,6 +13057,14 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "對對糊",
@@ -11664,7 +13083,7 @@
             "error": null
           },
           {
-            "id": "canonical-112",
+            "id": "canonical-115",
             "name": "字一色",
             "score": 150,
             "category": "canonical",
@@ -11706,6 +13125,14 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "對對糊",
@@ -11784,6 +13211,10 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "混全帶么九",
@@ -11871,6 +13302,10 @@
               {
                 "name": "無花",
                 "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "混全帶么九",
@@ -11962,6 +13397,10 @@
               {
                 "name": "風牌(東圈東位)",
                 "score": 3
+              },
+              {
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "四歸一 (暗)",
@@ -12063,6 +13502,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "十三么（13 飛）",
                 "score": 150
               }
@@ -12142,6 +13585,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "十三么（13 飛）",
                 "score": 150
               }
@@ -12159,7 +13606,7 @@
             "error": null
           },
           {
-            "id": "canonical-105",
+            "id": "canonical-108",
             "name": "坎坎糊",
             "score": 200,
             "category": "canonical",
@@ -12212,6 +13659,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -12224,7 +13675,7 @@
             "error": null
           },
           {
-            "id": "canonical-106",
+            "id": "canonical-109",
             "name": "清么碰",
             "score": 200,
             "category": "canonical",
@@ -12260,15 +13711,23 @@
             },
             "actual": [
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "小雜兄弟",
                 "score": 8
               },
               {
-                "name": "老少碰x2",
+                "name": "缺五",
                 "score": 10
               },
               {
-                "name": "缺五",
+                "name": "老少碰x2",
                 "score": 10
               },
               {
@@ -12288,7 +13747,7 @@
             "error": null
           },
           {
-            "id": "canonical-113",
+            "id": "canonical-116",
             "name": "坎坎糊+exclusions",
             "score": 200,
             "category": "canonical",
@@ -12370,6 +13829,10 @@
                 "score": 2
               },
               {
+                "name": "底",
+                "score": 5
+              },
+              {
                 "name": "斷么",
                 "score": 5
               },
@@ -12432,11 +13895,15 @@
                 "score": 1
               },
               {
-                "name": "老少碰x2",
-                "score": 10
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "缺五",
+                "score": 10
+              },
+              {
+                "name": "老少碰x2",
                 "score": 10
               },
               {
@@ -12494,6 +13961,10 @@
                 "score": 15
               },
               {
+                "name": "獨獨",
+                "score": 2
+              },
+              {
                 "name": "花牌 (0正花 + 1其他花)",
                 "score": 1
               }
@@ -12544,11 +14015,15 @@
             },
             "actual": [
               {
-                "name": "老少碰x2",
-                "score": 10
+                "name": "底",
+                "score": 5
               },
               {
                 "name": "缺五",
+                "score": 10
+              },
+              {
+                "name": "老少碰x2",
                 "score": 10
               },
               {
@@ -12604,6 +14079,10 @@
               {
                 "name": "大雜兄弟",
                 "score": 15
+              },
+              {
+                "name": "獨獨",
+                "score": 2
               }
             ],
             "error": null

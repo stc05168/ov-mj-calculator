@@ -1,0 +1,5 @@
+- Scoring results use exact-or-family name matching, with parameterized names (e.g. `風牌(東)`, `純全帶7`, `二相逢x1`) matched only to their declared family rather than globally.
+- Non-stacking relationships are centralized in `EXCLUSION_RULES` inside `checkHandType.js` instead of being applied ad hoc in UI or detector code.
+- Rule amendments are expressed as targeted exclusions that remove prohibited results while preserving the triggering result, not as score substitutions.
+- Canonical tests assert exact name, exact score, matcher type, minimum/maximum count, and optional prohibited results to prevent coincidental passes.
+- Extension points require coordinated updates across detector, exclusion mapping, canonical fixture, and test baselines rather than isolated changes.

@@ -1,0 +1,1 @@
+Run locally with `python -m http.server 8000` and open `http://127.0.0.1:8000/mj.html`; validate changes with `python -u run_tests.py --self-test` and full matrix runs via `python -u run_tests.py --browser all --timeout 120`, which must produce `discovered = executed = passed`, `failed = 0`, `errors = 0`, `status = success`.

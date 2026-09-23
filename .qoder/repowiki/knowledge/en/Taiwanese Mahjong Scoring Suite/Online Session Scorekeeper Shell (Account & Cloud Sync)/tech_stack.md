@@ -1,0 +1,1 @@
+Vanilla ES modules-free browser JavaScript; relies on `fetch` + `AbortController` for HTTP, `sessionStorage` for token/API persistence, and an `<iframe>`-based cross-origin host bridge (`OVMJSessionHost`) to communicate with the embedded mahjong-suite scoring app.

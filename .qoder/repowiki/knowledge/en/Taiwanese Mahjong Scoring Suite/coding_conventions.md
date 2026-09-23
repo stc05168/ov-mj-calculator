@@ -1,0 +1,5 @@
+- Canonical source files (`mj.html`, `mj.css`, `mjConst.js`, `mj.js`, `checkHandType.js`, `test.html`, `build_test.py`, `run_tests.py`, docs) are edited directly; generated artifacts like `test_standalone.html` and `test-results/latest.json` are regenerated, not hand-edited.
+- Runtime script load order is enforced as `mjConst.js` → `mj.js` → `checkHandType.js` to guarantee symbol availability.
+- Scoring rule changes require citing the v2.7 rule section, adding or updating a stable case in `test.html`, and centralizing mutual-exclusion logic in `EXCLUSION_RULES`/`applyExclusions()` instead of patching UI output.
+- Test results are emitted as structured JSON with separate discovered/executed/passed/failed/errors fields and a status field, consumed by the Python runners as versioned completion payloads.
+- Configuration shared between frontend shells is exposed via the frozen `OVMJ_APP_CONFIG` global from `app-config.js` rather than hard-coded per component.

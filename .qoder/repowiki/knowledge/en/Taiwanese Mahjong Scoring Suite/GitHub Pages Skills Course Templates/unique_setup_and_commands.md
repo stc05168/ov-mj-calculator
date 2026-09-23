@@ -1,0 +1,1 @@
+Learners start by creating a repository from this template; the first push to `main` triggers `0-welcome.yml`, which creates a `my-pages` branch with initial Jekyll files and opens a PR. The active step is tracked in `.github/steps/-step.txt` and advanced automatically by `skills/action-update-step@v2` — no manual step management is required.

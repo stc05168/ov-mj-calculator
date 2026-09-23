@@ -1,0 +1,1 @@
+Vanilla ES2020+ browser JavaScript with no framework; DOM manipulation via `document.createElement`/`replaceChildren`; SVG line chart drawn with `createElementNS('http://www.w3.org/2000/svg', ...)`; Canvas 2D for share-image generation; `globalThis.crypto.randomUUID` for IDs; `structuredClone` for deep copies; `<dialog>` element for the seat dialog.

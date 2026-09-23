@@ -275,6 +275,26 @@ add('四歸一',5,'All 4 copies used (exposed)',()=>{
     state.handTiles=[t(2),t(2),t(3),t(4),t(5),t(6),t(7)];
     state.winningTile=t(8);
 });
+add('暗槓不觸發四歸一',2,'Concealed kong of t(5) must NOT count as 四歸一',()=>{
+    state.concealedKongs=[mkKong(t,5)];
+    state.chows=[mkChow(w,2,3,4),mkChow(w,6,7,8),mkChow(s,2,3,4)];
+    state.handTiles=[s(6),s(7),s(8)];
+    state.winningTile=s(8);
+},{required:[{name:'暗槓x1',score:2,matcher:'exact',minCount:1,maxCount:1}],
+  prohibited:[{name:'四歸一',matcher:'prefix'},{name:'四歸二',matcher:'prefix'},{name:'四歸四',matcher:'prefix'}]});
+add('明槓不觸發四歸一',1,'Open kong of w(3) must NOT count as 四歸一',()=>{
+    state.openKongs=[mkKong(w,3)];
+    state.chows=[mkChow(s,2,3,4),mkChow(s,6,7,8),mkChow(t,2,3,4)];
+    state.handTiles=[t(6),t(7),t(8)];
+    state.winningTile=t(8);
+},{required:[{name:'明槓x1',score:1,matcher:'exact',minCount:1,maxCount:1}],
+  prohibited:[{name:'四歸一',matcher:'prefix'},{name:'四歸二',matcher:'prefix'},{name:'四歸四',matcher:'prefix'}]});
+add('四歸一(順刻 legitimate)',5,'4 copies of w(5): pung 555 + 1 in hand (no kong, no chow)',()=>{
+    state.chows=[mkChow(s,2,3,4),mkChow(s,6,7,8)];
+    state.pungs=[mkPung(w,5)];
+    state.handTiles=[w(5),t(2),t(3),t(4),t(6),t(7),t(9)];
+    state.winningTile=t(9);
+},{required:[{name:'四歸一',score:5,matcher:'exact',minCount:1,maxCount:1}]});
 add('三色步步高',5,'3 ascending chows diff suits',()=>{
     state.chows=[mkChow(w,1,2,3),mkChow(s,2,3,4),mkChow(t,3,4,5)];
     state.handTiles=[w(5),w(6),w(7),s(6),s(7),s(8),t(8)];
@@ -452,7 +472,9 @@ add('小三風',20,'2 wind pungs + 1 wind pair',()=>{
     ],
     baselineResults:[
         {name:'無花',score:2},
+        {name:'獨獨',score:2},
         {name:'二相逢x1',score:3},
+        {name:'底',score:5},
         {name:'小三風',score:20}
     ]
 });
@@ -535,7 +557,9 @@ add('小三元',30,'2 dragon pungs + 1 dragon pair',()=>{
     ],
     baselineResults:[
         {name:'無花',score:2},
+        {name:'獨獨',score:2},
         {name:'二相逢x1',score:3},
+        {name:'底',score:5},
         {name:'小三元',score:30}
     ]
 });
@@ -650,6 +674,8 @@ add('小四喜',80,'3 wind pungs + 1 wind pair',()=>{
     ],
     baselineResults:[
         {name:'無花',score:2},
+        {name:'獨獨',score:2},
+        {name:'底',score:5},
         {name:'小四喜',score:80}
     ]
 });
@@ -1185,6 +1211,47 @@ add('大雜兄弟',15,'Three consecutive pung ranks in the three numbered suits 
     required:[regressionExact('大雜兄弟',15)],
     prohibited:[regressionExact('小雜兄弟',8)]
 });
+add('底', 5, 'Base score always present', () => {
+    state.handTiles=[w(2),w(3),w(4),w(6),w(7),w(8),s(2),s(3),s(4),s(6),s(7),s(8),t(5),t(5),t(5),t(4)];
+    state.winningTile=t(4);
+}, {id: 'base-fan-di'});
+
+// ---------- 三色步步高 regressions (Task #12) ----------
+// 兩個漏判原因：
+// (1) getAllChows 以「同花同點」扣除明順的牌，明順 678索 會把暗牌裡的 索6、索7
+//     一併刪掉，暗順 567索 因此消失。
+// (2) detectBubugao 只掃描「依起始點排序後的相鄰三筆」，起始點 6 同時存在
+//     明順 678索 與暗順 678萬 時，5-6-7 的正確組合會被擋住。
+add('三色步步高 (暗)',10,'Exposed 678s+123t must not hide the concealed 567s/678w/789t ascending run',()=>{
+    state.chows=[mkChow(s,6,7,8),mkChow(t,1,2,3)];
+    state.handTiles=[t(5),t(5),s(5),s(6),s(7),w(6),w(7),w(8),t(7),t(8)];
+    state.winningTile=t(9);
+},{
+    id:'sanse-bugao-bu',category:'regression-sanse-bubugao',traceCandidates:true,
+    required:[{name:'三色步步高 (暗)',score:10,matcher:'exact',minCount:1,maxCount:1}],
+    prohibited:[{name:'三色步步高',score:5,matcher:'exact'}]
+});
+add('三色步步高',5,'Exposed 123w plus concealed 234s/345t stays 明 when the run mixes exposed and concealed chows',()=>{
+    state.chows=[mkChow(w,1,2,3)];
+    state.handTiles=[s(2),s(3),s(4),t(3),t(4),t(5),w(6),w(7),w(8),s(7),s(8),s(9),t(8)];
+    state.winningTile=t(8);
+},{
+    id:'sanse-bugao-bu-mixed-ming',category:'regression-sanse-bubugao',traceCandidates:true,
+    required:[{name:'三色步步高',score:5,matcher:'exact',minCount:1,maxCount:1}],
+    prohibited:[{name:'三色步步高 (暗)',score:10,matcher:'exact'}]
+});
+
+// ---------- 獨獨 regressions (Task #13) ----------
+// analyzeWaitsBeforeWin 計算 testHand 時漏掉已副露的牌（meldedTiles 是死變數），
+// 有副露時 testHand 不足 17 張，canWin 一律 false，導致獨獨偵測不到。
+// 使用 explicit id 避免位移 canonical 序號。
+add('獨獨(多明順)', 2, 'Single wait with multiple exposed melds', () => {
+    state.chows = [mkChow(w,3,4,5), mkChow(w,6,7,8)];
+    state.pungs = [mkPung(h,7)];
+    state.handTiles = [t(6),t(7),t(8),h(1),h(1),h(1),s(2)];
+    state.winningTile = s(2);
+}, {id: 'dudu-exposed-melds',
+    required:[{name:'獨獨',score:2,matcher:'exact',minCount:1,maxCount:1}]});
 // TEST-DEFINITIONS-END
 
 // TEST-HARNESS-BEGIN

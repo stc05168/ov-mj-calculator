@@ -1,0 +1,1 @@
+Spring Boot 3.5.7 (starter-web, starter-data-jpa, starter-validation, security-crypto), Java 17, Spring Data JPA with H2 (default) and PostgreSQL (via profile), BCrypt password hashing, SHA-256 token hashing, Jackson `JsonNode` for schema-less payload validation.

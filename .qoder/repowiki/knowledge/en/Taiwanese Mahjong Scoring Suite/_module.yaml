@@ -1,0 +1,35 @@
+schema_version: 1
+module_path: ""
+title: Taiwanese Mahjong Scoring Suite
+scope:
+    - CONTRIBUTING.md
+    - .gitignore
+    - app-config.js
+    - mj.html
+    - mj.js
+    - mj.css
+    - mjConst.js
+    - debug.html
+    - debug2.html
+    - test.html
+    - test_runner.html
+    - scorekeeper-tests.html
+    - run_tests.py
+    - run_tests.js
+    - build_test.py
+    - check_tests.py
+    - check_tests2.py
+    - run_scorekeeper_tests.py
+    - failures.txt
+    - results2.txt
+    - results3.txt
+    - test_output.html
+    - test_output2.html
+    - test_output3.html
+    - test_results.txt
+    - full_output.html
+    - full_output2.html
+    - full_output3.html
+source_files: []
+depends_on: []
+related_to: []

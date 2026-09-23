@@ -1,0 +1,1 @@
+Markdown reference material aligned with the project's Taiwan Mahjong v2.7 rule book; references to Chrome/Edge headless test runners, Python test scripts (`build_test.py`, `run_tests.py`, `run_scorekeeper_tests.py`), and Spring Boot 3.5.7 / Java 17 backend.

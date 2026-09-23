@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: session_scorekeeper
+title: Taiwanese Mahjong Session Scorekeeper
+scope:
+    - session-scorekeeper/
+source_files: []
+depends_on: []
+related_to:
+    - path: mahjong_suite
